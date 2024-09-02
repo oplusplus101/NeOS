@@ -11,7 +11,7 @@ Modules:
 A module is a generic interface between drivers and user-mode programs. Modules can also be used as kernel extensions.
 
 The boot process:
-- The bootloader loads the kernel located at C:/SYS/NEOSKRNL.SYS
+- The bootloader loads the kernel located at: \NEOSKRNL.SYS in the ESP
 - The kernel will load the files: C:/SYS/DRV.CFG, and C:/SYS/MOD.SYS. These files say which drivers/modules to load.
 - Once the drivers/modules are loaded, the kernel will run the file C:/SYS/AUTOEXEC.SH
 

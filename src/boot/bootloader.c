@@ -1,25 +1,11 @@
-/*
-NeOS: A simple 64-bit operating system
-Copyright (C) 2024 Joel Marti
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <https://www.gnu.org/licenses/>.
-*/
 
 #include <uefi.h>
 #include <common/bootheaders.h>
+#include <common/exeheaders.h>
 
-#define KERNEL_FILENAME "NEOSKRNL.SYS"
+#define KERNEL_FILENAME ".\\NEOSKRNL.SYS"
+
+#define printerr(...) printf(__VA_ARGS__); while (1);
 
 int main()
 {
@@ -32,8 +18,7 @@ int main()
 
     if (EFI_ERROR(nStatus) && pGop == NULL)
     {
-        fprintf(stderr, "Unable to get GOP.\n");
-        while (1);
+        printerr("Unable to get GOP.\n");
     }
 
     nStatus = pGop->QueryMode(pGop, pGop->Mode ? pGop->Mode->Mode : 0, &nISize, &pGopInfo);
@@ -46,8 +31,7 @@ int main()
 
     if (EFI_ERROR(nStatus))
     {
-        fprintf(stderr, "Unable to get current video mode.\n");
-        while (1);
+        printerr("Unable to get current video mode.\n");
     }
 
     GopData gopData;
@@ -57,6 +41,85 @@ int main()
     gopData.nHeight            = pGop->Mode->Information->VerticalResolution;
     gopData.nPixelsPerScanline = pGop->Mode->Information->PixelsPerScanLine;
 
+    // File loading
+    FILE *pFile = fopen(KERNEL_FILENAME, "r");
+    if (pFile == NULL)
+    {
+        printerr("Kernel '" KERNEL_FILENAME "' not found.");
+    }
+    
+    // Get file size
+    fseek(pFile, 0, SEEK_END);
+    size_t nFilesize = ftell(pFile);
+    fseek(pFile, 0, SEEK_SET);
 
+    sMZHeader mzhdr;
+    fread((void *) &mzhdr, sizeof(sMZHeader), 1, pFile);
+    if (mzhdr.nMagic != 0x5A4D)
+    {
+        printerr("Invalid MZ header in kernel. %d", mzhdr.nMagic);
+    }
+
+    // Skip the DOS stub
+    fseek(pFile, 128, SEEK_SET);
+
+    sPE32Header pehdr;
+    fread((void *) &pehdr, sizeof(sPE32Header), 1, pFile);
+    if (pehdr.nMagic != 0x4550)
+    {
+        printerr("Invalid PE32 header in kernel.");
+    }
+
+    if (pehdr.nSizeOfOptionalHeader != 0)
+    {
+        sPE32OptionalHeader peohdr;
+        fread((void *) &peohdr, sizeof(sPE32OptionalHeader), 1, pFile);
+        if (peohdr.nMagic != 0x020B)
+        {
+            printerr("Invalid PE32 optional header in kernel.");
+        }
+
+        printf("Magic: %d\n", peohdr.nMagic);
+        printf("MajorLinkerVersion: %d\n", peohdr.nMajorLinkerVersion);
+        printf("MinorLinkerVersion: %d\n", peohdr.nMinorLinkerVersion);
+        printf("SizeOfCode: %d\n", peohdr.nSizeOfCode);
+        printf("SizeOfInitializedData: %d\n", peohdr.nSizeOfInitializedData);
+        printf("SizeOfUninitializedData: %d\n", peohdr.nSizeOfUninitializedData);
+        printf("AddressOfEntryPoint: %d\n", peohdr.nAddressOfEntryPoint);
+        printf("BaseOfCode: %d\n", peohdr.nBaseOfCode);
+        printf("BaseOfData: %d\n", peohdr.nBaseOfData);
+        printf("ImageBase: %d\n", peohdr.nImageBase);
+        printf("SectionAlignment: %d\n", peohdr.nSectionAlignment);
+        printf("FileAlignment: %d\n", peohdr.nFileAlignment);
+        printf("MajorOperatingSystemVersion: %d\n", peohdr.nMajorOperatingSystemVersion);
+        printf("MinorOperatingSystemVersion: %d\n", peohdr.nMinorOperatingSystemVersion);
+        printf("MajorImageVersion: %d\n", peohdr.nMajorImageVersion);
+        printf("MinorImageVersion: %d\n", peohdr.nMinorImageVersion);
+        printf("MajorSubsystemVersion: %d\n", peohdr.nMajorSubsystemVersion);
+        printf("MinorSubsystemVersion: %d\n", peohdr.nMinorSubsystemVersion);
+        printf("Win32VersionValue: %d\n", peohdr.nWin32VersionValue);
+        printf("SizeOfImage: %d\n", peohdr.nSizeOfImage);
+        printf("SizeOfHeaders: %d\n", peohdr.nSizeOfHeaders);
+        printf("CheckSum: %d\n", peohdr.nCheckSum);
+        printf("Subsystem: %d\n", peohdr.nSubsystem);
+        printf("DllCharacteristics: %d\n", peohdr.nDllCharacteristics);
+        printf("SizeOfStackReserve: %d\n", peohdr.nSizeOfStackReserve);
+        printf("SizeOfStackCommit: %d\n", peohdr.nSizeOfStackCommit);
+        printf("SizeOfHeapReserve: %d\n", peohdr.nSizeOfHeapReserve);
+        printf("SizeOfHeapCommit: %d\n", peohdr.nSizeOfHeapCommit);
+        printf("LoaderFlags: %d\n", peohdr.nLoaderFlags);
+        printf("NumberOfRvaAndSizes: %d\n", peohdr.nNumberOfRvaAndSizes);
+    }
+
+    printf("%d", ftell(pFile));
+
+    fclose(pFile);
+    
+
+    exit_bs();
+
+    // TODO: Call the kernel
+
+    while (1); // Shouldn't ever be reached; In case the kernel ever returns.
     return 0;
 }
