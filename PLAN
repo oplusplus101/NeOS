@@ -1,9 +1,9 @@
 Create a basic 64-bit OS with the following features:
-- UEFI bootloader;
-- A kernel that handles: users, the filesystem, memory, and loading drivers and modules;
-- A DWM-like GUI;
-- An NTFS or EXT4 filesystem;
-- Use the PE64 format for executables;
+- UEFI bootloader
+- A kernel that handles: users, the filesystem, memory, and loading drivers and modules
+- A DWM-like GUI
+- An NTFS or EXT4 filesystem
+- Use the PE32+ format for executables
 - A bash-like shell.
 Drivers:
 A driver handles communication between modules and the hardware.
@@ -12,6 +12,11 @@ A module is a generic interface between drivers and user-mode programs. Modules 
 
 The boot process:
 - The bootloader loads the kernel located at: \NEOSKRNL.SYS in the ESP
-- The kernel will load the files: C:/SYS/DRV.CFG, and C:/SYS/MOD.SYS. These files say which drivers/modules to load.
+- The kernel will load the files: C:/SYS/DRV.CFG, and C:/SYS/MOD.SYS. These files say which drivers/modules to load
 - Once the drivers/modules are loaded, the kernel will run the file C:/SYS/AUTOEXEC.SH
 
+Paths:
+- The seperator can either be '/' or '\'
+- The current directory is '.', and the higher directory is '..'
+- Storage devices use the following format: '(A-Z):'
+- The main drive will default to 'C:'
