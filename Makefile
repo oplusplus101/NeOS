@@ -4,8 +4,9 @@ OVMFDIR = OVMF
 IMG = NeOS.img
 
 KERNEL_EXEC = obj/kernel.exe
-KERNEL_CC_PARAMS = -c -std=c99 -nostdlib -fno-builtin -Iinclude -mno-red-zone
-KERNEL_LD_PARAMS = -m64
+KERNEL_CC_PARAMS = -m64 -c -std=c99 -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
+				   -fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude
+KERNEL_LD_PARAMS = -mi386pep --image-base 0x100000 -nostdlib
 KERNEL_CC = x86_64-w64-mingw32-gcc
 KERNEL_LD = x86_64-w64-mingw32-ld
 KENREL_OBJECTS = obj/kernel/kernel.o
@@ -25,10 +26,10 @@ $(IMG): $(BOOTLOADER_EXEC) $(KERNEL_EXEC)
 	mcopy -i $(IMG) $(KERNEL_EXEC) ::/NEOSKRNL.SYS
 
 $(BOOTLOADER_EXEC): src/boot/bootloader.c
-	cd src/boot && make || true
+	cd src/boot && make
 
 $(KERNEL_EXEC): $(KENREL_OBJECTS)
-	$(KERNEL_LD) $(KENREL_OBJECTS) -o $(KERNEL_EXEC)
+	$(KERNEL_LD) $(KERNEL_LD_PARAMS) $(KENREL_OBJECTS) -o $(KERNEL_EXEC)
 
 obj/%.o: src/%.c
 	mkdir -p $(@D)

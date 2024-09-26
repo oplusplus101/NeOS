@@ -10,11 +10,11 @@ typedef struct
     unsigned int nWidth;
     unsigned int nHeight;
     unsigned int nPixelsPerScanline;
-} GopData;
+} __attribute__((packed)) sGopData;
 
 typedef struct
 {
-    GopData gop;
-} BootHeader;
+    sGopData gop;
+} __attribute__((packed)) sBootData;
 
 #endif // __BOOTHEADER_H

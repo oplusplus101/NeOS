@@ -28,3 +28,12 @@ _strlen:
 .done:
     mov rax, rbx
     ret
+
+    global _memzero
+_memzero:
+    pop rdi
+    pop rcx
+    xor al, al
+    rep stosb
+    ret
+    
