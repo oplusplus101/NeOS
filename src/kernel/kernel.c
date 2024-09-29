@@ -6,7 +6,6 @@
 void KernelMain(sBootData hdr)
 {
     // Pattern from: https://youtu.be/hxOw_p0kLfI?t=42
-//    __asm__ volatile ("cli\nhlt");
     for (int y = 0; y < hdr.gop.nHeight; y++)
     {
         for (int x = 0; x < hdr.gop.nWidth; x++)

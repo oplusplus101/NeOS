@@ -6,10 +6,11 @@ IMG = NeOS.img
 KERNEL_EXEC = obj/kernel.exe
 KERNEL_CC_PARAMS = -m64 -c -std=c99 -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
 				   -fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude
-KERNEL_LD_PARAMS = -mi386pep --image-base 0x100000 -nostdlib
-KERNEL_CC = x86_64-w64-mingw32-gcc
-KERNEL_LD = x86_64-w64-mingw32-ld
-KENREL_OBJECTS = obj/kernel/kernel.o
+KERNEL_LD_PARAMS = -melf_x86_64 -Ttext 0x100000
+KERNEL_CC        = gcc
+KERNEL_LD        = ld
+KERNEL_OBJCOPY   = objcopy
+KENREL_OBJECTS   = obj/kernel/kernel.o
 
 run: $(IMG)
 	qemu-system-x86_64 -m 1G -cpu qemu64 -monitor stdio \
@@ -29,7 +30,9 @@ $(BOOTLOADER_EXEC): src/boot/bootloader.c
 	cd src/boot && make
 
 $(KERNEL_EXEC): $(KENREL_OBJECTS)
-	$(KERNEL_LD) $(KERNEL_LD_PARAMS) $(KENREL_OBJECTS) -o $(KERNEL_EXEC)
+	$(KERNEL_LD) $(KERNEL_LD_PARAMS) $(KENREL_OBJECTS) -o $(KERNEL_EXEC).elf
+	$(KERNEL_OBJCOPY) -O pei-x86-64 $(KERNEL_EXEC).elf $(KERNEL_EXEC)
+	rm $(KERNEL_EXEC).elf
 
 obj/%.o: src/%.c
 	mkdir -p $(@D)

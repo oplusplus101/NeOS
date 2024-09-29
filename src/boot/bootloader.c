@@ -29,14 +29,14 @@ int main()
 
     assert(!EFI_ERROR(nStatus), "Unable to get current video mode.");
 
-    GopData gopData;
+    sGopData gopData;
     gopData.pFramebuffer       = (void *) pGop->Mode->FrameBufferBase;
     gopData.nBufferSize        = pGop->Mode->FrameBufferSize;
     gopData.nWidth             = pGop->Mode->Information->HorizontalResolution;
     gopData.nHeight            = pGop->Mode->Information->VerticalResolution;
     gopData.nPixelsPerScanline = pGop->Mode->Information->PixelsPerScanLine;
 
-    BootData bootData;
+    sBootData bootData;
     bootData.gop = gopData;
 
     // File loading
@@ -60,9 +60,8 @@ int main()
     sPE32OptionalHeader peohdr;
     fread((void *) &peohdr, sizeof(sPE32OptionalHeader), 1, pFile);
     assert(peohdr.nMagic == 0x020B, "Invalid PE32 optional header.");
-    
-    // FIXME: Magic number
-    fseek(pFile, 128, SEEK_CUR);
+
+    fseek(pFile, pehdr.nSizeOfOptionalHeader - sizeof(sPE32OptionalHeader), SEEK_CUR);
 
     // The .text section is for code, .rdata section is for readonly data.
     for (size_t i = 0; i < pehdr.nNumberOfSections; i++)
@@ -85,7 +84,7 @@ int main()
 
     fclose(pFile);
     exit_bs();
-    void (*KernelMain)(BootData) = (__attribute__((sysv_abi)) void (*)(BootData)) (peohdr.nAddressOfEntrypoint + peohdr.nImageBase);
+    void (*KernelMain)(sBootData) = (void (*)(sBootData)) (peohdr.nAddressOfEntrypoint + peohdr.nImageBase);
     KernelMain(bootData);
     while (1); // In case the kernel ever returns.
     return 0;
