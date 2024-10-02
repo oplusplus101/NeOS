@@ -68,15 +68,26 @@ int main()
     {
         sPE32SectionHeader hdr;
         fread((void *) &hdr, sizeof(sPE32SectionHeader), 1, pFile);
+
         if (!strncmp((char *) hdr.sName, ".text", 8) ||
-            !strncmp((char *) hdr.sName, ".rdata", 8))
+            !strncmp((char *) hdr.sName, ".data", 8) ||
+            !strncmp((char *) hdr.sName, ".rdata", 8) ||
+            !strncmp((char *) hdr.sName, ".rodata", 8) ||
+            !strncmp((char *) hdr.sName, ".bss", 8))
         {
             size_t nPrevPos = ftell(pFile);
             fseek(pFile, hdr.nPointerToRawData, SEEK_SET);
             size_t nAddress = hdr.nVirtualAddress + peohdr.nImageBase;
-            size_t nPages   = hdr.nVirtualSize / 0x1000 + 1;
-            efi_status_t s  = BS->AllocatePages(AllocateAddress, EfiLoaderData, nPages, &nAddress);
-            assert(!EFI_ERROR(s), "Unable to allocate pages for the %s section.", hdr.sName);
+            size_t nPages   = (hdr.nVirtualSize + 0x1000 - 1) / 0x1000;
+            for (size_t j = 0; j < nPages; j++)
+            {
+                size_t nAddressOffset = nAddress + j * 0x1000;
+                // FIXME: Error handling
+                efi_status_t s = BS->AllocatePages(AllocateAddress, EfiLoaderData, 1, &nAddressOffset);
+            }
+
+            printf("Address: %16X, Pages: %d, Name: %s\n", nAddress, nPages, hdr.sName);
+            //assert(!EFI_ERROR(s), "Unable to allocate pages for the %s section.", hdr.sName);
             fread((void *) nAddress, hdr.nVirtualSize, 1, pFile);
             fseek(pFile, nPrevPos, SEEK_SET);
         }
@@ -84,6 +95,7 @@ int main()
 
     fclose(pFile);
     exit_bs();
+
     void (*KernelMain)(sBootData) = (void (*)(sBootData)) (peohdr.nAddressOfEntrypoint + peohdr.nImageBase);
     KernelMain(bootData);
     while (1); // In case the kernel ever returns.
