@@ -1,10 +1,12 @@
 
+%define NUM_SEGMENTS 5
+
+    extern g_gdt
+
     global LoadGDT
 LoadGDT:
-    shl si, 4
-    dec si
-    mov [gdtr.nLimit], si
-    mov [gdtr.nBase], rdi
+    mov word [gdtr.nLimit], NUM_SEGMENTS * 16 - 1
+    mov qword [gdtr.nBase], g_gdt
     lgdt [gdtr]
     push 0x10
     lea rax, [rel .ReloadCS]

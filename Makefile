@@ -6,15 +6,18 @@ IMG = NeOS.img
 KERNEL_EXEC = obj/kernel.exe
 KERNEL_CC_PARAMS = -m64 -c -std=c99 -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
 				   -fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude
-KERNEL_LD_PARAMS = -melf_x86_64 -Ttext 0x100000
+KERNEL_LD_PARAMS = -melf_x86_64 -Tlinker.ld
 KERNEL_AS_PARAMS = -felf64 -O0
 KERNEL_CC        = gcc
 KERNEL_LD        = ld
 KERNEL_OBJCOPY   = objcopy
 KERNEL_AS        = nasm
 KENREL_OBJECTS   = obj/kernel/kernel.o \
+				   obj/common/screen.o \
 				   obj/hardware/gdt.o \
-				   obj/hardware/gdtasm.o
+				   obj/hardware/gdtasm.o \
+				   obj/hardware/idt.o \
+				   obj/hardware/idtasm.o
 
 run: $(IMG)
 	qemu-system-x86_64 -m 1G -cpu qemu64 -monitor stdio \

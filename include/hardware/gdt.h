@@ -4,6 +4,12 @@
 
 #include <common/types.h>
 
+#define KERNEL_CODE_SEGMENT 0x10
+#define KERNEL_DATA_SEGMENT 0x20
+#define USER_CODE_SEGMENT   0x30
+#define USER_DATA_SEGMENT   0x40
+
+
 typedef struct
 {
     uint16_t nLimitLow;
@@ -24,7 +30,7 @@ typedef struct
     sSegmentDescriptor userDataSegment;
 } sGlobalDescriptorTable;
 
-void InitGDT(sGlobalDescriptorTable *pGDT);
-extern void LoadGDT(sGlobalDescriptorTable *pGDT, uint16_t nSegments);
+void InitGDT();
+extern void LoadGDT();
 
 #endif // __GDT_H
