@@ -27,9 +27,11 @@ typedef struct
 } __attribute__((packed)) sIDTPointer;
 
 typedef uint64_t (*ISR)(uint64_t);
+typedef uint64_t (*ESR)(uint64_t, uint8_t);
 
 void InitIDT();
-void RegisterISR(uint8_t nInterrupt, ISR pISR);
+void RegisterException(uint8_t n, ESR pESR);
+void RegisterInterrupt(uint8_t n, ISR pISR);
 
 static inline void EnableInterrupts()
 {

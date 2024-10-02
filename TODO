@@ -1,4 +1,7 @@
 Implement scrolling in PrintChar
 Implement interrupts
+Handle exceptions
+Make a basic heap
+Implement paging
 Implement basic AHCI (reading and writing to the disk)
 Implement the NTFS filesystem

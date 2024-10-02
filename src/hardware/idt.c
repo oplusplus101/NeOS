@@ -5,7 +5,8 @@
 
 sIDTEntry g_idt[256];
 sIDTPointer g_idtr;
-ISR g_ISRs[256];
+ESR g_ESRs[32];
+ISR g_ISRs[224];
 
 extern void HandleException0x00();
 extern void HandleException0x01();
@@ -134,10 +135,12 @@ void InitIDT()
     __asm__ volatile ("lidt %0" :: "m" (g_idtr));
 }
 
-uint64_t HandleInterrupt(uint8_t nInterrupt, uint64_t rsp)
+uint64_t HandleInterrupt(uint8_t nInterrupt, uint64_t rsp, uint8_t nErrorCode)
 {
-    if (g_ISRs[nInterrupt] != 0)
-        rsp = g_ISRs[nInterrupt](rsp);
+    if (nInterrupt < 32 && g_ESRs[nInterrupt] != 0)
+        rsp = g_ESRs[nInterrupt](rsp, nErrorCode);
+    else if (nInterrupt >= 32 && g_ISRs[nInterrupt - 32] != 0)
+        rsp = g_ISRs[nInterrupt - 32](rsp);
     
     if (nInterrupt >= 0x28)
     {
@@ -151,8 +154,12 @@ uint64_t HandleInterrupt(uint8_t nInterrupt, uint64_t rsp)
 }
 
 
-void RegisterISR(uint8_t nInterrupt, ISR pISR)
+void RegisterException(uint8_t n, ESR pESR)
 {
-    g_ISRs[nInterrupt] = pISR;
+    g_ESRs[n] = pESR;
 }
 
+void RegisterInterrupt(uint8_t n, ISR pISR)
+{
+    g_ISRs[n - 32] = pISR;
+}

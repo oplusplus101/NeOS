@@ -7,10 +7,10 @@
 #include <hardware/idt.h>
 #include <hardware/ports.h>
 
-uint64_t Test(uint64_t rsp)
+uint64_t Test(uint64_t rsp, uint8_t nErrorCode)
 {
-    PrintString("Interrupt\n");
-    PrintDec(rsp);
+    PrintString("Division by zero!\n");
+    __asm__ volatile ("cli\nhlt");
     return rsp;
 }
 
@@ -25,8 +25,10 @@ void KernelMain(sBootData hdr)
     PrintString("Kernel loaded!\n");
     InitIDT();
 
-    RegisterISR(0x20, Test);
-    
+    RegisterException(0x00, Test);
+
+    __asm__ volatile ("div %0" :: "r"(0));
+
     EnableInterrupts();
     while (1); // Make sure the kernel doesn't exit
 }
