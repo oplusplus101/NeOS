@@ -1,5 +1,5 @@
+Get the memory map from the bootloader
 Implement scrolling in PrintChar
-Implement interrupts
 Handle exceptions
 Make a basic heap
 Implement paging

@@ -3,7 +3,7 @@
 #include <common/bootstructs.h>
 #include <common/exestructs.h>
 
-#define KERNEL_FILENAME ".\\NEOSKRNL.SYS"
+#define KERNEL_FILENAME ".\\NEOSLDR.SYS"
 
 #define printerr(...) { printf(__VA_ARGS__); while (1); }
 #define assert(c, ...) if (!(c)) { printerr(__VA_ARGS__); }
@@ -17,7 +17,7 @@ int main()
     uintn_t nISize = sizeof(efi_gop_mode_info_t);
     nStatus = BS->LocateProtocol(&gopGUID, NULL, (void **) &pGop);
 
-    assert(!EFI_ERROR(nStatus) && pGop != NULL, "Unable to get GOP.");
+    assert(!EFI_ERROR(nStatus) && pGop != NULL, "Unable to get the GOP.");
 
     nStatus = pGop->QueryMode(pGop, pGop->Mode ? pGop->Mode->Mode : 0, &nISize, &pGopInfo);
     if (nStatus == EFI_NOT_STARTED || !pGop->Mode)
@@ -27,7 +27,7 @@ int main()
         ST->StdErr->Reset(ST->StdErr, 0);
     }
 
-    assert(!EFI_ERROR(nStatus), "Unable to get current video mode.");
+    assert(!EFI_ERROR(nStatus), "Unable to get the current video mode.");
 
     sGopData gopData;
     gopData.pFramebuffer       = (void *) pGop->Mode->FrameBufferBase;
@@ -38,6 +38,17 @@ int main()
 
     sBootData bootData;
     bootData.gop = gopData;
+
+    // Get the memory map
+    // efi_memory_descriptor_t *pMemoryMap = NULL;
+    // uintn_t nMapSize, nMapKey, nDescSize;
+    // uint32_t nDescVer;
+    // nStatus = BS->GetMemoryMap(&nMapSize, pMemoryMap, &nMapKey, &nDescSize, &nDescVer);
+    // assert(!EFI_ERROR(nStatus), "Unable to get the memory map.\nEC: 0x%16x", nStatus);
+    // pMemoryMap = malloc(nMapSize);
+    // assert(pMemoryMap != NULL, "Unable to allocate memory.");
+    // BS->GetMemoryMap(&nMapSize, pMemoryMap, &nMapKey, &nDescSize, &nDescVer);
+    // assert(!EFI_ERROR(nStatus), "Unable to get the memory map.\nEC: 0x%16x", nStatus);
 
     // File loading
     FILE *pFile = fopen(KERNEL_FILENAME, "r");

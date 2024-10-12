@@ -4,9 +4,10 @@
 
 uint32_t *g_pScreen;
 int g_nWidth, g_nHeight;
+int g_nTextWidth, g_nTextHeight;
 int g_nCursorX, g_nCursorY;
-color_t g_fgColor, g_bgColor;
 const int g_nFontWidth = 8, g_nFontHeight = 16;
+color_t g_fgColor, g_bgColor;
 
 // Array from: https://files.osdev.org/mirrors/geezer/osd/graphics/modes.c
 static uint8_t g_8x16_font[4096] =
@@ -274,6 +275,8 @@ void InitScreen(int nWidth, int nHeight, uint32_t *pScreenBuffer)
     g_pScreen = pScreenBuffer;
     g_nWidth  = nWidth;
     g_nHeight = nHeight;
+    g_nTextWidth  = g_nWidth / g_nFontWidth;
+    g_nTextHeight = g_nHeight / g_nFontHeight;
     g_nCursorX = g_nCursorY = 0;
     memzero(g_pScreen, nWidth * nHeight * 4);
 }
