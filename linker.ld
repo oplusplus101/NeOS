@@ -1,5 +1,5 @@
 
-ENTRY(KernelMain);
+ENTRY(LoaderMain);
 
 SECTIONS
 {

@@ -1,11 +1,18 @@
 
+#include <common/types.h>
 #include <common/bootstructs.h>
+#include <common/screen.h>
+#include <hardware/gdt.h>
 
 void LoaderMain(sBootData data)
 {
-    int q = 311;
-    for (int i = 0; i < data.gop.nWidth * data.gop.nHeight * 4; i++)
-    {
-        ((unsigned int *) data.gop.pFramebuffer)[i] = i;
-    }
+    InitGDT();
+    LoadGDT();
+    InitScreen(data.gop.nWidth, data.gop.nHeight, data.gop.pFramebuffer);
+    ClearScreen();
+    SetBGColor(RGB(0, 0, 0));
+    SetFGColor(RGB(168, 168, 168));
+    PrintString("Hello, World!");
+
+    while (1);
 }

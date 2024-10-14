@@ -1,7 +1,7 @@
+Implement basic AHCI (reading and writing to the disk) for the loader
+Implement the NTFS filesystem
 Get the memory map from the bootloader
 Implement scrolling in PrintChar
 Handle exceptions
 Make a basic heap
 Implement paging
-Implement basic AHCI (reading and writing to the disk)
-Implement the NTFS filesystem

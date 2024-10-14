@@ -20,6 +20,7 @@ void PrintChar(char c);
 void PrintString(const char *s);
 void PrintDec(int64_t n);
 
+void ClearScreen();
 void SetCursor(int x, int y);
 void SetFGColor(color_t c);
 void SetBGColor(color_t c);

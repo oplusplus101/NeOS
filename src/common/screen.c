@@ -10,7 +10,7 @@ const int g_nFontWidth = 8, g_nFontHeight = 16;
 color_t g_fgColor, g_bgColor;
 
 // Array from: https://files.osdev.org/mirrors/geezer/osd/graphics/modes.c
-static uint8_t g_8x16_font[4096] =
+const uint8_t g_8x16_font[4096] =
 {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x7E, 0x81, 0xA5, 0x81, 0x81, 0xBD, 0x99, 0x81, 0x81, 0x7E, 0x00, 0x00, 0x00, 0x00,
@@ -278,7 +278,18 @@ void InitScreen(int nWidth, int nHeight, uint32_t *pScreenBuffer)
     g_nTextWidth  = g_nWidth / g_nFontWidth;
     g_nTextHeight = g_nHeight / g_nFontHeight;
     g_nCursorX = g_nCursorY = 0;
-    memzero(g_pScreen, nWidth * nHeight * 4);
+}
+
+void ClearScreen()
+{
+    memzero(g_pScreen, g_nWidth * g_nHeight * 4);
+}
+
+// TODO: Clamp the range
+void SetCursor(int x, int y)
+{
+    g_nCursorX = x;
+    g_nCursorY = y;
 }
 
 void SetFGColor(color_t c)
@@ -305,21 +316,36 @@ void PrintChar(char c)
         g_nCursorX = 0;
         g_nCursorY++;
         break;
+    case '\r':
+        g_nCursorX = 0;
+        break;
     default:
-        uint8_t *pCharacter = &g_8x16_font[((uint16_t) c) * g_nFontHeight];
+        const uint8_t *pCharacter = &g_8x16_font[((uint16_t) c) * g_nFontHeight];
         for (int y = 0; y < g_nFontHeight; y++)
             for (int x = 0; x < g_nFontWidth; x++)
                 DrawPixel(x + g_nCursorX * g_nFontWidth,
                           y + g_nCursorY * g_nFontHeight,
                           pCharacter[y] & (0x80 >> x) ? g_fgColor : g_bgColor);
-        g_nCursorX += 1;
+        g_nCursorX++;
         break;
+    }
+    
+    if (g_nCursorX >= g_nTextWidth)
+    {
+        g_nCursorX = 0;
+        g_nCursorY++;
+    }
+    
+    if (g_nCursorY >= g_nTextHeight)
+    {
+        g_nCursorX = g_nCursorY = 0;
+        ClearScreen();
     }
 }
 
 void PrintString(const char *s)
 {
-    for (int i = 0; i < s[i] != 0; i++)
+    for (int i = 0; s[i] != 0; i++)
         PrintChar(s[i]);
 }
 

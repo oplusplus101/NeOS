@@ -11,7 +11,10 @@ CC_PARAMS = -m64 -c -std=c99 -O0 -nostdlib -ffreestanding -fno-builtin -fno-stac
 			-fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude
 
 LOADER_EXEC      = obj/loader.exe
-LOADER_OBJECTS   = obj/loader/loader.o
+LOADER_OBJECTS   = obj/loader/loader.o \
+				   obj/common/screen.o \
+				   obj/hardware/gdt.o \
+				   obj/hardware/gdtasm.o
 LOADER_LD_PARAMS = -melf_x86_64 -Tlinker.ld
 
 KERNEL_EXEC = obj/kernel.exe
