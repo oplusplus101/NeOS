@@ -5,6 +5,8 @@ SECTIONS
 {
     . = 0x100000;
 
+    g_nLoaderStart = .;
+
     .text :
     {
         *(.text)
@@ -30,4 +32,6 @@ SECTIONS
     {
         *(.comment)
     }
+
+    g_nLoaderEnd = .;
 }

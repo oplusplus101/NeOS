@@ -14,17 +14,18 @@ int main()
 
     // Get the memory map
     efi_memory_descriptor_t *pMemoryMap = NULL;
-    uintn_t nMapSize = 0, nMapKey = 0, nDescSize = 0;
+    uintn_t nMemoryMapSize = 0, nMapKey = 0, nDescSize = 0;
 
-    nStatus = BS->GetMemoryMap(&nMapSize, NULL, &nMapKey, &nDescSize, NULL);
-    assert(nStatus == EFI_BUFFER_TOO_SMALL && nMapSize != 0, "Unable to get the memory map.\nEC: 0x%02X", (uint8_t) nStatus);
-    nMapSize += 4 * nDescSize;
+    nStatus = BS->GetMemoryMap(&nMemoryMapSize, NULL, &nMapKey, &nDescSize, NULL);
+    assert(nStatus == EFI_BUFFER_TOO_SMALL && nMemoryMapSize != 0, "Unable to get the memory map.\nEC: 0x%02X", (uint8_t) nStatus);
+    nMemoryMapSize += 4 * nDescSize;
 
-    pMemoryMap = malloc(nMapSize);
+    pMemoryMap = malloc(nMemoryMapSize);
     assert(pMemoryMap != NULL, "Unable to allocate memory.");
 
-    nStatus = BS->GetMemoryMap(&nMapSize, pMemoryMap, &nMapKey, &nDescSize, NULL);
-    
+    nStatus = BS->GetMemoryMap(&nMemoryMapSize, pMemoryMap, &nMapKey, &nDescSize, NULL);
+    assert(!EFI_ERROR(nStatus), "Unable to get the memory map.\nEC: 0x%02X", (uint8_t) nStatus);
+
     efi_guid_t gopGUID = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     efi_gop_t *pGop = NULL;
     efi_gop_mode_info_t *pGopInfo = NULL;
@@ -53,12 +54,9 @@ int main()
     sBootData bootData;
     bootData.gop = gopData;
 
-    bootData.memoryDescriptor.nType          = pMemoryMap->Type;
-    bootData.memoryDescriptor.nPad           = pMemoryMap->Pad;
-    bootData.memoryDescriptor.nPhysicalStart = pMemoryMap->PhysicalStart;
-    bootData.memoryDescriptor.nVirtualStart  = pMemoryMap->VirtualStart;
-    bootData.memoryDescriptor.nNumberOfPages = pMemoryMap->NumberOfPages;
-    bootData.memoryDescriptor.nAttribute     = pMemoryMap->Attribute;
+    bootData.pMemoryDescriptor = (sEFIMemoryDescriptor *) pMemoryMap;
+    bootData.nMemoryMapSize = nMemoryMapSize;
+    bootData.nMemoryDescriptorSize = nDescSize;
 
     // File loading
     FILE *pFile = fopen(KERNEL_FILENAME, "r");

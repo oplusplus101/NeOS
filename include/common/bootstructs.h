@@ -1,16 +1,16 @@
 
-#ifndef __BOOTHEADER_H
-#define __BOOTHEADER_H
+#ifndef __BOOTSTRUCTS_H
+#define __BOOTSTRUCTS_H
 
 typedef struct
 {
     uint32_t nType;
     uint32_t nPad;
     size_t   nPhysicalStart;
-    size_t   nVirtualStart;
+    size_t   nVirtualStart; 
     uint64_t nNumberOfPages;
     uint64_t nAttribute;
-} __attribute__((packed)) sEFIMemoryDescriptor;
+} sEFIMemoryDescriptor;
 
 typedef struct
 {
@@ -24,7 +24,9 @@ typedef struct
 typedef struct
 {
     sGopData gop;
-    sEFIMemoryDescriptor memoryDescriptor;
+    sEFIMemoryDescriptor *pMemoryDescriptor;
+    size_t nMemoryMapSize;
+    size_t nMemoryDescriptorSize;
 } __attribute__((packed)) sBootData;
 
-#endif // __BOOTHEADER_H
+#endif // __BOOTSTRUCTS_H

@@ -338,8 +338,8 @@ void PrintChar(char c)
     
     if (g_nCursorY >= g_nTextHeight)
     {
-        g_nCursorX = g_nCursorY = 0;
-        ClearScreen();
+        g_nCursorY = g_nTextHeight - 1;
+        memcpy(g_pScreen, g_pScreen + g_nWidth * g_nFontHeight, g_nWidth * g_nHeight * 4 - g_nWidth * g_nFontHeight);
     }
 }
 
@@ -349,11 +349,76 @@ void PrintString(const char *s)
         PrintChar(s[i]);
 }
 
-void PrintDec(int64_t n)
+void PrintFormat(const char *sFormat, ...)
 {
+    __builtin_va_list args;
+    __builtin_va_start(args, sFormat);
+    for (size_t i = 0; sFormat[i] != 0; i++)
+    {
+        if (sFormat[i] == '%')
+        {
+            i++; // Skip the %
+            switch (sFormat[i])
+            {
+            case 'd':
+            case 'i':
+                int32_t n = __builtin_va_arg(args, int32_t);
+                if (n < 0)
+                {
+                    n *= -1;
+                    PrintChar('-');
+                }
+                PrintDec(n);
+                break;
+            case 'u':
+                PrintDec(__builtin_va_arg(args, uint32_t));
+                break;
+            case 's':
+                PrintString(__builtin_va_arg(args, const char *));
+                break;
+            case '%':
+                PrintChar('%');
+                break;
+            }
+        }
+        else
+            PrintChar(sFormat[i]);
+    }
+    __builtin_va_end(args);
 }
 
-void PrintHex(uint64_t n)
+void PrintDec(uint64_t n)
 {
+    if (n == 0)
+    {
+        PrintChar('0');
+        return;
+    }
 
+    char sNumber[20];
+    int i = 0;
+    while (n)
+    {
+        sNumber[i++] = (n % 10) + '0';
+        n /= 10;
+    }
+    
+    for (int j = i - 1; j >= 0; j--)
+        PrintChar(sNumber[j]);
+}
+
+void PrintHex(uint64_t n, uint8_t nDigits)
+{
+    nDigits = nDigits > 16 ? 16 : nDigits;
+    char sDigits[16] = "012345679ABCDEF";
+    char sNumber[16];
+
+    for (uint8_t i = 0; i < nDigits; i++)
+    {
+        sNumber[i] = sDigits[n % 16];
+        n /= 16;
+    }
+    
+    for (uint8_t i = nDigits - 1; i >= 0; i--)
+        PrintChar(sNumber[i]);
 }

@@ -13,8 +13,12 @@ CC_PARAMS = -m64 -c -std=c99 -O0 -nostdlib -ffreestanding -fno-builtin -fno-stac
 LOADER_EXEC      = obj/loader.exe
 LOADER_OBJECTS   = obj/loader/loader.o \
 				   obj/common/screen.o \
+				   obj/common/bitmap.o \
 				   obj/hardware/gdt.o \
-				   obj/hardware/gdtasm.o
+				   obj/hardware/gdtasm.o \
+				   obj/hardware/idt.o \
+				   obj/hardware/idtasm.o \
+				   obj/hardware/memory/paging.o
 LOADER_LD_PARAMS = -melf_x86_64 -Tlinker.ld
 
 KERNEL_EXEC = obj/kernel.exe

@@ -15,5 +15,10 @@ typedef long long int int64_t;
 typedef unsigned long long int uint64_t;
 
 typedef uint64_t size_t;
+typedef unsigned char bool;
+
+#define true 1
+#define false 0
+#define NULL ((void *) 0)
 
 #endif // __TYPES_H

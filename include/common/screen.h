@@ -18,7 +18,8 @@ void DrawPixel(int x, int y, color_t c);
 void PrintChar(char c);
 
 void PrintString(const char *s);
-void PrintDec(int64_t n);
+void PrintDec(uint64_t n);
+void PrintFormat(const char *sFormat, ...);
 
 void ClearScreen();
 void SetCursor(int x, int y);
