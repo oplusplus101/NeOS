@@ -11,7 +11,7 @@ typedef struct
     uint8_t b;
 } __attribute__((packed)) color_t;
 
-#define RGB(r, g, b) ((color_t) { (r), (g), (b) })
+#define _RGB(r, g, b) ((color_t) { (r), (g), (b) })
 
 void InitScreen(int nWidth, int nHeight, uint32_t *pScreenBuffer);
 void DrawPixel(int x, int y, color_t c);

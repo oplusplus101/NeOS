@@ -3,6 +3,7 @@
 #define __PAGING_H
 
 #include <common/types.h>
+#include <common/bootstructs.h>
 
 #define PAGE_SIZE 4096
 #define PAGE_TABLE_SIZE 512
@@ -31,13 +32,16 @@ typedef struct
    sPageDirectoryEntry arrEntries[512];
 } __attribute__((packed)) sPageTable;
 
-void LockPage(void *pAddress);
-void LockPages(void *pAddress, size_t nPages);
+void ReservePage(void *pAddress);
+void ReservePages(void *pAddress, size_t nPages);
+void ReturnPage(void *pAddress);
+void ReturnPages(void *pAddress, size_t nPages);
 void MapPage(void *pVirtualMemory, void *pPhysicalMemory);
 void MapPageRange(void *pVirtualMemory, void *pPhysicalMemory, size_t nPages);
-void *RequestPage();
+void *AllocatePage();
 void LoadPML4();
 
-void InitPaging(size_t nMemorySize, void *pLargestSegment, size_t nLargestSegmentSize);
-
+void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
+                size_t nMemoryMapSize, size_t nMemoryDescriptorSize,
+                size_t nLoaderStart, size_t nLoaderEnd);
 #endif // __PAGING_H

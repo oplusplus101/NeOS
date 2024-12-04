@@ -61,7 +61,11 @@ int main()
     // File loading
     FILE *pFile = fopen(KERNEL_FILENAME, "r");
     assert(pFile != NULL, "Kernel '%s' not found.", KERNEL_FILENAME);
-    
+
+    fseek(pFile, 0, SEEK_END);
+    size_t nFilesize = ftell(pFile);
+    fseek(pFile, 0, SEEK_SET);
+
     sMZHeader mzhdr;
     fread((void *) &mzhdr, sizeof(sMZHeader), 1, pFile);
     assert(mzhdr.nMagic == 0x5A4D, "Invalid DOS stub.");
@@ -79,6 +83,9 @@ int main()
     sPE32OptionalHeader peohdr;
     fread((void *) &peohdr, sizeof(sPE32OptionalHeader), 1, pFile);
     assert(peohdr.nMagic == 0x020B, "Invalid PE32 optional header.");
+
+    bootData.nLoaderStart = peohdr.nAddressOfEntrypoint + peohdr.nImageBase;
+    bootData.nLoaderEnd   = bootData.nLoaderStart + nFilesize;
 
     fseek(pFile, pehdr.nSizeOfOptionalHeader - sizeof(sPE32OptionalHeader), SEEK_CUR);
 

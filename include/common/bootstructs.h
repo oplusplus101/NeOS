@@ -27,6 +27,8 @@ typedef struct
     sEFIMemoryDescriptor *pMemoryDescriptor;
     size_t nMemoryMapSize;
     size_t nMemoryDescriptorSize;
+    size_t nLoaderStart;
+    size_t nLoaderEnd;
 } __attribute__((packed)) sBootData;
 
 #endif // __BOOTSTRUCTS_H

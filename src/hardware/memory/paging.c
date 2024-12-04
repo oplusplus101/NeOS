@@ -6,37 +6,38 @@
 #include <common/screen.h>
 #include <common/memory.h>
 #include <common/bitmap.h>
+#include <common/panic.h>
 
 sPageTable *g_pPML4;
 sBitmap g_pageBitmap;
 size_t g_nMemorySize = 0, g_nFreeMemory = 0;
 size_t g_nPageBitmapIndex = 0;
-extern size_t g_nLoaderStart, g_nLoaderEnd;
 
-uint64_t PageFaultHandler(uint64_t rsp, uint8_t nErrorCode)
-{
-    SetCursor(0, 0);
-    ClearScreen();
-    SetBGColor(RGB(0, 0, 0));
-    SetFGColor(RGB(255, 0, 0));
-    PrintFormat("A page fault has occured!\nError Code: %d", nErrorCode);
-    __asm__ volatile ("cli\nhlt");
-    return rsp;
-}
-
-void *RequestPage()
+void *AllocatePage()
 {
     for (; g_nPageBitmapIndex < g_pageBitmap.nLength * 8; g_nPageBitmapIndex++)
     {
         if (GetBitmap(&g_pageBitmap, g_nPageBitmapIndex)) continue;
-        LockPage((void *) (g_nPageBitmapIndex * PAGE_SIZE));
+        ReservePage((void *) (g_nPageBitmapIndex * PAGE_SIZE));
+        // Clear the page
+        memzero((void *) (g_nPageBitmapIndex * PAGE_SIZE), PAGE_SIZE);
         return (void *) (g_nPageBitmapIndex * PAGE_SIZE);
     }
 
     return NULL;
 }
 
-void LockPage(void *pAddress)
+void FreePage(void *pAddress)
+{
+    if (pAddress == NULL) return;
+    
+    size_t nIndex = (size_t) pAddress / PAGE_SIZE;
+    if (!GetBitmap(&g_pageBitmap, nIndex)) return;
+
+    ReturnPage(pAddress);
+}
+
+void ReservePage(void *pAddress)
 {
     size_t nIndex = (size_t) pAddress / PAGE_SIZE;
     
@@ -46,25 +47,37 @@ void LockPage(void *pAddress)
         g_nFreeMemory -= PAGE_SIZE;
 }
 
-void LockPages(void *pAddress, size_t nPages)
+void ReturnPage(void *pAddress)
 {
-    for (size_t i = 0; i < nPages; i++)
-        LockPage(pAddress + i * PAGE_SIZE);
+    uint64_t nIndex = (size_t) pAddress / PAGE_SIZE;
+    if (!GetBitmap(&g_pageBitmap, nIndex)) return;
+    if (SetBitmap(&g_pageBitmap, nIndex, false))
+    {
+        g_nFreeMemory += PAGE_SIZE;
+        if (g_nPageBitmapIndex > nIndex) g_nPageBitmapIndex = nIndex;
+    }
 }
 
-void FreePage(void *pAddress)
+void ReservePages(void *pAddress, size_t nPages)
 {
+    for (size_t i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
+        ReservePage(pAddress + i);
+}
+
+void ReturnPages(void *pAddress, size_t nPages)
+{
+    for (size_t i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
+        ReturnPage(pAddress + i);
 }
 
 void MapPage(void *pVirtualMemory, void *pPhysicalMemory)
 {
     // Page Directory Pointer
     sPageDirectoryEntry *pEntry = &g_pPML4->arrEntries[(((size_t) pVirtualMemory) >> 39) & (PAGE_TABLE_SIZE - 1)];
-
     sPageTable *pPageDirectoryPointer;
     if (!pEntry->bPresent)
     {
-        pPageDirectoryPointer = RequestPage();
+        pPageDirectoryPointer = AllocatePage();
         memzero(pPageDirectoryPointer, PAGE_SIZE);
         pEntry->nAddress   = (size_t) pPageDirectoryPointer >> 12;
         pEntry->bPresent   = true;
@@ -80,7 +93,7 @@ void MapPage(void *pVirtualMemory, void *pPhysicalMemory)
     sPageTable *pPageDirectory;
     if (!pEntry->bPresent)
     {
-        pPageDirectory = RequestPage();
+        pPageDirectory = AllocatePage();
         memzero(pPageDirectory, PAGE_SIZE);
         pEntry->nAddress   = (size_t) pPageDirectory >> 12;
         pEntry->bPresent   = true;
@@ -96,7 +109,7 @@ void MapPage(void *pVirtualMemory, void *pPhysicalMemory)
     sPageTable *pPageTable;
     if (!pEntry->bPresent)
     {
-        pPageTable = RequestPage();
+        pPageTable = AllocatePage();
         memzero(pPageTable, PAGE_SIZE);
         pEntry->nAddress   = (size_t) pPageTable >> 12;
         pEntry->bPresent   = true;
@@ -119,22 +132,53 @@ void MapPageRange(void *pVirtualMemory, void *pPhysicalMemory, size_t nPages)
         MapPage(pVirtualMemory + i, pPhysicalMemory + i);
 }
 
-void InitPaging(size_t nMemorySize, void *pLargestSegment, size_t nLargestSegmentSize)
+void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
+                size_t nMemoryMapSize, size_t nMemoryDescriptorSize,
+                size_t nLoaderStart, size_t nLoaderEnd)
 {
+
+    void *pLargestSegment = NULL;
+    size_t nLargestSegmentSize = 0, nMemorySize = 0;
+
+    for (sEFIMemoryDescriptor *pEntry = pMemoryDescriptor;
+         (uint8_t *) pEntry < (uint8_t *) pMemoryDescriptor + nMemoryMapSize;
+         pEntry = (sEFIMemoryDescriptor *) ((uint8_t *) pEntry + nMemoryDescriptorSize))
+    {
+        nMemorySize += pEntry->nNumberOfPages * PAGE_SIZE;
+        if (pEntry->nType == 7 && pEntry->nNumberOfPages * PAGE_SIZE > nLargestSegmentSize)
+        {
+            pLargestSegment     = (void *) pEntry->nPhysicalStart;
+            nLargestSegmentSize = pEntry->nNumberOfPages * PAGE_SIZE;
+        }
+    }
+
+    
     g_nMemorySize = nMemorySize;
     g_nFreeMemory = nMemorySize;
 
     g_pageBitmap.pData   = pLargestSegment;
     g_pageBitmap.nLength = nMemorySize / PAGE_SIZE / 8 + 1;
+    memzero(g_pageBitmap.pData, g_pageBitmap.nLength);
 
-    LockPages((void *) g_nLoaderStart, (g_nLoaderEnd - g_nLoaderStart) / PAGE_SIZE);
+    ReservePages(0, g_nMemorySize / PAGE_SIZE + 1);
+    for (int i = 0; i < nMemoryMapSize; i++)
+    {
+        sEFIMemoryDescriptor *pDesc = (sEFIMemoryDescriptor *) ((uint64_t) pMemoryDescriptor + (i * nMemoryDescriptorSize));
+        if (pDesc->nType == 7) ReturnPages((void *) pDesc->nPhysicalStart, pDesc->nNumberOfPages);
+    }
 
-    g_pPML4 = RequestPage();
+    ReservePages(0, 256); // Reserve the first 1MiB.
+    ReservePages(g_pageBitmap.pData, g_pageBitmap.nLength / PAGE_SIZE + 1); // Reserve the bitmap's pages.
+
+    // Reserve the bootloader's pages.
+    ReservePages((void *) nLoaderStart, (nLoaderEnd - nLoaderStart) / PAGE_SIZE + 1);
+
+    g_pPML4 = AllocatePage();
     memzero(g_pPML4, PAGE_SIZE);
 
-    MapPageRange(NULL, NULL, nMemorySize / PAGE_SIZE);
+    // Identity map the whole memory.
+    MapPageRange(NULL, NULL, nMemorySize / PAGE_SIZE + 1);
 
-    RegisterException(14, PageFaultHandler);
 }
 
 void LoadPML4()

@@ -13,8 +13,8 @@ void KernelMain(sBootData hdr)
     InitGDT();
     LoadGDT();
     InitScreen(hdr.gop.nWidth, hdr.gop.nHeight, hdr.gop.pFramebuffer);
-    SetFGColor(RGB(255, 255, 255));
-    SetBGColor(RGB(0, 0, 0));
+    SetFGColor(_RGB(255, 255, 255));
+    SetBGColor(_RGB(0, 0, 0));
     PrintString("Kernel loaded!\n");
     InitIDT();
 

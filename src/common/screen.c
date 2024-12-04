@@ -282,6 +282,7 @@ void InitScreen(int nWidth, int nHeight, uint32_t *pScreenBuffer)
 
 void ClearScreen()
 {
+    SetCursor(0, 0);
     memzero(g_pScreen, g_nWidth * g_nHeight * 4);
 }
 
@@ -372,6 +373,9 @@ void PrintFormat(const char *sFormat, ...)
                 break;
             case 'u':
                 PrintDec(__builtin_va_arg(args, uint32_t));
+                break;
+            case 'p':
+                PrintDec(__builtin_va_arg(args, size_t));
                 break;
             case 's':
                 PrintString(__builtin_va_arg(args, const char *));

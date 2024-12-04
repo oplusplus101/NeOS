@@ -8,13 +8,15 @@ LD        = ld
 OBJCOPY   = objcopy
 AS        = nasm
 CC_PARAMS = -m64 -c -std=c99 -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
-			-fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude
+			-fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wno-packed-bitfield-compat
 
 LOADER_EXEC      = obj/loader.exe
 LOADER_OBJECTS   = obj/loader/loader.o \
+				   obj/common/exceptions.o \
 				   obj/common/screen.o \
 				   obj/common/bitmap.o \
 				   obj/hardware/gdt.o \
+				   obj/hardware/pci.o \
 				   obj/hardware/gdtasm.o \
 				   obj/hardware/idt.o \
 				   obj/hardware/idtasm.o \
@@ -33,6 +35,12 @@ KENREL_OBJECTS   = obj/kernel/kernel.o \
 
 run: $(IMG)
 	qemu-system-x86_64 -m 1G -cpu qemu64 -monitor stdio \
+					   -drive file=$(IMG) \
+					   -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
+					   -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
+
+debug: $(IMG)
+	qemu-system-x86_64 -gdb tcp::9000 -m 1G -cpu qemu64 -monitor stdio \
 					   -drive file=$(IMG) \
 					   -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
 					   -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none

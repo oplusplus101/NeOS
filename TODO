@@ -1,7 +1,9 @@
+Fix paging
+Implement PCI
+Make a basic heap
 Implement basic AHCI (reading and writing to the disk) for the loader
 Implement the NTFS filesystem
-Get the memory map from the bootloader
-Implement scrolling in PrintChar
-Handle exceptions
-Make a basic heap
-Implement paging
+Organize the file structure
+Create a basic driver/module file format, based on PE32+
+Add a basic MS-DOS-like shell
+Implement priority round-robin multitasking
