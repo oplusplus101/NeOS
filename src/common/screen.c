@@ -375,7 +375,7 @@ void PrintFormat(const char *sFormat, ...)
                 PrintDec(__builtin_va_arg(args, uint32_t));
                 break;
             case 'p':
-                PrintDec(__builtin_va_arg(args, size_t));
+                PrintHex(__builtin_va_arg(args, size_t), 16, true);
                 break;
             case 's':
                 PrintString(__builtin_va_arg(args, const char *));
@@ -383,7 +383,18 @@ void PrintFormat(const char *sFormat, ...)
             case '%':
                 PrintChar('%');
                 break;
+            default:
+                if (sFormat[i] >= '0' && sFormat[i] <= '9' && sFormat[i + 1] >= '0' && sFormat[i + 1] <= '9')
+                {
+                    size_t nDigits = (sFormat[i] - '0') * 10 + (sFormat[i + 1] - '0');
+                    i += 2;
+                    if (sFormat[i] == 'X')
+                        PrintHex(__builtin_va_arg(args, size_t), nDigits, true);
+                    else if (sFormat[i] == 'x')
+                        PrintHex(__builtin_va_arg(args, size_t), nDigits, false);
+                }
             }
+            
         }
         else
             PrintChar(sFormat[i]);
@@ -411,18 +422,18 @@ void PrintDec(uint64_t n)
         PrintChar(sNumber[j]);
 }
 
-void PrintHex(uint64_t n, uint8_t nDigits)
+void PrintHex(uint64_t n, uint8_t nDigits, bool bUppercase)
 {
     nDigits = nDigits > 16 ? 16 : nDigits;
-    char sDigits[16] = "012345679ABCDEF";
+    char *sDigits = bUppercase ? "0123456789ABCDEF" : "0123456789abcdef";
     char sNumber[16];
 
-    for (uint8_t i = 0; i < nDigits; i++)
+    for (int i = 0; i < nDigits; i++)
     {
         sNumber[i] = sDigits[n % 16];
         n /= 16;
     }
     
-    for (uint8_t i = nDigits - 1; i >= 0; i--)
+    for (int i = nDigits - 1; i >= 0; i--)
         PrintChar(sNumber[i]);
 }

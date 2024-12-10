@@ -19,6 +19,7 @@ void PrintChar(char c);
 
 void PrintString(const char *s);
 void PrintDec(uint64_t n);
+void PrintHex(uint64_t n, uint8_t nDigits, bool bUppercase);
 void PrintFormat(const char *sFormat, ...);
 
 void ClearScreen();

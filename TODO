@@ -1,4 +1,3 @@
-Fix paging
 Implement PCI
 Make a basic heap
 Implement basic AHCI (reading and writing to the disk) for the loader

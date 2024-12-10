@@ -7,8 +7,9 @@ CC        = gcc
 LD        = ld
 OBJCOPY   = objcopy
 AS        = nasm
-CC_PARAMS = -m64 -c -std=c99 -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
-			-fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wno-packed-bitfield-compat
+CC_PARAMS = -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
+			-fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wall -Wpedantic -Werror# -Wno-packed-bitfield-compat
+QEMU	  = qemu-system-x86_64
 
 LOADER_EXEC      = obj/loader.exe
 LOADER_OBJECTS   = obj/loader/loader.o \
@@ -34,16 +35,16 @@ KENREL_OBJECTS   = obj/kernel/kernel.o \
 				   obj/hardware/idtasm.o
 
 run: $(IMG)
-	qemu-system-x86_64 -m 1G -cpu qemu64 -monitor stdio \
-					   -drive file=$(IMG) \
-					   -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
-					   -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
+	$(QEMU) -m 1G -cpu qemu64 -monitor stdio \
+			-drive file=$(IMG) \
+			-drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
+			-drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
 
 debug: $(IMG)
-	qemu-system-x86_64 -gdb tcp::9000 -m 1G -cpu qemu64 -monitor stdio \
-					   -drive file=$(IMG) \
-					   -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
-					   -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
+	$(QEMU) -gdb tcp::9000 -m 1G -cpu qemu64 -monitor stdio \
+			-drive file=$(IMG) \
+			-drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
+			-drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
 
 $(IMG): $(BOOTLOADER_EXEC) $(LOADER_EXEC)
 	dd if=/dev/zero of=$(IMG) bs=1k count=1440
@@ -52,6 +53,7 @@ $(IMG): $(BOOTLOADER_EXEC) $(LOADER_EXEC)
 	mmd -i $(IMG) ::/EFI/BOOT
 	mcopy -i $(IMG) $(BOOTLOADER_EXEC) ::/EFI/BOOT/BOOTX64.EFI
 	mcopy -i $(IMG) $(LOADER_EXEC) ::/NEOSLDR.SYS
+	mcopy -i $(IMG) startup.nsh ::/STARTUP.NSH
 
 $(LOADER_EXEC): $(LOADER_OBJECTS)
 	$(LD) $(LOADER_LD_PARAMS) $(LOADER_OBJECTS) -o $(LOADER_EXEC).elf

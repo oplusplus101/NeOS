@@ -11,6 +11,8 @@
 
 void LoaderMain(sBootData data)
 {
+    DisableInterrupts();
+    
     InitGDT();
     LoadGDT();
 
@@ -21,12 +23,10 @@ void LoaderMain(sBootData data)
 
     PrintString("Screen initialized!\n");
 
+    // Interrupts
     InitIDT();
-
     RegisterExceptions();
-
-    EnableInterrupts();
-    PrintString("Interrupts enabled!\n");
+    PrintString("Interrupts initialized!\n");
 
     // Paging
     InitPaging(data.pMemoryDescriptor,
@@ -37,6 +37,9 @@ void LoaderMain(sBootData data)
     ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
     MapPageRange(data.gop.pFramebuffer, data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
     LoadPML4();
+
+    EnableInterrupts();
+    PrintString("Interrupts enabled!\n");
 
     // ScanPCIDevices();
     

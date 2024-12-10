@@ -4,11 +4,11 @@
 bool SetBitmap(sBitmap *pBitmap, size_t nIndex, bool bValue)
 {
     if (nIndex > pBitmap->nLength * 8) return false;
-    size_t nByteIndex = nIndex / 8;
-    uint8_t nBitIndex = nIndex % 8;
-    uint8_t nBitIndexer = 0x80 >> nBitIndex;
-    pBitmap->pData[nByteIndex] &= ~nBitIndexer;
-    pBitmap->pData[nByteIndex] |= nBitIndex * bValue;
+    size_t  nByteIndex  = nIndex / 8;
+    uint8_t nBitIndex   = nIndex % 8;
+    uint8_t nBitMask    = 1 << nBitIndex;
+    pBitmap->pData[nByteIndex] &= ~nBitMask;
+    pBitmap->pData[nByteIndex] |= nBitMask * bValue;
 
     return true;
 }
@@ -16,9 +16,9 @@ bool SetBitmap(sBitmap *pBitmap, size_t nIndex, bool bValue)
 bool GetBitmap(sBitmap *pBitmap, size_t nIndex)
 {
     if (nIndex > pBitmap->nLength * 8) return false;
-    size_t nByteIndex = nIndex / 8;
-    uint8_t nBitIndex = nIndex % 8;
-    uint8_t nBitIndexer = 0x80 >> nBitIndex;
+    size_t  nByteIndex  = nIndex / 8;
+    uint8_t nBitIndex   = nIndex % 8;
+    uint8_t nBitMask    = 1 << nBitIndex;
 
-    return pBitmap->pData[nByteIndex] & nBitIndexer != 0;
+    return (pBitmap->pData[nByteIndex] & nBitMask) != 0;
 }

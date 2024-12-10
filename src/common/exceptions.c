@@ -59,7 +59,28 @@ size_t Exception13(size_t nRSP, uint8_t nErrorCode)
 
 size_t Exception14(size_t rsp, uint8_t nErrorCode)
 {
-    _KernelPanicEC(nErrorCode, "Page fault");
+    size_t nExceptionAddress;
+    __asm__ volatile("mov %%cr2, %0" : "=r" (nExceptionAddress));
+
+    switch (nErrorCode & 7)
+    {
+    case 0b000:
+        _KernelPanicEC(nErrorCode, "Supervisory process tried to read a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+    case 0b001:
+        _KernelPanicEC(nErrorCode, "Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+    case 0b010:
+        _KernelPanicEC(nErrorCode, "Supervisory process tried to write to a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+    case 0b011:
+        _KernelPanicEC(nErrorCode, "Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+    case 0b100:
+        _KernelPanicEC(nErrorCode, "User process tried to read a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+    case 0b101:
+        _KernelPanicEC(nErrorCode, "User process tried to read a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+    case 0b110:
+        _KernelPanicEC(nErrorCode, "User process tried to write to a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+    case 0b111:
+        _KernelPanicEC(nErrorCode, "User process tried to write a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+    }
     return rsp;
 }
 

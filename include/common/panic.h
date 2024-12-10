@@ -13,7 +13,7 @@
                                   SetFGColor((color_t) { 255, 0, 0 }); \
                                   PrintString("Kernel Panic!\nMessage: "); \
                                   PrintFormat(__VA_ARGS__); \
-                                  PrintFormat("Error code: %d", ec); \
+                                  PrintFormat("\nError code: %d", ec); \
                                   __asm__ volatile ("cli\nhlt"); }
 
 #endif // __PANIC_H

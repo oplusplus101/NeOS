@@ -40,6 +40,8 @@ sPCIDeviceDescriptor GetDeviceDescriptor(uint8_t nBus, uint8_t nSlot, uint8_t nF
     desc.nClass     = PCIRead(nBus, nSlot, nFunction, 11);
 
     desc.nInterrupt = PCIRead(nBus, nSlot, nFunction, 60);
+
+    return desc;
 }
 
 void ScanPCIDevices()
