@@ -6,20 +6,18 @@
 
 typedef struct
 {
-    uint8_t r;
-    uint8_t g;
-    uint8_t b;
+    BYTE r, g, b;
 } __attribute__((packed)) color_t;
 
 #define _RGB(r, g, b) ((color_t) { (r), (g), (b) })
 
-void InitScreen(int nWidth, int nHeight, uint32_t *pScreenBuffer);
+void InitScreen(int nWidth, int nHeight, DWORD *pScreenBuffer);
 void DrawPixel(int x, int y, color_t c);
 void PrintChar(char c);
 
 void PrintString(const char *s);
-void PrintDec(uint64_t n);
-void PrintHex(uint64_t n, uint8_t nDigits, bool bUppercase);
+void PrintDec(QWORD n);
+void PrintHex(QWORD n, BYTE nDigits, BOOL bUppercase);
 void PrintFormat(const char *sFormat, ...);
 
 void ClearScreen();

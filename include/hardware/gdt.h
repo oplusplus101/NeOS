@@ -12,13 +12,13 @@
 
 typedef struct
 {
-    uint16_t nLimitLow;
-    uint32_t nBaseLow : 24;
-    uint8_t  nAccessByte;
-    uint8_t  nLimitHigh : 4;
-    uint8_t  nFlags : 4;
-    uint64_t nBaseHigh : 40;
-    uint32_t nReserved;
+    WORD  nLimitLow;
+    DWORD nBaseLow : 24;
+    BYTE  nAccessByte;
+    BYTE  nLimitHigh : 4;
+    BYTE  nFlags : 4;
+    QWORD nBaseHigh : 40;
+    DWORD nReserved;
 } __attribute__((packed)) sSegmentDescriptor;
 
 typedef struct

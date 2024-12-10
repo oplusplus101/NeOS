@@ -3,33 +3,33 @@
 #include <hardware/ports.h>
 #include <common/screen.h>
 
-uint32_t PCIRead(uint8_t nBus, uint8_t nSlot, uint8_t nFunction, uint8_t nOffset)
+DWORD PCIRead(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset)
 {
   
-    uint32_t nAddress = ((uint32_t) nBus << 16) | ((uint32_t) nSlot << 11) |
-                        ((uint32_t) nFunction << 8) | ((uint32_t) nOffset & 0xFC) | 0x80000000;
+    DWORD nAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
+                        ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
 
     outl(0xCF8, nAddress);
     return inl(0xCFC) >> ((nOffset & 3) << 3);
 }
 
-void PCIWrite(uint8_t nBus, uint8_t nSlot, uint8_t nFunction, uint8_t nOffset, uint32_t nValue)
+void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD nValue)
 {
   
-    uint32_t nAddress = ((uint32_t) nBus << 16) | ((uint32_t) nSlot << 11) |
-                        ((uint32_t) nFunction << 8) | ((uint32_t) nOffset & 0xFC) | 0x80000000;
+    DWORD nAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
+                        ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
 
     outl(0xCF8, nAddress);
     outl(0xCFC, nValue);
 }
 
-sPCIDeviceDescriptor GetDeviceDescriptor(uint8_t nBus, uint8_t nSlot, uint8_t nFunction)
+sPCIDeviceDescriptor GetDeviceDescriptor(BYTE nBus, BYTE nSlot, BYTE nFunction)
 {
     sPCIDeviceDescriptor desc;
 
-    desc.nBus = nBus;
-    desc.nSlot = nSlot;
-    desc.nBus = nBus;
+    desc.nBus       = nBus;
+    desc.nSlot      = nSlot;
+    desc.nBus       = nBus;
 
     desc.nVendor    = PCIRead(nBus, nSlot, nFunction, 0);
     desc.nDevice    = PCIRead(nBus, nSlot, nFunction, 2);
@@ -55,8 +55,8 @@ void ScanPCIDevices()
                 sPCIDeviceDescriptor desc = GetDeviceDescriptor(nBus, nSlot, nFunction);
                 if (desc.nVendor == 0 || desc.nVendor == 0xFFFF) continue;
 
-                PrintFormat("Bus: %s, Slot: %s, Func: %s\n", nBus, nSlot, nFunction);
-                PrintFormat("Interface: %s, Class: %s, Subclass: %s\n", desc.nInterface, desc.nClass, desc.nSubclass);
+                PrintFormat("Bus: %d, Slot: %d, Func: %d\n", nBus, nSlot, nFunction);
+                PrintFormat("Interface: %d, Class: %d, Subclass: %d\n", desc.nInterface, desc.nClass, desc.nSubclass);
             }
             
         }

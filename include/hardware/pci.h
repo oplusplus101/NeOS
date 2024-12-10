@@ -3,31 +3,32 @@
 #define __NEOS__PCI_H
 
 #include <common/types.h>
+#include <hardware/ports.h>
 
 typedef struct
 {
-    uint16_t nBus;
-    uint16_t nSlot;
-    uint16_t nFunction;
+    WORD  nBus;
+    WORD  nSlot;
+    WORD  nFunction;
 
-    uint16_t nVendor;
-    uint16_t nDevice;
+    WORD  nVendor;
+    WORD  nDevice;
     
-    uint8_t  nRevision;
-    uint8_t  nInterface;
-    uint8_t  nSubclass;
-    uint8_t  nClass;
+    BYTE  nRevision;
+    BYTE  nInterface;
+    BYTE  nSubclass;
+    BYTE  nClass;
 
-    uint8_t  nInterrupt;
+    BYTE  nInterrupt;
 
-    size_t   nPortBase;
+    QWORD nPortBase;
 } sPCIDeviceDescriptor;
 
 
-uint32_t PCIRead(uint8_t nBus, uint8_t nSlot, uint8_t nFunction, uint8_t nOffset);
-void PCIWrite(uint8_t nBus, uint8_t nSlot, uint8_t nFunction, uint8_t nOffset, uint32_t nValue);
+DWORD PCIRead(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset);
+void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD nValue);
 
-sPCIDeviceDescriptor GetDeviceDescriptor(uint8_t nBus, uint8_t nSlot, uint8_t nFunction);
+sPCIDeviceDescriptor GetDeviceDescriptor(BYTE nBus, BYTE nSlot, BYTE nFunction);
 
 void ScanPCIDevices();
 

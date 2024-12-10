@@ -1,7 +1,7 @@
 
 #include <common/list.h>
 
-sList CreateEmptyList(size_t nElementSize)
+sList CreateEmptyList(QWORD nElementSize)
 {
     sList list;
     list.pData = malloc(nElementSize);
@@ -17,7 +17,7 @@ void DestroyList(sList *pList)
     pList->nElementSize = 0;
 }
 
-void SwapListElements(sList *pList, size_t nElement1Index, size_t nElement2Index)
+void SwapListElements(sList *pList, QWORD nElement1Index, QWORD nElement2Index)
 {
     if (nElement1Index >= pList->nLength ||
         nElement2Index >= pList->nLength)
@@ -28,14 +28,14 @@ void SwapListElements(sList *pList, size_t nElement1Index, size_t nElement2Index
     SetListElement(pList, nElement2Index, pTemp);
 }
 
-void *GetListElement(sList *pList, size_t nIndex)
+void *GetListElement(sList *pList, QWORD nIndex)
 {
     if (nIndex >= pList->nLength) KernelPanic(ERR_LIST_OUT_OF_RANGE, __FILE__, __LINE__);
-    return (void *) ((size_t) pList->pData + nIndex * pList->nElementSize);
+    return (void *) ((QWORD) pList->pData + nIndex * pList->nElementSize);
 }
 
-void SetListElement(sList *pList, size_t nIndex, void *pData)
+void SetListElement(sList *pList, QWORD nIndex, void *pData)
 {
     if (nIndex >= pList->nLength) KernelPanic(ERR_LIST_OUT_OF_RANGE, __FILE__, __LINE__);
-    memcpy((void *) ((size_t) pList->pData + nIndex * pList->nElementSize), pData, pList->nElementSize);
+    memcpy((void *) ((QWORD) pList->pData + nIndex * pList->nElementSize), pData, pList->nElementSize);
 }

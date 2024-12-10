@@ -3,63 +3,63 @@
 #include <common/panic.h>
 #include <hardware/idt.h>
 
-size_t Exception0(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception0(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanic("Division by zero");
     return nRSP;
 }
 
-size_t Exception5(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception5(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanic("Bound range error");
     return nRSP;
 }
 
-size_t Exception6(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception6(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanic("Invalid opcode");
     return nRSP;
 }
 
-size_t Exception7(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception7(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanic("Device not available");
     return nRSP;
 }
 
-size_t Exception8(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception8(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanic("Double fault");
     return nRSP;
 }
 
-size_t Exception10(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception10(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Invalid TSS");
     return nRSP;
 }
 
-size_t Exception11(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception11(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Segment not present");
     return nRSP;
 }
 
-size_t Exception12(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception12(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Stack segment fault");
     return nRSP;
 }
 
-size_t Exception13(size_t nRSP, uint8_t nErrorCode)
+QWORD Exception13(QWORD nRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "General protection fault");
     return nRSP;
 }
 
-size_t Exception14(size_t rsp, uint8_t nErrorCode)
+QWORD Exception14(QWORD rsp, BYTE nErrorCode)
 {
-    size_t nExceptionAddress;
+    QWORD nExceptionAddress;
     __asm__ volatile("mov %%cr2, %0" : "=r" (nExceptionAddress));
 
     switch (nErrorCode & 7)
@@ -84,49 +84,49 @@ size_t Exception14(size_t rsp, uint8_t nErrorCode)
     return rsp;
 }
 
-size_t Exception16(size_t rsp, uint8_t nErrorCode)
+QWORD Exception16(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanic("x87 Floating point error");
     return rsp;
 }
 
-size_t Exception17(size_t rsp, uint8_t nErrorCode)
+QWORD Exception17(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Alignment check");
     return rsp;
 }
 
-size_t Exception19(size_t rsp, uint8_t nErrorCode)
+QWORD Exception19(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanic("SIMD Floating point error");
     return rsp;
 }
 
-size_t Exception20(size_t rsp, uint8_t nErrorCode)
+QWORD Exception20(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanic("Virtualization error");
     return rsp;
 }
 
-size_t Exception21(size_t rsp, uint8_t nErrorCode)
+QWORD Exception21(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Control protection error");
     return rsp;
 }
 
-size_t Exception28(size_t rsp, uint8_t nErrorCode)
+QWORD Exception28(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanic("Hypervisor injection error");
     return rsp;
 }
 
-size_t Exception29(size_t rsp, uint8_t nErrorCode)
+QWORD Exception29(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "VMM communication error");
     return rsp;
 }
 
-size_t Exception30(size_t rsp, uint8_t nErrorCode)
+QWORD Exception30(QWORD rsp, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Security error");
     return rsp;

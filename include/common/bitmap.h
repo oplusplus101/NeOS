@@ -6,11 +6,11 @@
 
 typedef struct
 {
-    uint8_t *pData;
-    size_t nLength;
+    BYTE *pData;
+    QWORD nLength;
 } sBitmap;
 
-bool SetBitmap(sBitmap *pBitmap, size_t nIndex, bool bValue);
-bool GetBitmap(sBitmap *pBitmap, size_t nIndex);
+BOOL SetBitmap(sBitmap *pBitmap, QWORD nIndex, BOOL bValue);
+BOOL GetBitmap(sBitmap *pBitmap, QWORD nIndex);
 
 #endif // __BITMAP_H

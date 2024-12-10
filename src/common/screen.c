@@ -2,7 +2,7 @@
 #include <common/screen.h>
 #include <common/memory.h>
 
-uint32_t *g_pScreen;
+DWORD *g_pScreen;
 int g_nWidth, g_nHeight;
 int g_nTextWidth, g_nTextHeight;
 int g_nCursorX, g_nCursorY;
@@ -10,7 +10,7 @@ const int g_nFontWidth = 8, g_nFontHeight = 16;
 color_t g_fgColor, g_bgColor;
 
 // Array from: https://files.osdev.org/mirrors/geezer/osd/graphics/modes.c
-const uint8_t g_8x16_font[4096] =
+const BYTE g_8x16_font[4096] =
 {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x7E, 0x81, 0xA5, 0x81, 0x81, 0xBD, 0x99, 0x81, 0x81, 0x7E, 0x00, 0x00, 0x00, 0x00,
@@ -270,7 +270,7 @@ const uint8_t g_8x16_font[4096] =
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-void InitScreen(int nWidth, int nHeight, uint32_t *pScreenBuffer)
+void InitScreen(int nWidth, int nHeight, DWORD *pScreenBuffer)
 {
     g_pScreen = pScreenBuffer;
     g_nWidth  = nWidth;
@@ -321,7 +321,7 @@ void PrintChar(char c)
         g_nCursorX = 0;
         break;
     default:
-        const uint8_t *pCharacter = &g_8x16_font[((uint16_t) c) * g_nFontHeight];
+        const BYTE *pCharacter = &g_8x16_font[((WORD) c) * g_nFontHeight];
         for (int y = 0; y < g_nFontHeight; y++)
             for (int x = 0; x < g_nFontWidth; x++)
                 DrawPixel(x + g_nCursorX * g_nFontWidth,
@@ -354,7 +354,7 @@ void PrintFormat(const char *sFormat, ...)
 {
     __builtin_va_list args;
     __builtin_va_start(args, sFormat);
-    for (size_t i = 0; sFormat[i] != 0; i++)
+    for (QWORD i = 0; sFormat[i] != 0; i++)
     {
         if (sFormat[i] == '%')
         {
@@ -363,7 +363,7 @@ void PrintFormat(const char *sFormat, ...)
             {
             case 'd':
             case 'i':
-                int32_t n = __builtin_va_arg(args, int32_t);
+                INT n = __builtin_va_arg(args, INT);
                 if (n < 0)
                 {
                     n *= -1;
@@ -372,10 +372,10 @@ void PrintFormat(const char *sFormat, ...)
                 PrintDec(n);
                 break;
             case 'u':
-                PrintDec(__builtin_va_arg(args, uint32_t));
+                PrintDec(__builtin_va_arg(args, DWORD));
                 break;
             case 'p':
-                PrintHex(__builtin_va_arg(args, size_t), 16, true);
+                PrintHex(__builtin_va_arg(args, QWORD), 16, true);
                 break;
             case 's':
                 PrintString(__builtin_va_arg(args, const char *));
@@ -386,12 +386,12 @@ void PrintFormat(const char *sFormat, ...)
             default:
                 if (sFormat[i] >= '0' && sFormat[i] <= '9' && sFormat[i + 1] >= '0' && sFormat[i + 1] <= '9')
                 {
-                    size_t nDigits = (sFormat[i] - '0') * 10 + (sFormat[i + 1] - '0');
+                    QWORD nDigits = (sFormat[i] - '0') * 10 + (sFormat[i + 1] - '0');
                     i += 2;
                     if (sFormat[i] == 'X')
-                        PrintHex(__builtin_va_arg(args, size_t), nDigits, true);
+                        PrintHex(__builtin_va_arg(args, QWORD), nDigits, true);
                     else if (sFormat[i] == 'x')
-                        PrintHex(__builtin_va_arg(args, size_t), nDigits, false);
+                        PrintHex(__builtin_va_arg(args, QWORD), nDigits, false);
                 }
             }
             
@@ -402,7 +402,7 @@ void PrintFormat(const char *sFormat, ...)
     __builtin_va_end(args);
 }
 
-void PrintDec(uint64_t n)
+void PrintDec(QWORD n)
 {
     if (n == 0)
     {
@@ -422,7 +422,7 @@ void PrintDec(uint64_t n)
         PrintChar(sNumber[j]);
 }
 
-void PrintHex(uint64_t n, uint8_t nDigits, bool bUppercase)
+void PrintHex(QWORD n, BYTE nDigits, BOOL bUppercase)
 {
     nDigits = nDigits > 16 ? 16 : nDigits;
     char *sDigits = bUppercase ? "0123456789ABCDEF" : "0123456789abcdef";

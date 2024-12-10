@@ -48,11 +48,11 @@ extern void HandleInterrupt0x23();
 
 extern void IgnoreInterrupt();
 
-void SetIDTEntry(uint8_t nInterrupt, void (*pHandler)(), uint8_t nFlags)
+void SetIDTEntry(BYTE nInterrupt, void (*pHandler)(), BYTE nFlags)
 {
     sIDTEntry *pEntry = &g_idt[nInterrupt];
-    pEntry->nISRLow   = ((size_t) pHandler) & 0xFFFF;
-    pEntry->nISRHigh  = ((size_t) pHandler) >> 16;
+    pEntry->nISRLow   = ((QWORD) pHandler) & 0xFFFF;
+    pEntry->nISRHigh  = ((QWORD) pHandler) >> 16;
     pEntry->nFlags    = nFlags;
     pEntry->nKernelCS = KERNEL_CODE_SEGMENT;
     pEntry->nIST      = 0;
@@ -131,11 +131,11 @@ void InitIDT()
     IOWait();
     
     g_idtr.nLimit = sizeof(sIDTEntry) * 256 - 1;
-    g_idtr.nBase  = (size_t) g_idt;
+    g_idtr.nBase  = (QWORD) g_idt;
     __asm__ volatile ("lidt %0" :: "m" (g_idtr));
 }
 
-uint64_t HandleInterrupt(uint8_t nInterrupt, uint64_t rsp, uint8_t nErrorCode)
+QWORD HandleInterrupt(BYTE nInterrupt, QWORD rsp, BYTE nErrorCode)
 {
     if (nInterrupt < 32 && g_ESRs[nInterrupt] != 0)
         rsp = g_ESRs[nInterrupt](rsp, nErrorCode);
@@ -154,12 +154,12 @@ uint64_t HandleInterrupt(uint8_t nInterrupt, uint64_t rsp, uint8_t nErrorCode)
 }
 
 
-void RegisterException(uint8_t n, ESR pESR)
+void RegisterException(BYTE n, ESR pESR)
 {
     g_ESRs[n] = pESR;
 }
 
-void RegisterInterrupt(uint8_t n, ISR pISR)
+void RegisterInterrupt(BYTE n, ISR pISR)
 {
     g_ISRs[n - 32] = pISR;
 }

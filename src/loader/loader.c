@@ -37,11 +37,12 @@ void LoaderMain(sBootData data)
     ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
     MapPageRange(data.gop.pFramebuffer, data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
     LoadPML4();
+    PrintString("Paging initialized!\n");
 
     EnableInterrupts();
     PrintString("Interrupts enabled!\n");
 
-    // ScanPCIDevices();
+    ScanPCIDevices();
     
     while (1);
 }

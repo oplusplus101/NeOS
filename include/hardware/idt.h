@@ -12,26 +12,26 @@
 
 typedef struct
 {
-    uint16_t nISRLow;
-    uint16_t nKernelCS;
-    uint8_t  nIST;
-    uint8_t  nFlags;
-    uint64_t nISRHigh : 48;
-    uint32_t nReserved;
+    WORD  nISRLow;
+    WORD  nKernelCS;
+    BYTE  nIST;
+    BYTE  nFlags;
+    QWORD nISRHigh : 48;
+    DWORD nReserved;
 } __attribute__((packed)) sIDTEntry;
 
 typedef struct
 {
-    uint16_t nLimit;
-    uint64_t nBase;
+    WORD  nLimit;
+    QWORD nBase;
 } __attribute__((packed)) sIDTPointer;
 
-typedef uint64_t (*ISR)(uint64_t);
-typedef uint64_t (*ESR)(uint64_t, uint8_t);
+typedef QWORD (*ISR)(QWORD);
+typedef QWORD (*ESR)(QWORD, BYTE);
 
 void InitIDT();
-void RegisterException(uint8_t n, ESR pESR);
-void RegisterInterrupt(uint8_t n, ISR pISR);
+void RegisterException(BYTE n, ESR pESR);
+void RegisterInterrupt(BYTE n, ISR pISR);
 
 static inline void EnableInterrupts()
 {

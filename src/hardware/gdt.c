@@ -3,7 +3,7 @@
 
 sGlobalDescriptorTable g_gdt;
 
-void MakeSegmentDescriptor(uint64_t nBase, uint32_t nLimit, uint8_t nAccessByte, uint8_t nFlags, sSegmentDescriptor *pSegment)
+void MakeSegmentDescriptor(QWORD nBase, DWORD nLimit, BYTE nAccessByte, BYTE nFlags, sSegmentDescriptor *pSegment)
 {
     pSegment->nBaseLow    = nBase & 0xFFFFFF;
     pSegment->nBaseHigh   = nBase >> 24;

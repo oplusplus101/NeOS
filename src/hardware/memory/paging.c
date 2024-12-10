@@ -10,8 +10,8 @@
 
 sPageTable *g_pPML4;
 sBitmap g_pageBitmap;
-size_t g_nMemorySize = 0, g_nFreeMemory = 0;
-size_t g_nPageBitmapIndex = 0;
+QWORD g_nMemorySize = 0, g_nFreeMemory = 0;
+QWORD g_nPageBitmapIndex = 0;
 
 void *AllocatePage()
 {
@@ -40,7 +40,7 @@ void FreePage(void *pAddress)
 
 void ReservePage(void *pAddress)
 {
-    size_t nIndex = (size_t) pAddress / PAGE_SIZE;
+    QWORD nIndex = (QWORD) pAddress / PAGE_SIZE;
     
     if (GetBitmap(&g_pageBitmap, nIndex)) return;
 
@@ -50,7 +50,7 @@ void ReservePage(void *pAddress)
 
 void ReturnPage(void *pAddress)
 {
-    size_t nIndex = (size_t) pAddress / PAGE_SIZE;
+    QWORD nIndex = (QWORD) pAddress / PAGE_SIZE;
     if (!GetBitmap(&g_pageBitmap, nIndex)) return;
     if (SetBitmap(&g_pageBitmap, nIndex, false))
     {
@@ -59,92 +59,92 @@ void ReturnPage(void *pAddress)
     }
 }
 
-void ReservePages(void *pAddress, size_t nPages)
+void ReservePages(void *pAddress, QWORD nPages)
 {
-    for (size_t i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
-        ReservePage((void *) ((size_t) pAddress + i));
+    for (QWORD i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
+        ReservePage((void *) ((QWORD) pAddress + i));
 }
 
-void ReturnPages(void *pAddress, size_t nPages)
+void ReturnPages(void *pAddress, QWORD nPages)
 {
-    for (size_t i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
-        ReturnPage((void *) ((size_t) pAddress + i));
+    for (QWORD i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
+        ReturnPage((void *) ((QWORD) pAddress + i));
 }
 
 void MapPage(void *pVirtualMemory, void *pPhysicalMemory)
 {
     // Page Directory Pointer
-    sPageDirectoryEntry *pEntry = &g_pPML4->arrEntries[((size_t) pVirtualMemory >> 39) % PAGE_TABLE_SIZE];
+    sPageDirectoryEntry *pEntry = &g_pPML4->arrEntries[((QWORD) pVirtualMemory >> 39) % PAGE_TABLE_SIZE];
     sPageTable *pPageDirectoryPointer;
     if (!pEntry->bPresent)
     {
         pPageDirectoryPointer = AllocatePage();
         memzero(pPageDirectoryPointer, PAGE_SIZE);
-        pEntry->nAddress   = (size_t) pPageDirectoryPointer >> 12;
+        pEntry->nAddress   = (QWORD) pPageDirectoryPointer >> 12;
         pEntry->bPresent   = true;
         pEntry->bWriteable = true;
-        g_pPML4->arrEntries[((size_t) pVirtualMemory >> 39) % PAGE_TABLE_SIZE] = *pEntry;
+        g_pPML4->arrEntries[((QWORD) pVirtualMemory >> 39) % PAGE_TABLE_SIZE] = *pEntry;
     }
     else
-        pPageDirectoryPointer = (sPageTable *) ((size_t) pEntry->nAddress << 12);
+        pPageDirectoryPointer = (sPageTable *) ((QWORD) pEntry->nAddress << 12);
 
 
     // Page Directory
-    pEntry = &pPageDirectoryPointer->arrEntries[((size_t) pVirtualMemory >> 30) % PAGE_TABLE_SIZE];
+    pEntry = &pPageDirectoryPointer->arrEntries[((QWORD) pVirtualMemory >> 30) % PAGE_TABLE_SIZE];
 
     sPageTable *pPageDirectory;
     if (!pEntry->bPresent)
     {
         pPageDirectory = AllocatePage();
         memzero(pPageDirectory, PAGE_SIZE);
-        pEntry->nAddress   = (size_t) pPageDirectory >> 12;
+        pEntry->nAddress   = (QWORD) pPageDirectory >> 12;
         pEntry->bPresent   = true;
         pEntry->bWriteable = true;
-        pPageDirectoryPointer->arrEntries[((size_t) pVirtualMemory >> 30) % PAGE_TABLE_SIZE] = *pEntry;
+        pPageDirectoryPointer->arrEntries[((QWORD) pVirtualMemory >> 30) % PAGE_TABLE_SIZE] = *pEntry;
     }
     else
-        pPageDirectory = (sPageTable *) ((size_t) pEntry->nAddress << 12);
+        pPageDirectory = (sPageTable *) ((QWORD) pEntry->nAddress << 12);
 
     // Page Table
-    pEntry = &pPageDirectory->arrEntries[((size_t) pVirtualMemory >> 21) % PAGE_TABLE_SIZE];
+    pEntry = &pPageDirectory->arrEntries[((QWORD) pVirtualMemory >> 21) % PAGE_TABLE_SIZE];
 
     sPageTable *pPageTable;
     if (!pEntry->bPresent)
     {
         pPageTable = AllocatePage();
         memzero(pPageTable, PAGE_SIZE);
-        pEntry->nAddress   = (size_t) pPageTable >> 12;
+        pEntry->nAddress   = (QWORD) pPageTable >> 12;
         pEntry->bPresent   = true;
         pEntry->bWriteable = true;
-        pPageDirectory->arrEntries[((size_t) pVirtualMemory >> 21) % PAGE_TABLE_SIZE] = *pEntry;
+        pPageDirectory->arrEntries[((QWORD) pVirtualMemory >> 21) % PAGE_TABLE_SIZE] = *pEntry;
     }
     else
-        pPageTable = (sPageTable *) ((size_t) pEntry->nAddress << 12);
+        pPageTable = (sPageTable *) ((QWORD) pEntry->nAddress << 12);
 
-    pEntry = &pPageTable->arrEntries[((size_t) pVirtualMemory >> 12) % PAGE_TABLE_SIZE];
-    pEntry->nAddress   = (size_t) pPhysicalMemory >> 12;
+    pEntry = &pPageTable->arrEntries[((QWORD) pVirtualMemory >> 12) % PAGE_TABLE_SIZE];
+    pEntry->nAddress   = (QWORD) pPhysicalMemory >> 12;
     pEntry->bPresent   = true;
     pEntry->bWriteable = true;
-    pPageTable->arrEntries[((size_t) pVirtualMemory >> 12) % PAGE_TABLE_SIZE] = *pEntry;
+    pPageTable->arrEntries[((QWORD) pVirtualMemory >> 12) % PAGE_TABLE_SIZE] = *pEntry;
 }
 
-void MapPageRange(void *pVirtualMemory, void *pPhysicalMemory, size_t nPages)
+void MapPageRange(void *pVirtualMemory, void *pPhysicalMemory, QWORD nPages)
 {
-    for (size_t i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
-        MapPage((void *) ((size_t) pVirtualMemory + i), (void *) ((size_t) pPhysicalMemory + i));
+    for (QWORD i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
+        MapPage((void *) ((QWORD) pVirtualMemory + i), (void *) ((QWORD) pPhysicalMemory + i));
 }
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
-                size_t nMemoryMapSize, size_t nMemoryDescriptorSize,
-                size_t nLoaderStart, size_t nLoaderEnd)
+                QWORD nMemoryMapSize, QWORD nMemoryDescriptorSize,
+                QWORD nLoaderStart, QWORD nLoaderEnd)
 {
 
     void *pLargestSegment = NULL;
-    size_t nLargestSegmentSize = 0, nMemorySize = 0;
+    QWORD nLargestSegmentSize = 0, nMemorySize = 0;
 
     for (sEFIMemoryDescriptor *pEntry = pMemoryDescriptor;
-         (uint8_t *) pEntry < (uint8_t *) pMemoryDescriptor + nMemoryMapSize;
-         pEntry = (sEFIMemoryDescriptor *) ((uint8_t *) pEntry + nMemoryDescriptorSize))
+         (BYTE *) pEntry < (BYTE *) pMemoryDescriptor + nMemoryMapSize;
+         pEntry = (sEFIMemoryDescriptor *) ((BYTE *) pEntry + nMemoryDescriptorSize))
     {
         nMemorySize += pEntry->nNumberOfPages * PAGE_SIZE;
         if (pEntry->nType == 7 && pEntry->nNumberOfPages * PAGE_SIZE > nLargestSegmentSize)
@@ -164,9 +164,9 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
 
     ReservePages(0, g_nMemorySize / PAGE_SIZE + 1);
 
-    for (size_t i = 0; i < nMemoryMapSize; i += nMemoryDescriptorSize)
+    for (QWORD i = 0; i < nMemoryMapSize; i += nMemoryDescriptorSize)
     {
-        sEFIMemoryDescriptor *pDesc = (sEFIMemoryDescriptor *) ((uint64_t) pMemoryDescriptor + i);
+        sEFIMemoryDescriptor *pDesc = (sEFIMemoryDescriptor *) ((QWORD) pMemoryDescriptor + i);
         if (pDesc->nType == 7) ReturnPages((void *) pDesc->nPhysicalStart, pDesc->nNumberOfPages);
     }
 

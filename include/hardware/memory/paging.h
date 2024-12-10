@@ -10,17 +10,17 @@
 
 typedef struct
 {
-    bool bPresent            : 1;
-    bool bWriteable          : 1;
-    bool bUser               : 1;
-    bool bWriteThrough       : 1;
-    bool bCacheDisable       : 1;
-    bool bAccessed           : 1;
-    bool bDirty              : 1;
-    bool bPageTableAttribute : 1;
-    bool bGlobal             : 1;
-    uint8_t nAvailable       : 3;
-    uint64_t nAddress        : 52;
+    BOOL bPresent            : 1;
+    BOOL bWriteable          : 1;
+    BOOL bUser               : 1;
+    BOOL bWriteThrough       : 1;
+    BOOL bCacheDisable       : 1;
+    BOOL bAccessed           : 1;
+    BOOL bDirty              : 1;
+    BOOL bPageTableAttribute : 1;
+    BOOL bGlobal             : 1;
+    BYTE nAvailable          : 3;
+    QWORD nAddress           : 52;
 } __attribute__((packed)) sPageDirectoryEntry;
 
 typedef struct
@@ -29,16 +29,16 @@ typedef struct
 } __attribute__((packed)) __attribute__((aligned(PAGE_SIZE))) sPageTable;
 
 void ReservePage(void *pAddress);
-void ReservePages(void *pAddress, size_t nPages);
+void ReservePages(void *pAddress, QWORD nPages);
 void ReturnPage(void *pAddress);
-void ReturnPages(void *pAddress, size_t nPages);
+void ReturnPages(void *pAddress, QWORD nPages);
 void MapPage(void *pVirtualMemory, void *pPhysicalMemory);
-void MapPageRange(void *pVirtualMemory, void *pPhysicalMemory, size_t nPages);
+void MapPageRange(void *pVirtualMemory, void *pPhysicalMemory, QWORD nPages);
 void *AllocatePage();
 void FreePage(void *pAddress);
 void LoadPML4();
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
-                size_t nMemoryMapSize, size_t nMemoryDescriptorSize,
-                size_t nLoaderStart, size_t nLoaderEnd);
+                QWORD nMemoryMapSize, QWORD nMemoryDescriptorSize,
+                QWORD nLoaderStart, QWORD nLoaderEnd);
 #endif // __PAGING_H

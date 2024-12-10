@@ -4,31 +4,31 @@
 
 typedef struct
 {
-    uint32_t nType;
-    uint32_t nPad;
-    size_t   nPhysicalStart;
-    size_t   nVirtualStart; 
-    uint64_t nNumberOfPages;
-    uint64_t nAttribute;
+    unsigned int           nType;
+    unsigned int           nPad;
+    unsigned long long int nPhysicalStart;
+    unsigned long long int nVirtualStart; 
+    unsigned long long int nNumberOfPages;
+    unsigned long long int nAttribute;
 } sEFIMemoryDescriptor;
 
 typedef struct
 {
-    void *pFramebuffer;
-    size_t nBufferSize;
-    uint32_t nWidth;
-    uint32_t nHeight;
-    uint32_t nPixelsPerScanline;
+    void                  *pFramebuffer;
+    unsigned long long int nBufferSize;
+    unsigned int           nWidth;
+    unsigned int           nHeight;
+    unsigned int           nPixelsPerScanline;
 } __attribute__((packed)) sGopData;
 
 typedef struct
 {
-    sGopData gop;
-    sEFIMemoryDescriptor *pMemoryDescriptor;
-    size_t nMemoryMapSize;
-    size_t nMemoryDescriptorSize;
-    size_t nLoaderStart;
-    size_t nLoaderEnd;
+    sGopData               gop;
+    sEFIMemoryDescriptor  *pMemoryDescriptor;
+    unsigned long long int nMemoryMapSize;
+    unsigned long long int nMemoryDescriptorSize;
+    unsigned long long int nLoaderStart;
+    unsigned long long int nLoaderEnd;
 } __attribute__((packed)) sBootData;
 
 #endif // __BOOTSTRUCTS_H

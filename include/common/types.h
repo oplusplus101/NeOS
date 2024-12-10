@@ -2,23 +2,24 @@
 #ifndef __TYPES_H
 #define __TYPES_H
 
-typedef char int8_t;
-typedef unsigned char uint8_t;
+typedef char CHAR;
+typedef unsigned char BYTE;
 
-typedef short int16_t;
-typedef unsigned short uint16_t;
+typedef short SHORT;
+typedef unsigned short WORD;
 
-typedef int int32_t;
-typedef unsigned int uint32_t;
+typedef int INT;
+typedef unsigned int DWORD;
 
-typedef long long int int64_t;
-typedef unsigned long long int uint64_t;
+typedef long long int LONG64;
+typedef unsigned long long int QWORD;
 
-typedef uint64_t size_t;
-typedef unsigned char bool;
+typedef unsigned char BOOL;
 
 #define true 1
 #define false 0
+#define TRUE 1
+#define FALSE 0
 #define NULL ((void *) 0)
 
 #endif // __TYPES_H
