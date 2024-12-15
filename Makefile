@@ -10,6 +10,10 @@ AS        = nasm
 CC_PARAMS = -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
 			-fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wall -Wpedantic -Werror# -Wno-packed-bitfield-compat
 QEMU	  = qemu-system-x86_64
+QEMU_PARAMS = -m 1G -cpu qemu64 -monitor stdio \
+			  -drive file=$(IMG),format=raw,index=0,media=disk -device ahci,id=ahci \
+			  -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
+			  -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
 
 LOADER_EXEC      = obj/loader.exe
 LOADER_OBJECTS   = obj/loader/loader.o \
@@ -35,16 +39,10 @@ KENREL_OBJECTS   = obj/kernel/kernel.o \
 				   obj/hardware/idtasm.o
 
 run: $(IMG)
-	$(QEMU) -m 1G -cpu qemu64 -monitor stdio \
-			-drive file=$(IMG) \
-			-drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
-			-drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
+	$(QEMU) $(QEMU_PARAMS)
 
 debug: $(IMG)
-	$(QEMU) -gdb tcp::9000 -m 1G -cpu qemu64 -monitor stdio \
-			-drive file=$(IMG) \
-			-drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE-pure-efi.fd",readonly=on \
-			-drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS-pure-efi.fd" -net none
+	$(QEMU) -gdb tcp::9000 $(QEMU_PARAMS)
 
 $(IMG): $(BOOTLOADER_EXEC) $(LOADER_EXEC)
 	dd if=/dev/zero of=$(IMG) bs=1k count=1440

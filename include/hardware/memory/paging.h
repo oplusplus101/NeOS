@@ -8,6 +8,13 @@
 #define PAGE_SIZE 4096
 #define PAGE_TABLE_SIZE 512
 
+#define ADDRESS_TO_PDP_INDEX(a) (((SIZE_T) (a) >> 39) % PAGE_TABLE_SIZE)
+#define ADDRESS_TO_PD_INDEX(a)  (((SIZE_T) (a) >> 30) % PAGE_TABLE_SIZE)
+#define ADDRESS_TO_PT_INDEX(a)  (((SIZE_T) (a) >> 21) % PAGE_TABLE_SIZE)
+#define ADDRESS_TO_PE_INDEX(a)  (((SIZE_T) (a) >> 12) % PAGE_TABLE_SIZE)
+#define PAGE_TO_ADDRESS(p)      ((SIZE_T) (p) << 12)
+#define ADDRESS_TO_PAGE(a)      ((SIZE_T) (a) >> 12)
+
 typedef struct
 {
     BOOL bPresent            : 1;
@@ -20,25 +27,26 @@ typedef struct
     BOOL bPageTableAttribute : 1;
     BOOL bGlobal             : 1;
     BYTE nAvailable          : 3;
-    QWORD nAddress           : 52;
-} __attribute__((packed)) sPageDirectoryEntry;
+    SIZE_T nAddress          : 52;
+} __attribute__((packed)) sPageTableEntry;
 
 typedef struct
 {
-    sPageDirectoryEntry arrEntries[PAGE_TABLE_SIZE];
+    sPageTableEntry arrEntries[PAGE_TABLE_SIZE];
 } __attribute__((packed)) __attribute__((aligned(PAGE_SIZE))) sPageTable;
 
-void ReservePage(void *pAddress);
-void ReservePages(void *pAddress, QWORD nPages);
-void ReturnPage(void *pAddress);
-void ReturnPages(void *pAddress, QWORD nPages);
-void MapPage(void *pVirtualMemory, void *pPhysicalMemory);
-void MapPageRange(void *pVirtualMemory, void *pPhysicalMemory, QWORD nPages);
-void *AllocatePage();
-void FreePage(void *pAddress);
+void ReservePage(PVOID pAddress);
+void ReservePages(PVOID pAddress, QWORD nPages);
+void ReturnPage(PVOID pAddress);
+void ReturnPages(PVOID pAddress, QWORD nPages);
+void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress);
+void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD nPages);
+PVOID AllocatePage();
+void FreePage(PVOID pAddress);
+PVOID GetPhysicalAddress(PVOID pVirtualAddress);
 void LoadPML4();
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
-                QWORD nMemoryMapSize, QWORD nMemoryDescriptorSize,
-                QWORD nLoaderStart, QWORD nLoaderEnd);
+                SIZE_T nMemoryMapSize, SIZE_T nMemoryDescriptorSize,
+                SIZE_T nLoaderStart, SIZE_T nLoaderEnd);
 #endif // __PAGING_H

@@ -59,7 +59,7 @@ QWORD Exception13(QWORD nRSP, BYTE nErrorCode)
 
 QWORD Exception14(QWORD rsp, BYTE nErrorCode)
 {
-    QWORD nExceptionAddress;
+    SIZE_T nExceptionAddress;
     __asm__ volatile("mov %%cr2, %0" : "=r" (nExceptionAddress));
 
     switch (nErrorCode & 7)
@@ -134,11 +134,11 @@ QWORD Exception30(QWORD rsp, BYTE nErrorCode)
 
 void RegisterExceptions()
 {
-    RegisterException(0,  Exception0); // Division by 0
-    RegisterException(5,  Exception5); // Bound range exceeded
-    RegisterException(6,  Exception6); // Invalid opcode
-    RegisterException(7,  Exception7); // Device not available
-    RegisterException(8,  Exception8); // Double fault
+    RegisterException(0,  Exception0);  // Division by 0
+    RegisterException(5,  Exception5);  // Bound range exceeded
+    RegisterException(6,  Exception6);  // Invalid opcode
+    RegisterException(7,  Exception7);  // Device not available
+    RegisterException(8,  Exception8);  // Double fault
     RegisterException(10, Exception10); // Invalid TSS
     RegisterException(11, Exception11); // Segment not present
     RegisterException(12, Exception12); // Stack segment fault

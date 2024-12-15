@@ -283,7 +283,7 @@ void InitScreen(int nWidth, int nHeight, DWORD *pScreenBuffer)
 void ClearScreen()
 {
     SetCursor(0, 0);
-    memzero(g_pScreen, g_nWidth * g_nHeight * 4);
+    ZeroMemory(g_pScreen, g_nWidth * g_nHeight * 4);
 }
 
 // TODO: Clamp the range
@@ -330,18 +330,15 @@ void PrintChar(char c)
         g_nCursorX++;
         break;
     }
-    
+
     if (g_nCursorX >= g_nTextWidth)
     {
         g_nCursorX = 0;
         g_nCursorY++;
     }
-    
+
     if (g_nCursorY >= g_nTextHeight)
-    {
-        g_nCursorY = g_nTextHeight - 1;
-        memcpy(g_pScreen, g_pScreen + g_nWidth * g_nFontHeight, g_nWidth * g_nHeight * 4 - g_nWidth * g_nFontHeight);
-    }
+        ClearScreen();
 }
 
 void PrintString(const char *s)

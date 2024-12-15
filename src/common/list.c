@@ -22,20 +22,20 @@ void SwapListElements(sList *pList, QWORD nElement1Index, QWORD nElement2Index)
     if (nElement1Index >= pList->nLength ||
         nElement2Index >= pList->nLength)
         __PANIC(ERR_LIST_OUT_OF_RANGE);
-    void *pTemp = malloc(pList->nElementSize);
+    PVOID pTemp = malloc(pList->nElementSize);
     memcpy(pTemp, GetListElement(pList, nElement1Index), pList->nElementSize); // Backup the first element.
     SetListElement(pList, nElement1Index, GetListElement(pList, nElement2Index)); // Move element 2 to element 1.
     SetListElement(pList, nElement2Index, pTemp);
 }
 
-void *GetListElement(sList *pList, QWORD nIndex)
+PVOIDGetListElement(sList *pList, QWORD nIndex)
 {
     if (nIndex >= pList->nLength) KernelPanic(ERR_LIST_OUT_OF_RANGE, __FILE__, __LINE__);
-    return (void *) ((QWORD) pList->pData + nIndex * pList->nElementSize);
+    return (PVOID) ((QWORD) pList->pData + nIndex * pList->nElementSize);
 }
 
-void SetListElement(sList *pList, QWORD nIndex, void *pData)
+void SetListElement(sList *pList, QWORD nIndex, PVOID pData)
 {
     if (nIndex >= pList->nLength) KernelPanic(ERR_LIST_OUT_OF_RANGE, __FILE__, __LINE__);
-    memcpy((void *) ((QWORD) pList->pData + nIndex * pList->nElementSize), pData, pList->nElementSize);
+    memcpy((PVOID) ((QWORD) pList->pData + nIndex * pList->nElementSize), pData, pList->nElementSize);
 }

@@ -4,27 +4,21 @@
 
 #include <common/types.h>
 
-static inline void memset(void *pDest, BYTE nByte, QWORD nSize)
+static inline void memset(PVOID pDest, BYTE nByte, SIZE_T nSize)
 {
     for (int i = 0; i < nSize; i++)
         ((BYTE *) pDest)[i] = nByte;
 }
 
-static inline void memcpy(void *pDest, void *pSrc, QWORD nSize)
+static inline void memcpy(PVOID pDest, PVOID pSrc, SIZE_T nSize)
 {
     for (int i = 0; i < nSize; i++)
         ((BYTE *) pDest)[i] = ((BYTE *) pSrc)[i];
 }
 
-static inline void memzero(void *pDest, QWORD nSize)
+static inline void ZeroMemory(PVOID pDest, SIZE_T nSize)
 {
     memset(pDest, 0, nSize);
 }
-
-CHAR memcmp(void *pA, void *pB, QWORD nSize);
-
-QWORD strlen(const char *sString);
-CHAR strcmp(const char *sA, const char *sB);
-
 
 #endif // __MEMORY_H
