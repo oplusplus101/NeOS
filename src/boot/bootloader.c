@@ -122,6 +122,8 @@ int main()
     fclose(pFile);
     exit_bs();
 
+    
+
     void (*KernelMain)(sBootData) = (void (*)(sBootData)) (peohdr.nAddressOfEntrypoint + peohdr.nImageBase);
     KernelMain(bootData);
     while (1); // In case the kernel ever returns.

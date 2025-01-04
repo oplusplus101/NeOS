@@ -42,6 +42,14 @@ static inline void outl(WORD nPort, DWORD nValue)
     __asm__ volatile ("out %%eax, %%dx" :: "a"(nValue), "Nd"(nPort));
 }
 
+static inline void insw(WORD nPort, PVOID pBuffer, SIZE_T nLength) {
+    __asm__ volatile ("cld; rep; insw" : "+D"(pBuffer), "+c"(nLength) : "d"(nPort));
+}
+
+static inline void outsw(WORD nPort, PVOID pBuffer, SIZE_T nLength) {
+    __asm__ volatile ("cld; rep; outsw" : "+S"(pBuffer), "+c"(nLength) : "d"(nPort));
+}
+
 static inline void IOWait()
 {
     outb(0x80, 0);

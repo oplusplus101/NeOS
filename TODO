@@ -1,8 +1,8 @@
-Implement PCI
 Make a basic heap
-Implement basic AHCI (reading and writing to the disk) for the loader
+Clean up AHCI code
+Implement NVMe (reading and writing)
 Implement the NTFS filesystem
-Organize the file structure
+Organize the project structure (Create seperate folders for the bootloader, kernel loader, and the kernel)
 Create a basic driver/module file format, based on PE32+
 Add a basic MS-DOS-like shell
 Implement priority round-robin multitasking

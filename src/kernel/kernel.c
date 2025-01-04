@@ -19,5 +19,5 @@ void KernelMain(sBootData hdr)
     InitIDT();
 
     EnableInterrupts();
-    while (1); // Make sure the kernel doesn't exit
+    while (true); // Make sure the kernel doesn't exit
 }

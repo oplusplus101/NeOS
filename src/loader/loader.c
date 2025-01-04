@@ -4,6 +4,7 @@
 #include <common/exceptions.h>
 #include <common/screen.h>
 
+#include <hardware/storage/drive.h>
 #include <hardware/memory/paging.h>
 #include <hardware/gdt.h>
 #include <hardware/idt.h>
@@ -35,7 +36,7 @@ void LoaderMain(sBootData data)
 
     // Lock the GOP screen memory.
     ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
-    MapPageRange(data.gop.pFramebuffer, data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
+    MapPageRange(data.gop.pFramebuffer, data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1, PF_WRITEABLE);
     LoadPML4();
     PrintString("Paging initialized!\n");
 
@@ -44,5 +45,5 @@ void LoaderMain(sBootData data)
 
     ScanPCIDevices();
     
-    while (1);
+    while (true);
 }

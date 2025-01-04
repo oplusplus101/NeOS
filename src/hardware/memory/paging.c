@@ -75,36 +75,35 @@ PVOID GetPhysicalAddress(PVOID pVirtualAddress)
 {
     // Page Directory Pointer
     sPageTableEntry *pEntry = &g_pPML4->arrEntries[ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
-    if (!pEntry->bPresent) return NULL;
+    if (!(pEntry->nFlags & PF_PRESENT)) return NULL;
     sPageTable *pPageDirectoryPointer = (sPageTable *) PAGE_TO_ADDRESS(pEntry->nAddress);
 
     // Page Directory
     pEntry = &pPageDirectoryPointer->arrEntries[ADDRESS_TO_PD_INDEX(pVirtualAddress)];
-    if (!pEntry->bPresent) return NULL;
+    if (!(pEntry->nFlags & PF_PRESENT)) return NULL;
     sPageTable *pPageDirectory = (sPageTable *) PAGE_TO_ADDRESS(pEntry->nAddress);
 
     // Page Table
     pEntry = &pPageDirectory->arrEntries[ADDRESS_TO_PT_INDEX(pVirtualAddress)];
-    if (!pEntry->bPresent) return NULL;
+    if (!(pEntry->nFlags & PF_PRESENT)) return NULL;
     sPageTable *pPageTable = (sPageTable *) PAGE_TO_ADDRESS(pEntry->nAddress);
 
     // Page Entry
     pEntry = &pPageTable->arrEntries[ADDRESS_TO_PE_INDEX(pVirtualAddress)];
-    return pEntry->bPresent ? (PVOID) PAGE_TO_ADDRESS(pEntry->nAddress) : NULL;
+    return (pEntry->nFlags & PF_PRESENT) ? (PVOID) PAGE_TO_ADDRESS(pEntry->nAddress) : NULL;
 }
 
-void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress)
+void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD nFlags)
 {
     // Page Directory Pointer
     sPageTableEntry *pEntry = &g_pPML4->arrEntries[ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
     sPageTable *pPageDirectoryPointer;
-    if (!pEntry->bPresent)
+    if (!(pEntry->nFlags & PF_PRESENT))
     {
         pPageDirectoryPointer = AllocatePage();
         ZeroMemory(pPageDirectoryPointer, PAGE_SIZE);
-        pEntry->nAddress   = ADDRESS_TO_PAGE(pPageDirectoryPointer);
-        pEntry->bPresent   = true;
-        pEntry->bWriteable = true;
+        pEntry->nAddress = ADDRESS_TO_PAGE(pPageDirectoryPointer);
+        pEntry->nFlags = PF_PRESENT | PF_WRITEABLE;
         g_pPML4->arrEntries[ADDRESS_TO_PDP_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
@@ -115,13 +114,12 @@ void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress)
     pEntry = &pPageDirectoryPointer->arrEntries[ADDRESS_TO_PD_INDEX(pVirtualAddress)];
 
     sPageTable *pPageDirectory;
-    if (!pEntry->bPresent)
+    if (!(pEntry->nFlags & PF_PRESENT))
     {
         pPageDirectory = AllocatePage();
         ZeroMemory(pPageDirectory, PAGE_SIZE);
         pEntry->nAddress   = ADDRESS_TO_PAGE(pPageDirectory);
-        pEntry->bPresent   = true;
-        pEntry->bWriteable = true;
+        pEntry->nFlags = PF_PRESENT | PF_WRITEABLE;
         pPageDirectoryPointer->arrEntries[ADDRESS_TO_PD_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
@@ -131,13 +129,12 @@ void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress)
     pEntry = &pPageDirectory->arrEntries[ADDRESS_TO_PT_INDEX(pVirtualAddress)];
 
     sPageTable *pPageTable;
-    if (!pEntry->bPresent)
+    if (!(pEntry->nFlags & PF_PRESENT))
     {
         pPageTable = AllocatePage();
         ZeroMemory(pPageTable, PAGE_SIZE);
         pEntry->nAddress   = ADDRESS_TO_PAGE(pPageTable);
-        pEntry->bPresent   = true;
-        pEntry->bWriteable = true;
+        pEntry->nFlags = PF_PRESENT | PF_WRITEABLE;
         pPageDirectory->arrEntries[ADDRESS_TO_PT_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
@@ -145,17 +142,17 @@ void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress)
 
     // Page Entry
     pEntry = &pPageTable->arrEntries[ADDRESS_TO_PE_INDEX(pVirtualAddress)];
-    pEntry->nAddress   = ADDRESS_TO_PAGE(pPhysicalAddress);
-    pEntry->bPresent   = true;
-    pEntry->bWriteable = true;
+    pEntry->nAddress = ADDRESS_TO_PAGE(pPhysicalAddress);
+    pEntry->nFlags   = PF_PRESENT | (nFlags & 0x0FFF);
+    
     pPageTable->arrEntries[ADDRESS_TO_PE_INDEX(pVirtualAddress)] = *pEntry;
 }
 
 
-void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD nPages)
+void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD nPages, WORD nFlags)
 {
     for (QWORD i = 0; i < nPages * PAGE_SIZE; i += PAGE_SIZE)
-        MapPage((PVOID) ((QWORD) pVirtualAddress + i), (PVOID) ((QWORD) pPhysicalAddress + i));
+        MapPage((PVOID) ((QWORD) pVirtualAddress + i), (PVOID) ((QWORD) pPhysicalAddress + i), nFlags);
 }
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
@@ -204,7 +201,7 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
     ZeroMemory(g_pPML4, PAGE_SIZE);
 
     // Identity map the whole memory.
-    MapPageRange(NULL, NULL, nMemorySize / PAGE_SIZE + 1);
+    MapPageRange(NULL, NULL, nMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
 }
 
 void LoadPML4()
