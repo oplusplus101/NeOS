@@ -15,6 +15,6 @@
 #define ALTERNATE_STATUS 0
 #define CONTROL 0x206
 
-BOOL ReadCDROMPIO(WORD nPort, BOOL bSlave, DWORD nLBA, DWORD nSectors, WORD *pBuffer);
+BOOL ReadCDROMPIO(WORD nPort, BOOL bSlave, DWORD dwLBA, DWORD dwSectors, WORD *pBuffer);
 
 #endif // __ATAPI_H

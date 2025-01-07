@@ -12,18 +12,18 @@
 
 typedef struct
 {
-    WORD  nISRLow;
-    WORD  nKernelCS;
+    WORD  wISRLow;
+    WORD  wKernelCS;
     BYTE  nIST;
     BYTE  nFlags;
     QWORD nISRHigh : 48;
-    DWORD nReserved;
+    DWORD dwReserved;
 } __attribute__((packed)) sIDTEntry;
 
 typedef struct
 {
-    WORD  nLimit;
-    QWORD nBase;
+    WORD  wLimit;
+    QWORD qwBase;
 } __attribute__((packed)) sIDTPointer;
 
 typedef QWORD (*ISR)(QWORD);

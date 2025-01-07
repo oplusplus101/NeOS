@@ -3,63 +3,63 @@
 #include <common/panic.h>
 #include <hardware/idt.h>
 
-QWORD Exception0(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception0(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("Division by zero");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception5(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception5(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("Bound range error");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception6(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception6(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("Invalid opcode");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception7(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception7(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("Device not available");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception8(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception8(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("Double fault");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception10(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception10(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Invalid TSS");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception11(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception11(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Segment not present");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception12(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception12(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Stack segment fault");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception13(QWORD nRSP, BYTE nErrorCode)
+QWORD Exception13(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "General protection fault");
-    return nRSP;
+    return qwRSP;
 }
 
-QWORD Exception14(QWORD rsp, BYTE nErrorCode)
+QWORD Exception14(QWORD qwRSP, BYTE nErrorCode)
 {
-    SIZE_T nExceptionAddress;
+    QWORD nExceptionAddress;
     __asm__ volatile("mov %%cr2, %0" : "=r" (nExceptionAddress));
 
     switch (nErrorCode & 7)
@@ -81,55 +81,55 @@ QWORD Exception14(QWORD rsp, BYTE nErrorCode)
     case 0b111:
         _KernelPanicEC(nErrorCode, "User process tried to write a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
     }
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception16(QWORD rsp, BYTE nErrorCode)
+QWORD Exception16(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("x87 Floating point error");
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception17(QWORD rsp, BYTE nErrorCode)
+QWORD Exception17(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Alignment check");
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception19(QWORD rsp, BYTE nErrorCode)
+QWORD Exception19(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("SIMD Floating point error");
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception20(QWORD rsp, BYTE nErrorCode)
+QWORD Exception20(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("Virtualization error");
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception21(QWORD rsp, BYTE nErrorCode)
+QWORD Exception21(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Control protection error");
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception28(QWORD rsp, BYTE nErrorCode)
+QWORD Exception28(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanic("Hypervisor injection error");
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception29(QWORD rsp, BYTE nErrorCode)
+QWORD Exception29(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "VMM communication error");
-    return rsp;
+    return qwRSP;
 }
 
-QWORD Exception30(QWORD rsp, BYTE nErrorCode)
+QWORD Exception30(QWORD qwRSP, BYTE nErrorCode)
 {
     _KernelPanicEC(nErrorCode, "Security error");
-    return rsp;
+    return qwRSP;
 }
 
 void RegisterExceptions()

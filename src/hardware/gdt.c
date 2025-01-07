@@ -3,15 +3,15 @@
 
 sGlobalDescriptorTable g_gdt;
 
-void MakeSegmentDescriptor(QWORD nBase, DWORD nLimit, BYTE nAccessByte, BYTE nFlags, sSegmentDescriptor *pSegment)
+void MakeSegmentDescriptor(QWORD qwBase, DWORD nLimit, BYTE nAccessByte, BYTE nFlags, sSegmentDescriptor *pSegment)
 {
-    pSegment->nBaseLow    = nBase & 0xFFFFFF;
-    pSegment->nBaseHigh   = nBase >> 24;
-    pSegment->nLimitLow   = nLimit & 0xFFFF;
+    pSegment->nBaseLow    = qwBase & 0xFFFFFF;
+    pSegment->nBaseHigh   = qwBase >> 24;
+    pSegment->wLimitLow   = nLimit & 0xFFFF;
     pSegment->nLimitHigh  = nLimit >> 16;
     pSegment->nAccessByte = nAccessByte;
     pSegment->nFlags      = nFlags;
-    pSegment->nReserved   = 0;
+    pSegment->dwReserved   = 0;
 }
 
 void InitGDT()

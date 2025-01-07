@@ -13,7 +13,7 @@ typedef enum
 
 void InitDrive();
 void ActivateDrive(BYTE nDrive);
-BOOL ReadFromDrive(BYTE nDrive, QWORD nStart, WORD nSectors, PVOID pBuffer);
-BOOL WriteToDrive(BYTE nDrive, QWORD nStart, WORD nSectors, PVOID pBuffer);
+BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wSectors, PVOID pBuffer);
+BOOL WriteToDrive(BYTE nDrive, QWORD qwStart, WORD wSectors, PVOID pBuffer);
 
 #endif // __DRIVE_H

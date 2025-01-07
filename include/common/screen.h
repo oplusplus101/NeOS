@@ -16,8 +16,8 @@ void DrawPixel(int x, int y, color_t c);
 void PrintChar(char c);
 
 void PrintString(const char *s);
-void PrintDec(QWORD n);
-void PrintHex(QWORD n, BYTE nDigits, BOOL bUppercase);
+void PrintDec(QWORD qw);
+void PrintHex(QWORD qw, BYTE nDigits, BOOL bUppercase);
 void PrintFormat(const char *sFormat, ...);
 
 void ClearScreen();

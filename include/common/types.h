@@ -14,7 +14,7 @@ typedef unsigned int DWORD;
 typedef long long int LONG64;
 typedef unsigned long long int QWORD;
 
-typedef QWORD SIZE_T;
+//typedef QWORD SIZE_T;
 
 typedef unsigned char BOOL;
 

@@ -383,12 +383,12 @@ void PrintFormat(const char *sFormat, ...)
             default:
                 if (sFormat[i] >= '0' && sFormat[i] <= '9' && sFormat[i + 1] >= '0' && sFormat[i + 1] <= '9')
                 {
-                    QWORD nDigits = (sFormat[i] - '0') * 10 + (sFormat[i + 1] - '0');
+                    QWORD qwDigits = (sFormat[i] - '0') * 10 + (sFormat[i + 1] - '0');
                     i += 2;
                     if (sFormat[i] == 'X')
-                        PrintHex(__builtin_va_arg(args, QWORD), nDigits, true);
+                        PrintHex(__builtin_va_arg(args, QWORD), qwDigits, true);
                     else if (sFormat[i] == 'x')
-                        PrintHex(__builtin_va_arg(args, QWORD), nDigits, false);
+                        PrintHex(__builtin_va_arg(args, QWORD), qwDigits, false);
                 }
             }
             

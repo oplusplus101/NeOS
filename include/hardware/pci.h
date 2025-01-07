@@ -21,12 +21,12 @@ typedef struct
 
     BYTE   nInterrupt;
 
-    DWORD nPortBase;
+    DWORD dwPortBase;
 } sPCIDeviceDescriptor;
 
 typedef struct
 {
-    QWORD nAddress;
+    QWORD qwAddress;
     enum {
         PCI_MMAP,
         PCI_IO
@@ -36,7 +36,7 @@ typedef struct
 
 sBaseAddressRegister GetBaseAddressRegister(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nBAR);
 DWORD PCIRead(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset);
-void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD nValue);
+void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD dwValue);
 
 sPCIDeviceDescriptor GetDeviceDescriptor(BYTE nBus, BYTE nSlot, BYTE nFunction);
 

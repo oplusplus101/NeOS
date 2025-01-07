@@ -7,10 +7,10 @@
 typedef struct
 {
     BYTE *pData;
-    QWORD nLength;
+    QWORD qwLength;
 } sBitmap;
 
-BOOL SetBitmap(sBitmap *pBitmap, QWORD nIndex, BOOL bValue);
-BOOL GetBitmap(sBitmap *pBitmap, QWORD nIndex);
+BOOL SetBitmap(sBitmap *pBitmap, QWORD qwIndex, BOOL bValue);
+BOOL GetBitmap(sBitmap *pBitmap, QWORD qwIndex);
 
 #endif // __BITMAP_H

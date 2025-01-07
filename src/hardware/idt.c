@@ -51,12 +51,12 @@ extern void IgnoreInterrupt();
 void SetIDTEntry(BYTE nInterrupt, void (*pHandler)(), BYTE nFlags)
 {
     sIDTEntry *pEntry = &g_idt[nInterrupt];
-    pEntry->nISRLow   = ((QWORD) pHandler) & 0xFFFF;
+    pEntry->wISRLow   = ((QWORD) pHandler) & 0xFFFF;
     pEntry->nISRHigh  = ((QWORD) pHandler) >> 16;
     pEntry->nFlags    = nFlags;
-    pEntry->nKernelCS = KERNEL_CODE_SEGMENT;
+    pEntry->wKernelCS = KERNEL_CODE_SEGMENT;
     pEntry->nIST      = 0;
-    pEntry->nReserved = 0;
+    pEntry->dwReserved = 0;
 }
 
 void InitIDT()
@@ -130,8 +130,8 @@ void InitIDT()
     outb(PIC_SLAVE_DATA, 0x00);
     IOWait();
     
-    g_idtr.nLimit = sizeof(sIDTEntry) * 256 - 1;
-    g_idtr.nBase  = (QWORD) g_idt;
+    g_idtr.wLimit = sizeof(sIDTEntry) * 256 - 1;
+    g_idtr.qwBase  = (QWORD) g_idt;
     __asm__ volatile ("lidt %0" :: "m" (g_idtr));
 }
 

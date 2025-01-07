@@ -8,12 +8,12 @@
 #define PAGE_SIZE 4096
 #define PAGE_TABLE_SIZE 512
 
-#define ADDRESS_TO_PDP_INDEX(a) (((SIZE_T) (a) >> 39) % PAGE_TABLE_SIZE)
-#define ADDRESS_TO_PD_INDEX(a)  (((SIZE_T) (a) >> 30) % PAGE_TABLE_SIZE)
-#define ADDRESS_TO_PT_INDEX(a)  (((SIZE_T) (a) >> 21) % PAGE_TABLE_SIZE)
-#define ADDRESS_TO_PE_INDEX(a)  (((SIZE_T) (a) >> 12) % PAGE_TABLE_SIZE)
-#define PAGE_TO_ADDRESS(p)      ((SIZE_T) (p) << 12)
-#define ADDRESS_TO_PAGE(a)      ((SIZE_T) (a) >> 12)
+#define ADDRESS_TO_PDP_INDEX(a) (((QWORD) (a) >> 39) % PAGE_TABLE_SIZE)
+#define ADDRESS_TO_PD_INDEX(a)  (((QWORD) (a) >> 30) % PAGE_TABLE_SIZE)
+#define ADDRESS_TO_PT_INDEX(a)  (((QWORD) (a) >> 21) % PAGE_TABLE_SIZE)
+#define ADDRESS_TO_PE_INDEX(a)  (((QWORD) (a) >> 12) % PAGE_TABLE_SIZE)
+#define PAGE_TO_ADDRESS(p)      ((QWORD) (p) << 12)
+#define ADDRESS_TO_PAGE(a)      ((QWORD) (a) >> 12)
 
 #define PF_PRESENT 1
 #define PF_WRITEABLE 2
@@ -28,8 +28,8 @@
 
 typedef struct
 {
-    WORD nFlags     : 12;
-    SIZE_T nAddress : 52;
+    WORD  nFlags   : 12;
+    QWORD nAddress : 52;
 } __attribute__((packed)) sPageTableEntry;
 
 typedef struct
@@ -38,17 +38,18 @@ typedef struct
 } __attribute__((packed)) __attribute__((aligned(PAGE_SIZE))) sPageTable;
 
 void ReservePage(PVOID pAddress);
-void ReservePages(PVOID pAddress, QWORD nPages);
+void ReservePages(PVOID pAddress, QWORD qwPages);
 void ReturnPage(PVOID pAddress);
-void ReturnPages(PVOID pAddress, QWORD nPages);
-void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD nFlags);
-void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD nPages, WORD nFlags);
+void ReturnPages(PVOID pAddress, QWORD qwPages);
+void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags);
+void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwPages, WORD wFlags);
 PVOID AllocatePage();
 void FreePage(PVOID pAddress);
 PVOID GetPhysicalAddress(PVOID pVirtualAddress);
 void LoadPML4();
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
-                SIZE_T nMemoryMapSize, SIZE_T nMemoryDescriptorSize,
-                SIZE_T nLoaderStart, SIZE_T nLoaderEnd);
+                QWORD qwMemoryMapSize, QWORD qwMemoryDescriptorSize,
+                QWORD qwLoaderStart, QWORD qwLoaderEnd);
+
 #endif // __PAGING_H

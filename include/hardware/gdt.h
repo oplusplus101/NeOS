@@ -12,13 +12,13 @@
 
 typedef struct
 {
-    WORD  nLimitLow;
+    WORD  wLimitLow;
     DWORD nBaseLow : 24;
     BYTE  nAccessByte;
     BYTE  nLimitHigh : 4;
     BYTE  nFlags : 4;
     QWORD nBaseHigh : 40;
-    DWORD nReserved;
+    DWORD dwReserved;
 } __attribute__((packed)) sSegmentDescriptor;
 
 typedef struct

@@ -20,18 +20,18 @@ BOOL CheckDrive(BYTE nDrive)
     return (g_nActiveDrives >> nDrive) & 0x01;
 }
 
-BOOL ReadFromDrive(BYTE nDrive, QWORD nStart, WORD nSectors, PVOID pBuffer)
+BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wSectors, PVOID pBuffer)
 {
     if (!CheckDrive(nDrive)) _KernelPanic("Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
     switch (nDrive)
     {
-    case DRIVE_TYPE_AHCI_SATA:   return AHCIRead(GetHBAPort(AHCI_DEVICE_TYPE_SATA), nStart, nSectors, pBuffer);
-    case DRIVE_TYPE_AHCI_SATAPI: return AHCIRead(GetHBAPort(AHCI_DEVICE_TYPE_SATAPI), nStart, nSectors, pBuffer);
+    case DRIVE_TYPE_AHCI_SATA:   return AHCIRead(GetHBAPort(AHCI_DEVICE_TYPE_SATA), qwStart, wSectors, pBuffer);
+    case DRIVE_TYPE_AHCI_SATAPI: return AHCIRead(GetHBAPort(AHCI_DEVICE_TYPE_SATAPI), qwStart, wSectors, pBuffer);
     }
     return false;
 }
 
-BOOL WriteToDrive(BYTE nDrive, QWORD nStart, WORD nSectors, PVOID pBuffer)
+BOOL WriteToDrive(BYTE nDrive, QWORD qwStart, WORD wSectors, PVOID pBuffer)
 {
     if (!CheckDrive(nDrive)) _KernelPanic("Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
     return false;

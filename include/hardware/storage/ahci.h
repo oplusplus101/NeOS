@@ -70,21 +70,21 @@ typedef struct tagFISRegisterHostToDevice
 
 typedef struct _tagHBAPort
 {
-    QWORD nCommandListBaseAddress;
-    QWORD nFISBaseAddress;
-    DWORD nInterruptStatus;
-    DWORD nInterruptEnable;
-    DWORD nCommandAndStatus;
-    DWORD nReserved0;
-    DWORD nTaskFileData;
-    DWORD nSignature;
-    DWORD nSATAStatus;
-    DWORD nSATAControl;
-    DWORD nSATAError;
-    DWORD nSATAActive;
-    DWORD nCommandIssue;
-    DWORD nSATANotification;
-    DWORD nFISSwitchControl;
+    QWORD qwCommandListBaseAddress;
+    QWORD qwFISBaseAddress;
+    DWORD dwInterruptStatus;
+    DWORD dwInterruptEnable;
+    DWORD dwCommandAndStatus;
+    DWORD dwReserved0;
+    DWORD dwTaskFileData;
+    DWORD dwSignature;
+    DWORD dwSATAStatus;
+    DWORD dwSATAControl;
+    DWORD dwSATAError;
+    DWORD dwSATAActive;
+    DWORD dwCommandIssue;
+    DWORD dwSATANotification;
+    DWORD dwFISSwitchControl;
     DWORD arrReserved1[11];
     DWORD arrVendor[4];
 } __attribute__((packed)) sHBAPort;
@@ -118,16 +118,16 @@ typedef struct tagHBACommandHeader
     BOOL bClearBusyUponOK : 1;
     BYTE nReserved0 : 1;
     BYTE nPortMultiplierPort : 4;
-    WORD nPhysicalRegionDescriptorTable;
-    volatile DWORD nPhysicalRegionDescriptorByteCount;
-    QWORD nCommandTableDescriptorBaseAddress;
+    WORD wPhysicalRegionDescriptorTable;
+    volatile DWORD dwPhysicalRegionDescriptorByteCount;
+    QWORD qwCommandTableDescriptorBaseAddress;
     DWORD arrReserved1[4];
 } __attribute__((packed)) sHBACommandHeader;
 
 typedef struct tagHBA_PRDT_ENTRY
 {
-    QWORD nDataBaseAddress;      // Data base address
-    DWORD nReserved0;     // Reserved
+    QWORD qwDataBaseAddress;      // Data base address
+    DWORD dwReserved0;     // Reserved
     DWORD nByteCount : 22;       // Byte count, 4M max
     WORD  nReserved1 : 9;       // Reserved
     BOOL  bInterruptOnCompletion : 1;      // Interrupt on completion
@@ -143,8 +143,8 @@ typedef struct tagHBACommandTable
 
 sHBAPort *GetHBAPort(BYTE nPort);
 
-BOOL AHCIRead(sHBAPort *pPort, QWORD nStart, WORD nCount, WORD *pBuffer);
-BOOL AHCIWrite(sHBAPort *pPort, QWORD nStart, WORD nCount, WORD *pBuffer);
+BOOL AHCIRead(sHBAPort *pPort, QWORD qwStart, WORD wCount, WORD *pBuffer);
+BOOL AHCIWrite(sHBAPort *pPort, QWORD qwStart, WORD wCount, WORD *pBuffer);
 
 void SetupAHCI(BYTE nBus, BYTE nSlot, BYTE nFunction);
 

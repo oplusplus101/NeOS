@@ -9,21 +9,21 @@
 DWORD PCIRead(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset)
 {
   
-    DWORD nAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
+    DWORD dwAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
                      ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
 
-    outl(0xCF8, nAddress);
+    outl(0xCF8, dwAddress);
     return inl(0xCFC) >> ((nOffset & 3) << 3);
 }
 
-void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD nValue)
+void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD dwValue)
 {
   
-    DWORD nAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
+    DWORD dwAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
                      ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
 
-    outl(0xCF8, nAddress);
-    outl(0xCFC, nValue);
+    outl(0xCF8, dwAddress);
+    outl(0xCFC, dwValue);
 }
 
 sPCIDeviceDescriptor GetDeviceDescriptor(BYTE nBus, BYTE nSlot, BYTE nFunction)
@@ -55,26 +55,26 @@ sBaseAddressRegister GetBaseAddressRegister(BYTE nBus, BYTE nSlot, BYTE nFunctio
     BYTE nMaxBARs    = 6 - (nHeaderType * 4);
     if (nBAR >= nMaxBARs) return bar;
 
-    DWORD nBARValue = PCIRead(nBus, nSlot, nFunction, 0x10 + nBAR * 4);
-    bar.eType = nBARValue & 0x01 ? PCI_IO : PCI_MMAP;
+    DWORD dwBARValue = PCIRead(nBus, nSlot, nFunction, 0x10 + nBAR * 4);
+    bar.eType = dwBARValue & 0x01 ? PCI_IO : PCI_MMAP;
 
     if (bar.eType == PCI_IO)
     {
-        bar.nAddress = nBARValue & 0xFFFFFFFC;
+        bar.qwAddress = dwBARValue & 0xFFFFFFFC;
         bar.bPrefetchable = false;
     }
     else if (bar.eType == PCI_MMAP)
     {
-        switch ((nBARValue >> 1) & 0x03)
+        switch ((dwBARValue >> 1) & 0x03)
         {
             case 0: // 32 Bit Mode
-                bar.nAddress = nBARValue & 0xFFFFFFF0;
+                bar.qwAddress = dwBARValue & 0xFFFFFFF0;
                 break;
             case 1: // 20 Bit Mode
                 break;
             case 2: // 64 Bit Mode
-                DWORD nBARValueHigh = PCIRead(nBus, nSlot, nFunction, 0x10 + (nBAR + 1) * 4);
-                bar.nAddress = (nBARValue & 0xFFFFFFF0) | ((QWORD) nBARValueHigh << 32);
+                DWORD dwBARValueHigh = PCIRead(nBus, nSlot, nFunction, 0x10 + (nBAR + 1) * 4);
+                bar.qwAddress = (dwBARValue & 0xFFFFFFF0) | ((QWORD) dwBARValueHigh << 32);
                 break;
         }
     }

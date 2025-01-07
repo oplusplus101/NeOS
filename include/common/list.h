@@ -7,14 +7,14 @@
 typedef struct
 {
     PVOID pData;
-    QWORD nLength;
-    QWORD nElementSize;
+    QWORD qwLength;
+    QWORD qwElementSize;
 } sList;
 
-sList CreateEmptyList(QWORD nElementSize);
+sList CreateEmptyList(QWORD qwElementSize);
 void DestroyList(sList *pList);
-void SwapElements(sList *pList, QWORD nElement1Index, QWORD nElement2Index);
-PVOID GetListElement(sList *pList, QWORD nIndex);
-void SetListElement(sList *pList, QWORD nIndex, PVOID pData);
+void SwapElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index);
+PVOID GetListElement(sList *pList, QWORD qwIndex);
+void SetListElement(sList *pList, QWORD qwIndex, PVOID pData);
 
 #endif // __LIST_H

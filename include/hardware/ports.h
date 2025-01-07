@@ -5,49 +5,49 @@
 
 #include <common/types.h>
 
-static inline BYTE inb(WORD nPort)
+static inline BYTE inb(WORD wPort)
 {
     BYTE nResult;
-    __asm__ volatile ("in %%dx, %%al" : "=a"(nResult) : "d"(nPort));
+    __asm__ volatile ("in %%dx, %%al" : "=a"(nResult) : "d"(wPort));
     return nResult;
 }
 
-static inline WORD inw(WORD nPort)
+static inline WORD inw(WORD wPort)
 {
-    WORD nResult;
-    __asm__ volatile ("in %%dx, %%ax" : "=a"(nResult) : "d"(nPort));
-    return nResult;
+    WORD wResult;
+    __asm__ volatile ("in %%dx, %%ax" : "=a"(wResult) : "d"(wPort));
+    return wResult;
 }
 
-static inline DWORD inl(WORD nPort)
+static inline DWORD inl(WORD wPort)
 {
-    DWORD nResult;
-    __asm__ volatile ("in %%dx, %%eax" : "=a"(nResult) : "d"(nPort));
-    return nResult;
+    DWORD dwResult;
+    __asm__ volatile ("in %%dx, %%eax" : "=a"(dwResult) : "d"(wPort));
+    return dwResult;
 }
 
 
-static inline void outb(WORD nPort, BYTE nValue)
+static inline void outb(WORD wPort, BYTE nValue)
 {
-    __asm__ volatile ("out %%al, %%dx" :: "a"(nValue), "d"(nPort));
+    __asm__ volatile ("out %%al, %%dx" :: "a"(nValue), "d"(wPort));
 }
 
-static inline void outw(WORD nPort, WORD nValue)
+static inline void outw(WORD wPort, WORD wValue)
 {
-    __asm__ volatile ("out %%ax, %%dx" :: "a"(nValue), "Nd"(nPort));
+    __asm__ volatile ("out %%ax, %%dx" :: "a"(wValue), "Nd"(wPort));
 }
 
-static inline void outl(WORD nPort, DWORD nValue)
+static inline void outl(WORD wPort, DWORD dwValue)
 {
-    __asm__ volatile ("out %%eax, %%dx" :: "a"(nValue), "Nd"(nPort));
+    __asm__ volatile ("out %%eax, %%dx" :: "a"(dwValue), "Nd"(wPort));
 }
 
-static inline void insw(WORD nPort, PVOID pBuffer, SIZE_T nLength) {
-    __asm__ volatile ("cld; rep; insw" : "+D"(pBuffer), "+c"(nLength) : "d"(nPort));
+static inline void insw(WORD wPort, PVOID pBuffer, QWORD nLength) {
+    __asm__ volatile ("cld; rep; insw" : "+D"(pBuffer), "+c"(nLength) : "d"(wPort));
 }
 
-static inline void outsw(WORD nPort, PVOID pBuffer, SIZE_T nLength) {
-    __asm__ volatile ("cld; rep; outsw" : "+S"(pBuffer), "+c"(nLength) : "d"(nPort));
+static inline void outsw(WORD wPort, PVOID pBuffer, QWORD nLength) {
+    __asm__ volatile ("cld; rep; outsw" : "+S"(pBuffer), "+c"(nLength) : "d"(wPort));
 }
 
 static inline void IOWait()
