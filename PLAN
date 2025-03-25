@@ -1,10 +1,11 @@
 Create a basic 64-bit OS with the following features:
 - UEFI bootloader
 - A kernel that handles: users, the filesystem, memory, and loading drivers and modules
-- A DWM-like GUI
-- An NTFS or EXT4 filesystem
+- A GUI like DWM or Windows XP
+- An NTFS filesystem, and/or a custom filesystem
 - Use the PE32+ format for executables
-- A bash-like shell.
+- A bash-like shell and/or an MS-DOS-like shell.
+- A BASIC-like scripting language
 Drivers:
 A driver handles communication between modules and the hardware.
 Modules:
@@ -12,12 +13,42 @@ A module is a generic interface between drivers and user-mode programs. Modules 
 
 The boot process:
 - The bootloader will load the loader located at: \NEOSLDR.SYS in the ESP
-- The loader will load the kernel at: C:/system/neoskernel.sys
-- The kernel will load the files: C:/system/drivers.cfg, and C:/system/modules.cfg. These files say which drivers/modules to load
-- Once the drivers/modules are loaded, the kernel will run the file C:/system/autoexec.sh
+- The loader will load the kernel at: C:/NeOS/neos.sys
+- The kernel will load the files: C:/NeOS/drivers.cfg, and C:/NeOS/modules.cfg. These files list which drivers/modules to be loaded
+- Finally the kernel will run the file C:/NeOS/autoexec.cmd
 
 Paths:
 - The seperator can either be '/' or '\'
 - The current directory is '.', and the higher directory is '..'
 - Storage devices use the following format: '(A-Z):'
 - The main drive will default to 'C:'
+- Letter-case is ignored
+
+Filesystem structure and operation:
+- The system directory will be C:\NeOS
+- There will be a directory for temp files in C:\Temp which will be cleared daily
+- There will be "virtual files", i.e. files that are only visible to a specific process and the kernel.
+  These virtual files can be persistent (they will stay when the process terminates) or non-persisdent (deleted once the process terminates)
+
+Coding Style:
+- Different types are prefixed:
+    b for BYTE
+    b for BOOL
+    w for WORD
+    dw for DWORD
+    qw for QWORD
+    us for a non-terminated string (e.g. A FAT-32 filename)
+    sz for a zero-terminated string
+    arr for array
+    lst for list
+    i for INT
+    l for LONG
+    ll for LONGLONG
+    nX for a count of X element(s)
+- Opening curly brackets are always on a new line instead of following the statement.
+- Macro-functions are always prefixed with _
+
+Configuration:
+- The default file-format will be an INI-like format ending in either: .ini or .cfg
+- Other configuration can be done using the Registry, which will be similar to the Windows registry
+

@@ -1,9 +1,13 @@
-Add the prefix 'w' to all WORD types
-Make a basic heap
+Implement a filesystem (NTFS or other)
+Load the kernel
+Rewrite the UEFI bootloader
 Clean up AHCI code
-Implement NVMe (reading and writing)
-Implement the NTFS filesystem
-Organize the project structure (Create seperate folders for the bootloader, kernel loader, and the kernel)
-Create a basic driver/module file format, based on PE32+
-Add a basic MS-DOS-like shell
+Redo the build process (e.g. change to cmake, or write a custom script)
 Implement round-robin multitasking
+Implement NVMe (reading and writing)
+Add a basic MS-DOS-like shell
+Create a basic driver/module file format, based on PE32+
+Implement a Windows-like registry
+Make a user system - with a root user and admin, standard, and guest users
+Make an installer (a program that sets up the file system, copies in all important files, and creates a default user)
+Move NEOSLDR.SYS to the main drive (Make the EFI bootloader directly read the main filesystem)

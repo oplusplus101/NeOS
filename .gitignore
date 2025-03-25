@@ -46,7 +46,12 @@
 # Other
 *.img
 *.iso
+*.qcow2
+*.vmdk
+temp
 uefi
 .vscode
 OVMF
 obj
+
+run.sh
