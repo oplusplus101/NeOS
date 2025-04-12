@@ -58,8 +58,8 @@ init-ospart: $(KERNEL_EXEC) $(OSDRIVE)
 	mkdir -p ospart && sleep 0.5
 	sudo mount $(OSPART) ospart
 
-	cp -r $(OSDRIVE)/* ospart
-	cp $(KERNEL_EXEC) ospart/NeOS/NeOS.sys
+	sudo cp -r $(OSDRIVE)/* ospart
+	sudo cp $(KERNEL_EXEC) ospart/NeOS/NeOS.sys
 
 	# TODO: Copy over all the drivers and modules
 	sudo umount ospart
@@ -76,7 +76,7 @@ generate-diskimage:
 	qemu-img create $(IMG) 1G -f $(IMG_FORMAT)
 	make nbd-connect
 	sudo sfdisk /dev/nbd0 < partitions.sfdisk
-	sudo mkfs.ntfs $(OSPART)
+	sudo mkfs.vfat -F 32 $(OSPART)
 	make nbd-disconnect
 
 nbd-connect:

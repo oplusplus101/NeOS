@@ -2,7 +2,9 @@ Implement a filesystem (NTFS or other)
 Load the kernel
 Rewrite the UEFI bootloader
 Clean up AHCI code
+Add support for multiple drives (AHCI)
 Redo the build process (e.g. change to cmake, or write a custom script)
+Document the whole codebase with comments
 Implement round-robin multitasking
 Implement NVMe (reading and writing)
 Add a basic MS-DOS-like shell

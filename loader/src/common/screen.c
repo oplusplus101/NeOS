@@ -354,13 +354,13 @@ void PrintChar(CHAR c)
         ClearScreen();
 }
 
-void PrintString(const CHAR *sz)
+void PrintString(const PCHAR sz)
 {
     for (INT i = 0; sz[i] != 0; i++)
         PrintChar(sz[i]);
 }
 
-void PrintFormat(const CHAR *szFormat, ...)
+void PrintFormat(const PCHAR szFormat, ...)
 {
     __builtin_va_list args;
     __builtin_va_start(args, szFormat);
@@ -388,7 +388,11 @@ void PrintFormat(const CHAR *szFormat, ...)
                 PrintHex(__builtin_va_arg(args, QWORD), 16, true);
                 break;
             case 's':
-                PrintString(__builtin_va_arg(args, const char *));
+                const PCHAR sz = __builtin_va_arg(args, const PCHAR);
+                if (sz == NULL)
+                    PrintString("(null)");
+                else
+                    PrintString(sz);
                 break;
             case 'c':
                 PrintChar((char) __builtin_va_arg(args, DWORD));
@@ -405,14 +409,18 @@ void PrintFormat(const CHAR *szFormat, ...)
                                                         _BE2LE48(*((QWORD *) &pGUID[10])));
                 break;
             default:
+    
                 if (szFormat[i] >= '0' && szFormat[i] <= '9' && szFormat[i + 1] >= '0' && szFormat[i + 1] <= '9')
                 {
-                    QWORD qwDigits = (szFormat[i] - '0') * 10 + (szFormat[i + 1] - '0');
+                    BYTE qwDigits = (szFormat[i] - '0') * 10 + (szFormat[i + 1] - '0');
                     i += 2;
                     if (szFormat[i] == 'X')
                         PrintHex(__builtin_va_arg(args, QWORD), qwDigits, true);
                     else if (szFormat[i] == 'x')
                         PrintHex(__builtin_va_arg(args, QWORD), qwDigits, false);
+                    else if (szFormat[i] == 's')
+                        for (BYTE j = 0; j < qwDigits; j++)
+                            PrintChar(__builtin_va_arg(args, const PCHAR)[j]);
                 }
             }
             
@@ -446,7 +454,7 @@ void PrintDec(QWORD n)
 void PrintHex(QWORD n, BYTE nDigits, BOOL bUppercase)
 {
     nDigits = nDigits > 16 ? 16 : nDigits;
-    CHAR *sDigits = bUppercase ? "0123456789ABCDEF" : "0123456789abcdef";
+    PCHAR sDigits = bUppercase ? "0123456789ABCDEF" : "0123456789abcdef";
     CHAR sNumber[16];
 
     for (INT i = 0; i < nDigits; i++)

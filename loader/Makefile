@@ -13,6 +13,7 @@ CC_PARAMS	= -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fno-stac
 EXEC		= obj/loader.exe
 OBJECTS		= obj/loader.o \
 			  obj/common/exceptions.o \
+			  obj/common/string.o \
 			  obj/common/screen.o \
 			  obj/memory/paging.o \
 			  obj/memory/bitmap.o \
@@ -28,8 +29,9 @@ OBJECTS		= obj/loader.o \
 			  obj/hardware/storage/drive.o \
 			  obj/hardware/storage/ahci.o \
 			  obj/filesystem/gpt.o \
-			  obj/filesystem/ntfs.o
-
+			  obj/filesystem/fat32.o
+			#   obj/filesystem/ntfs.o
+	
 $(EXEC): $(OBJECTS)
 	$(LD) $(LD_PARAMS) $(OBJECTS) -o $(EXEC).elf
 	$(OBJCOPY) -O pei-x86-64 $(EXEC).elf $(EXEC)

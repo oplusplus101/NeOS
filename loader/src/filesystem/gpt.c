@@ -6,6 +6,8 @@
 
 static sGPTPartitionEntry g_arrPartitionEntries[128];
 static sGPTPartitionEntry g_kernelPartition;
+// The kernel will be stored in an NTFS partition
+static BYTE g_guidKernel[16] = { 0xA2, 0xA0, 0xD0, 0xEB, 0xE5, 0xB9, 0x33, 0x44, 0x87, 0xC0, 0x68, 0xB6, 0xB7, 0x26, 0x99, 0xC7 };
 
 void LoadGPT(BYTE nDrive)
 {
@@ -24,7 +26,7 @@ void LoadGPT(BYTE nDrive)
     for (BYTE i = 0; i < 4; i++)
     {
         if (!memcmp(g_arrPartitionEntries[i].arrPartitionTypeGUID, (BYTE[16]) { 0 }, 16)) continue;
-        if (!memcmp(g_arrPartitionEntries[i].arrPartitionTypeGUID, (BYTE[16]) { 0xA2, 0xA0, 0xD0, 0xEB, 0xE5, 0xB9, 0x33, 0x44, 0x87, 0xC0, 0x68, 0xB6, 0xB7, 0x26, 0x99, 0xC7 }, 16))
+        if (!memcmp(g_arrPartitionEntries[i].arrPartitionTypeGUID, g_guidKernel, 16))
         {
             memcpy(&g_kernelPartition, &g_arrPartitionEntries[i], sizeof(sGPTPartitionEntry));
             break;

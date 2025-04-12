@@ -18,6 +18,7 @@ void InitHeap(QWORD qwStart, QWORD qwEnd)
 
 PVOID HeapAlloc(QWORD qwLength)
 {
+    _ASSERT(qwLength > 0, "Tried to allocate 0 bytes");
     sMemoryChunk *pResult = NULL;
     for (sMemoryChunk *pChunk = g_pFirst; pChunk != NULL && pResult == NULL; pChunk = pChunk->pNext)
         if (pChunk->qwLength >= qwLength && !pChunk->bAllocated)
