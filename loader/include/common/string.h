@@ -69,6 +69,42 @@ inline static BOOL ContainsChar(PCHAR sz, CHAR c)
     return false;
 }
 
+inline static BOOL iswhitespace(CHAR c)
+{
+    return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+}
+
+inline static BOOL isdigit(CHAR c)
+{
+    return c >= '0' && c <= '9';
+}
+
+inline static BOOL isalpha(CHAR c)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+inline static BOOL isalnum(CHAR c)
+{
+    return isdigit(c) || isalpha(c);
+}
+
+inline static PCHAR StripString(PCHAR sz)
+{
+    // First remove the prefix
+    QWORD qwPrefix = 0;
+    while (iswhitespace(sz[qwPrefix++]) && sz[qwPrefix] != 0);
+    qwPrefix--;
+    if (qwPrefix != 0) strcpy(sz, sz + qwPrefix);
+
+    // Then the suffix
+    QWORD qwSuffix = strlen(sz) - 1;
+    while (qwSuffix != 0 && iswhitespace(sz[qwSuffix--]));
+    sz[qwSuffix + 2] = 0;
+    return sz;
+}
+
+
 PCHAR strtok(PCHAR sz, const PCHAR szDelim);
 
 #endif // __STRING_H

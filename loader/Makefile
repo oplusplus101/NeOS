@@ -14,6 +14,7 @@ EXEC		= obj/loader.exe
 OBJECTS		= obj/loader.o \
 			  obj/common/exceptions.o \
 			  obj/common/string.o \
+			  obj/common/ini.o \
 			  obj/common/screen.o \
 			  obj/memory/paging.o \
 			  obj/memory/bitmap.o \
@@ -30,7 +31,6 @@ OBJECTS		= obj/loader.o \
 			  obj/hardware/storage/ahci.o \
 			  obj/filesystem/gpt.o \
 			  obj/filesystem/fat32.o
-			#   obj/filesystem/ntfs.o
 	
 $(EXEC): $(OBJECTS)
 	$(LD) $(LD_PARAMS) $(OBJECTS) -o $(EXEC).elf

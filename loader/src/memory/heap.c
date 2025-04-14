@@ -71,7 +71,6 @@ void HeapFree(PVOID pMemory)
         if (pChunk->pNext != NULL)
             pChunk->pNext->pPrevious = pChunk;
     }
-
 }
 
 PVOID HeapReAlloc(PVOID pMemory, QWORD qwNewSize)

@@ -16,6 +16,7 @@
 #include <memory/paging.h>
 #include <memory/heap.h>
 #include <common/memory.h>
+#include <common/ini.h>
 #include <neos.h>
 
 void LoaderMain(sBootData data)
@@ -72,7 +73,6 @@ void LoaderMain(sBootData data)
     sGPTPartitionEntry sKernelPartition = GetKernelPartition();
     LoadFAT32(DRIVE_TYPE_AHCI_SATA, sKernelPartition);
 
-
     sFAT32DirectoryEntry sKernelEntry;
     _ASSERT(GetEntryFromPath("NEOS/NEOS    SYS", &sKernelEntry), "Kernel not found at C:\\NeOS\\NeOS.sys");
     
@@ -96,14 +96,8 @@ void LoaderMain(sBootData data)
     for (QWORD i = 0; i < pPEHeader->wNumberOfSections; i++)
     {
         sPE32SectionHeader *hdr = (sPE32SectionHeader *) ((PBYTE) pPEOHeader + pPEHeader->wSizeOfOptionalHeader + sizeof(sPE32SectionHeader) * i);
-
         QWORD qwAddress = hdr->dwVirtualAddress + pPEOHeader->qwImageBase;
-        // QWORD qwPages   = (hdr->dwVirtualSize + 0x1000 - 1) / 0x1000;
-
         PrintFormat("Loading kernel segment: %s at 0x%p\n", hdr->szName, qwAddress);
-
-        // for (QWORD i = 0; i < qwPages; i++)
-        //     MapPage((PVOID) (qwAddress + i * PAGE_SIZE), AllocatePage(), PF_PRESENT | PF_WRITEABLE);
         
         memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwPointerToRawData, hdr->dwVirtualSize);
     }
@@ -111,12 +105,30 @@ void LoaderMain(sBootData data)
     EnableInterrupts();
     HeapFree(pKernelData);
     
-    sNEOSKernelHeader sHeader;
-    sHeader.sGOP = data.gop;
-    sHeader.sPaging = ExportPagingData();
+    // sNEOSKernelHeader sHeader;
+    // sHeader.sGOP = data.gop;
+    // sHeader.sPaging = ExportPagingData();
     
-    ClearScreen();
-    ((void (*)(sNEOSKernelHeader)) (pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase))(sHeader);
+    // Load the config
+    sFAT32DirectoryEntry sConfigEntry;
+    _ASSERT(GetEntryFromPath("NEOS/NEOS    CFG", &sConfigEntry), "Config file \"C:\\NEOS\\NeOS.cfg\" not found");
+    PCHAR szConfigContents = HeapAlloc(sConfigEntry.dwFileSize + 1);
+    ReadDirectoryEntry(&sConfigEntry, szConfigContents);
+    szConfigContents[sConfigEntry.dwFileSize] = 0;
+    
+    sList lstConfig = ParseINIFile(szConfigContents);
+
+    for (WORD i = 0; i < lstConfig.qwLength; i++)
+    {
+        sINIEntry *pEnt = GetListElement(&lstConfig, i);
+        PrintFormat("szLabel : %s\n", pEnt->szLabel);
+        PrintFormat("szName  : %s\n", pEnt->szName);
+        PrintFormat("szValue : %s\n", pEnt->szValue);
+    }
+    
+    
+    // ClearScreen();
+    // ((void (*)(sNEOSKernelHeader)) (pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase))(sHeader);
     
     DisableInterrupts();
     __asm__ volatile ("hlt");

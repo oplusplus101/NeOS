@@ -19,6 +19,7 @@ typedef struct
 {
     sGOPData sGOP;
     sPagingData sPaging;
+    BYTE nDriveNum;
 } __attribute__((packed)) sNEOSKernelHeader;
 
 #endif // __NEOS_H

@@ -1,3 +1,4 @@
+Implement syscalls
 Create a basic driver/module file format, based on PE32+
 Add a basic MS-DOS-like shell
 Implement round-robin multitasking
