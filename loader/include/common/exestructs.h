@@ -36,7 +36,7 @@ typedef struct
 
 typedef struct
 {
-    WORD wMagic;
+    WORD  wMagic;
     BYTE  nMajorLinkerVersion;
     BYTE  nMinorLinkerVersion;
     DWORD dwSizeOfCode;
@@ -47,18 +47,18 @@ typedef struct
     QWORD qwImageBase;
     DWORD dwSectionAlignment;
     DWORD dwFileAlignment;
-    WORD wMajorOperatingSystemVersion;
-    WORD wMinorOperatingSystemVersion;
-    WORD wMajorImageVersion;
-    WORD wMinorImageVersion;
-    WORD wMajorSubsystemVersion;
-    WORD wMinorSubsystemVersion;
+    WORD  wMajorOperatingSystemVersion;
+    WORD  wMinorOperatingSystemVersion;
+    WORD  wMajorImageVersion;
+    WORD  wMinorImageVersion;
+    WORD  wMajorSubsystemVersion;
+    WORD  wMinorSubsystemVersion;
     DWORD dwWin32VersionValue;
     DWORD dwSizeOfImage;
     DWORD dwSizeOfHeaders;
     DWORD dwCheckSum;
-    WORD wSubsystem;
-    WORD wDllCharacteristics;
+    WORD  wSubsystem;
+    WORD  wDllCharacteristics;
     QWORD qwSizeOfStackReserve;
     QWORD qwSizeOfStackCommit;
     QWORD qwSizeOfHeapReserve;

@@ -14,10 +14,13 @@ void KernelMain(sNEOSKernelHeader hdr)
     InitScreen(hdr.sGOP.nWidth, hdr.sGOP.nHeight, hdr.sGOP.pFramebuffer);
     SetFGColor(NEOS_FOREGROUND_COLOR);
     SetBGColor(NEOS_BACKGROUND_COLOR);
+    ClearScreen();
     PrintFormat("Kernel loaded!\n");
     
     // Load Paging data
     ImportPagingData(hdr.sPaging);
+
+    
 
     DisableInterrupts();
     __asm__ volatile ("hlt");

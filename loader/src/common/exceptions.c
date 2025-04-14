@@ -3,6 +3,11 @@
 #include <common/panic.h>
 #include <hardware/idt.h>
 
+void PrintStack(QWORD qwRSP)
+{
+    PrintBytes((PVOID) qwRSP, 512, 32, true);
+}
+
 QWORD Exception0(QWORD qwRSP, BYTE nErrorCode)
 {
     _KERNEL_PANIC("Division by zero");
@@ -77,6 +82,7 @@ QWORD Exception12(QWORD qwRSP, BYTE nErrorCode)
 
 QWORD Exception13(QWORD qwRSP, BYTE nErrorCode)
 {
+    PrintStack(qwRSP);
     _KERNEL_PANIC_EC(nErrorCode, "General protection fault");
     return qwRSP;
 }

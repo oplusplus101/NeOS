@@ -101,6 +101,7 @@ BOOL GetEntryFromPath(PCHAR szPath, sFAT32DirectoryEntry *pEntry)
 
     for (WORD i = 0, j = 0; szPath[i]; i++, j++)
     {
+        _ASSERT(wDepth < 256, "Path \"%s\" has a depth more than.");
         if (szPath[i] == '/' || szPath[i] == '\\')
         {
             wDepth++;

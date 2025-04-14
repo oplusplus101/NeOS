@@ -92,7 +92,7 @@ void LoaderMain(sBootData data)
     _ASSERT(pPEOHeader->wMagic == 0x020B, "Invalid PE32 optional header.");
 
     // TODO: Add saftey checks to ensure that the entrypoint inside the file matches the expected value (NEOS_KERNEL_LOCATION).
-    DisableInterrupts();
+    DisableInterrupts(); // To ensure that everything is loaded in the right order
     for (QWORD i = 0; i < pPEHeader->wNumberOfSections; i++)
     {
         sPE32SectionHeader *hdr = (sPE32SectionHeader *) ((PBYTE) pPEOHeader + pPEHeader->wSizeOfOptionalHeader + sizeof(sPE32SectionHeader) * i);
@@ -102,12 +102,9 @@ void LoaderMain(sBootData data)
         memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwPointerToRawData, hdr->dwVirtualSize);
     }
 
-    EnableInterrupts();
-    HeapFree(pKernelData);
-    
-    // sNEOSKernelHeader sHeader;
-    // sHeader.sGOP = data.gop;
-    // sHeader.sPaging = ExportPagingData();
+    sNEOSKernelHeader sHeader;
+    sHeader.sGOP = data.gop;
+    sHeader.sPaging = ExportPagingData();
     
     // Load the config
     sFAT32DirectoryEntry sConfigEntry;
@@ -116,19 +113,8 @@ void LoaderMain(sBootData data)
     ReadDirectoryEntry(&sConfigEntry, szConfigContents);
     szConfigContents[sConfigEntry.dwFileSize] = 0;
     
-    sList lstConfig = ParseINIFile(szConfigContents);
-
-    for (WORD i = 0; i < lstConfig.qwLength; i++)
-    {
-        sINIEntry *pEnt = GetListElement(&lstConfig, i);
-        PrintFormat("szLabel : %s\n", pEnt->szLabel);
-        PrintFormat("szName  : %s\n", pEnt->szName);
-        PrintFormat("szValue : %s\n", pEnt->szValue);
-    }
-    
-    
-    // ClearScreen();
-    // ((void (*)(sNEOSKernelHeader)) (pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase))(sHeader);
+    PrintFormat("Executing C:\\NEOS\\NEOS.sys at 0x%p\n", pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase);
+    ((void (*)(sNEOSKernelHeader)) (pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase))(sHeader);
     
     DisableInterrupts();
     __asm__ volatile ("hlt");

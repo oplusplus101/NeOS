@@ -6,6 +6,7 @@
 #include <common/bootstructs.h>
 #include <memory/paging.h>
 #include <memory/bitmap.h>
+#include <memory/list.h>
 
 #define NEOS_BACKGROUND_COLOR _RGB(0, 0, 0)
 #define NEOS_FOREGROUND_COLOR _RGB(168, 168, 168)
@@ -20,6 +21,7 @@ typedef struct
     sGOPData sGOP;
     sPagingData sPaging;
     BYTE nDriveNum;
+    sList lstConfig;
 } __attribute__((packed)) sNEOSKernelHeader;
 
 #endif // __NEOS_H

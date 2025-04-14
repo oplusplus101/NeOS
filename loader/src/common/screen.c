@@ -9,6 +9,7 @@ INT g_iTextWidth, g_iTextHeight;
 INT g_iCursorX, g_iCursorY;
 const INT g_iFontWidth = 8, g_iFontHeight = 16;
 color_t g_fgColor, g_bgColor;
+BOOL g_bControlCharState = true;
 
 // Array from: https://files.osdev.org/mirrors/geezer/osd/graphics/modes.c
 const BYTE g_8x16_font[4096] =
@@ -287,6 +288,12 @@ void ClearScreen()
     ZeroMemory(g_pScreen, g_iWidth * g_iHeight * 4);
 }
 
+// If set to true, control characters (i.e. \n, \t, etc.) will work normally, if false, they will just be whitespace
+void SetControlCharState(BOOL bState)
+{
+    g_bControlCharState = bState;
+}
+
 // TODO: Clamp the range
 void SetCursor(INT x, INT y)
 {
@@ -325,13 +332,28 @@ void PrintChar(CHAR c)
     switch (c)
     {
     case '\n':
+        if (!g_bControlCharState)
+        {
+            PrintChar(' ');
+            return;
+        }
         g_iCursorX = 0;
         g_iCursorY++;
         break;
     case '\r':
+        if (!g_bControlCharState)
+        {
+            PrintChar(' ');
+            return;
+        }
         g_iCursorX = 0;
         break;
     case '\t':
+        if (!g_bControlCharState)
+        {
+            PrintChar(' ');
+            return;
+        }
         g_iCursorX += 4;
         break;
     default:
@@ -467,11 +489,20 @@ void PrintHex(QWORD n, BYTE nDigits, BOOL bUppercase)
         PrintChar(sNumber[i]);
 }
 
-void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine)
+void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII)
 {
     for (QWORD i = 0; i < qwLength; i++)
     {
         PrintFormat("%02X ", ((BYTE *) pBuffer)[i]);
-        if (i % wBytesPerLine == wBytesPerLine - 1) PrintChar('\n');
+        if (i % wBytesPerLine == wBytesPerLine - 1)
+        {
+            SetControlCharState(false);
+            if (bASCII)
+                for (WORD j = 0; j < wBytesPerLine; j++)
+                    PrintChar(((BYTE *) pBuffer)[i - wBytesPerLine + j + 1]);
+            SetControlCharState(true);
+            
+            PrintChar('\n');
+        }
     }
 }
