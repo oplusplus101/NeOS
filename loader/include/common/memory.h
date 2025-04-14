@@ -39,7 +39,12 @@ static inline int memcmp(PVOID pA, PVOID pB, QWORD qwSize)
 
 static inline void ZeroMemory(PVOID pDest, QWORD qwSize)
 {
-    memset(pDest, 0, qwSize);
+#ifndef DO_NOT_OPTIMIZE_MEMORY_ROUTINES
+    __asm__ volatile ("xor %%rax, %%rax\nmov %%rdx, %%rdi\nrep stosb" : : "c"(qwSize), "d"(pDest));
+#else
+    for (QWORD i = 0; i < qwSize; i++)
+        ((BYTE *) pDest)[i] = 0;
+#endif
 }
 
 #endif // __MEMORY_H

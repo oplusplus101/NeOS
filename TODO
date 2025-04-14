@@ -1,14 +1,12 @@
-Implement a filesystem (NTFS or other)
-Load the kernel
-Rewrite the UEFI bootloader
+Create a basic driver/module file format, based on PE32+
+Add a basic MS-DOS-like shell
+Implement round-robin multitasking
+Rewrite/clean up the UEFI bootloader (Change UNIX types to Microsoft, make PE32+ code more efficient)
 Clean up AHCI code
 Add support for multiple drives (AHCI)
 Redo the build process (e.g. change to cmake, or write a custom script)
 Document the whole codebase with comments
-Implement round-robin multitasking
 Implement NVMe (reading and writing)
-Add a basic MS-DOS-like shell
-Create a basic driver/module file format, based on PE32+
 Implement a Windows-like registry
 Make a user system - with a root user and admin, standard, and guest users
 Make an installer (a program that sets up the file system, copies in all important files, and creates a default user)

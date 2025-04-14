@@ -2,6 +2,8 @@
 #ifndef __BOOTSTRUCTS_H
 #define __BOOTSTRUCTS_H
 
+#include <common/types.h>
+
 typedef struct
 {
     unsigned int           nType;

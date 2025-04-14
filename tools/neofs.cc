@@ -8,7 +8,7 @@
 
 struct sDirectoryTemplate
 {
-    WCHAR    sName[256];
+    WCHAR    szName[256];
     BYTE     nFilenameLength; // This should make searching slightly faster
     BYTE     nAttributes;
     BYTE     nPermissions;
@@ -37,9 +37,9 @@ void IterateDirectory(const std::filesystem::directory_entry &rootEntry, sDirect
             sFilename = sPath.substr(qwFilenameOffset + 1);
 
         sDirectoryTemplate current;
-        memset(current.sName, 0, 256);
+        memset(current.szName, 0, 256);
         for (QWORD i = 0; i < sPath.length(); i++)
-            current.sName[i] = sPath[i];
+            current.szName[i] = sPath[i];
         current.nFilenameLength = sPath.length();
         current.sOriginalPath = entry.path().string();
         LONGLONG llTime = time(nullptr) - 62262001254; // Convert to custom time format
@@ -118,9 +118,9 @@ int main(int nszArgc, char **arrArgv)
     auto AddRootDirectoryEntry = [&](const std::string &sFilename, const std::string &sOriginalPath, BYTE nAttributes, BYTE nPermissions, WORD wOwner, WORD wGroup)
     {
         sDirectoryTemplate entry;
-        memset(entry.sName, 0, 256);
+        memset(entry.szName, 0, 256);
         for (QWORD i = 0; i < sFilename.length(); i++)
-            entry.sName[i] = sFilename[i];
+            entry.szName[i] = sFilename[i];
         entry.nFilenameLength = sFilename.length();
         
         LONGLONG llTime = time(nullptr) - 62262001254; // Convert to custom time format
@@ -214,7 +214,7 @@ int main(int nszArgc, char **arrArgv)
     for (auto &entry : vecEntriesRoot)
     {
         sNEOFSDirectoryEntry dirent;
-        memcpy(dirent.sName, entry.sName, 256);
+        memcpy(dirent.szName, entry.szName, 256);
         dirent.nFilenameLength = entry.nFilenameLength; // This should make searching slightly faster
         dirent.nAttributes     = entry.nAttributes;
         dirent.nPermissions    = entry.nPermissions;

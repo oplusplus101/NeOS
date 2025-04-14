@@ -1,4 +1,5 @@
 
+#include <neos.h>
 #include <common/types.h>
 #include <common/bootstructs.h>
 #include <common/math.h>
@@ -7,17 +8,18 @@
 #include <hardware/idt.h>
 #include <hardware/ports.h>
 
-void KernelMain(sBootData hdr)
+void KernelMain(sNEOSKernelHeader hdr)
 {
     DisableInterrupts();
-    InitGDT();
-    LoadGDT();
-    InitScreen(hdr.gop.nWidth, hdr.gop.nHeight, hdr.gop.pFramebuffer);
-    SetFGColor(_RGB(255, 255, 255));
-    SetBGColor(_RGB(0, 0, 0));
-    PrintString("Kernel loaded!\n");
-    InitIDT();
+    InitScreen(hdr.sGOP.nWidth, hdr.sGOP.nHeight, hdr.sGOP.pFramebuffer);
+    SetFGColor(NEOS_FOREGROUND_COLOR);
+    SetBGColor(NEOS_BACKGROUND_COLOR);
+    PrintFormat("Kernel loaded!\n");
+    
+    // Load Paging data
+    ImportPagingData(hdr.sPaging);
 
-    EnableInterrupts();
-    while (true); // Make sure the kernel doesn't exit
+    DisableInterrupts();
+    __asm__ volatile ("hlt");
+    for (;;);
 }

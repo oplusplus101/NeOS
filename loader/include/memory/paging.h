@@ -4,6 +4,7 @@
 
 #include <common/types.h>
 #include <common/bootstructs.h>
+#include <memory/bitmap.h>
 
 #define PAGE_SIZE 4096
 #define PAGE_TABLE_SIZE 512
@@ -14,17 +15,17 @@
 #define _ADDRESS_TO_PE_INDEX(a)  (((QWORD) (a) >> 12) % PAGE_TABLE_SIZE)
 #define _PAGE_TO_ADDRESS(p)      ((QWORD) (p) << 12)
 #define _ADDRESS_TO_PAGE(a)      ((QWORD) (a) >> 12)
-#define _ALIGN_TO_PAGE(n) ((n) / PAGE_SIZE * PAGE_SIZE)
+#define _ALIGN_TO_PAGE(n)        ((n) / PAGE_SIZE * PAGE_SIZE)
 
-#define PF_PRESENT 1
-#define PF_WRITEABLE 2
-#define PF_USER 4
-#define PF_WRITETHROUGH 8
-#define PF_CACHEDISABLE 16
-#define PF_ACCESSED 32
-#define PF_DIRTY 64
+#define PF_PRESENT            1
+#define PF_WRITEABLE          2
+#define PF_USER               4
+#define PF_WRITETHROUGH       8
+#define PF_CACHEDISABLE       16
+#define PF_ACCESSED           32
+#define PF_DIRTY              64
 #define PF_PAGETABLEATTRIBUTE 128
-#define PF_GLOBAL 256
+#define PF_GLOBAL             256
 
 
 typedef struct
@@ -38,6 +39,15 @@ typedef struct
     sPageTableEntry arrEntries[PAGE_TABLE_SIZE];
 } __attribute__((packed)) __attribute__((aligned(PAGE_SIZE))) sPageTable;
 
+
+typedef struct
+{
+    sPageTable *pPML4;
+    sBitmap sPageBitmap;
+    QWORD qwMemorySize, qwFreeMemory;
+    QWORD qwPageBitmapIndex;
+} __attribute__((packed)) sPagingData;
+
 void ReservePage(PVOID pAddress);
 void ReservePages(PVOID pAddress, QWORD qwPages);
 void ReturnPage(PVOID pAddress);
@@ -50,6 +60,8 @@ PVOID AllocatePage();
 void FreePage(PVOID pAddress);
 PVOID GetPhysicalAddress(PVOID pVirtualAddress);
 void LoadPML4();
+sPagingData ExportPagingData();
+void ImportPagingData(sPagingData sData);
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
                 QWORD qwMemoryMapSize, QWORD qwMemoryDescriptorSize,

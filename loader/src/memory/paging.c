@@ -6,24 +6,47 @@
 #include <common/screen.h>
 #include <common/memory.h>
 #include <common/panic.h>
-#include <memory/bitmap.h>
 
 sPageTable *g_pPML4;
-sBitmap g_pageBitmap;
-QWORD g_nMemorySize = 0, g_nFreeMemory = 0;
-QWORD g_nPageBitmapIndex = 0;
+sBitmap g_sPageBitmap;
+QWORD g_qwMemorySize = 0, g_qwFreeMemory = 0;
+QWORD g_qwPageBitmapIndex = 0;
 
+sPagingData ExportPagingData()
+{
+    sPagingData sData =
+    {
+        .pPML4        = g_pPML4,
+        .sPageBitmap  = g_sPageBitmap,
+        .qwMemorySize = g_qwMemorySize,
+        .qwFreeMemory = g_qwFreeMemory,
+        .qwPageBitmapIndex = g_qwPageBitmapIndex
+    };
+
+    return sData;
+}
+
+void ImportPagingData(sPagingData sData)
+{
+    g_pPML4 = sData.pPML4;
+    g_sPageBitmap = sData.sPageBitmap;
+    g_qwMemorySize = sData.qwMemorySize;
+    g_qwFreeMemory = sData.qwFreeMemory;
+    g_qwPageBitmapIndex = sData.qwPageBitmapIndex;
+}
+
+// Returns a page of memory cleared filled with zeroes
 PVOID AllocatePage()
 {
-    for (; g_nPageBitmapIndex < g_pageBitmap.qwLength * 8; g_nPageBitmapIndex++)
+    for (; g_qwPageBitmapIndex < g_sPageBitmap.qwLength * 8; g_qwPageBitmapIndex++)
     {
-        if (GetBitmap(&g_pageBitmap, g_nPageBitmapIndex)) continue;
+        if (GetBitmap(&g_sPageBitmap, g_qwPageBitmapIndex)) continue;
 
-        ReservePage((PVOID) _PAGE_TO_ADDRESS(g_nPageBitmapIndex));
+        ReservePage((PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex));
         // Clear the page
-        ZeroMemory((PVOID) _PAGE_TO_ADDRESS(g_nPageBitmapIndex), PAGE_SIZE);
+        ZeroMemory((PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex), PAGE_SIZE);
 
-        return (PVOID) _PAGE_TO_ADDRESS(g_nPageBitmapIndex);
+        return (PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex);
     }
 
     _KERNEL_PANIC("Out of pages");
@@ -34,7 +57,7 @@ PVOID AllocatePage()
 void FreePage(PVOID pAddress)
 {
     if (pAddress == NULL) return;
-
+    
     ReturnPage(pAddress);
 }
 
@@ -42,20 +65,20 @@ void ReservePage(PVOID pAddress)
 {
     QWORD qwIndex = (QWORD) pAddress / PAGE_SIZE;
     
-    if (GetBitmap(&g_pageBitmap, qwIndex)) return;
+    if (GetBitmap(&g_sPageBitmap, qwIndex)) return;
 
-    if (SetBitmap(&g_pageBitmap, qwIndex, true))
-        g_nFreeMemory -= PAGE_SIZE;
+    if (SetBitmap(&g_sPageBitmap, qwIndex, true))
+        g_qwFreeMemory -= PAGE_SIZE;
 }
 
 void ReturnPage(PVOID pAddress)
 {
     QWORD qwIndex = (QWORD) pAddress / PAGE_SIZE;
-    if (!GetBitmap(&g_pageBitmap, qwIndex)) return;
-    if (SetBitmap(&g_pageBitmap, qwIndex, false))
+    if (!GetBitmap(&g_sPageBitmap, qwIndex)) return;
+    if (SetBitmap(&g_sPageBitmap, qwIndex, false))
     {
-        g_nFreeMemory += PAGE_SIZE;
-        if (g_nPageBitmapIndex > qwIndex) g_nPageBitmapIndex = qwIndex;
+        g_qwFreeMemory += PAGE_SIZE;
+        if (g_qwPageBitmapIndex > qwIndex) g_qwPageBitmapIndex = qwIndex;
     }
 }
 
@@ -101,7 +124,6 @@ void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags)
     if (!(pEntry->nFlags & PF_PRESENT))
     {
         pPageDirectoryPointer = AllocatePage();
-        ZeroMemory(pPageDirectoryPointer, PAGE_SIZE);
         pEntry->nAddress = _ADDRESS_TO_PAGE(pPageDirectoryPointer);
         pEntry->nFlags   = PF_PRESENT | PF_WRITEABLE;
         g_pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)] = *pEntry;
@@ -117,7 +139,6 @@ void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags)
     if (!(pEntry->nFlags & PF_PRESENT))
     {
         pPageDirectory = AllocatePage();
-        ZeroMemory(pPageDirectory, PAGE_SIZE);
         pEntry->nAddress = _ADDRESS_TO_PAGE(pPageDirectory);
         pEntry->nFlags   = PF_PRESENT | PF_WRITEABLE;
         pPageDirectoryPointer->arrEntries[_ADDRESS_TO_PD_INDEX(pVirtualAddress)] = *pEntry;
@@ -132,7 +153,6 @@ void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags)
     if (!(pEntry->nFlags & PF_PRESENT))
     {
         pPageTable = AllocatePage();
-        ZeroMemory(pPageTable, PAGE_SIZE);
         pEntry->nAddress = _ADDRESS_TO_PAGE(pPageTable);
         pEntry->nFlags   = PF_PRESENT | PF_WRITEABLE;
         pPageDirectory->arrEntries[_ADDRESS_TO_PT_INDEX(pVirtualAddress)] = *pEntry;
@@ -152,7 +172,7 @@ void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags)
 void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwPages, WORD wFlags)
 {
     for (QWORD i = 0; i < qwPages * PAGE_SIZE; i += PAGE_SIZE)
-    MapPage((PVOID) ((QWORD) pVirtualAddress + i), (PVOID) ((QWORD) pPhysicalAddress + i), wFlags);
+        MapPage((PVOID) ((QWORD) pVirtualAddress + i), (PVOID) ((QWORD) pPhysicalAddress + i), wFlags);
 }
 
 void MapPageToIdentity(PVOID pPage, WORD wFlags)
@@ -185,14 +205,14 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
         }
     }
 
-    g_nMemorySize = nMemorySize;
-    g_nFreeMemory = nMemorySize;
+    g_qwMemorySize = nMemorySize;
+    g_qwFreeMemory = nMemorySize;
     
-    g_pageBitmap.pData   = pLargestSegment;
-    g_pageBitmap.qwLength = nMemorySize / PAGE_SIZE / 8 + 1;
-    ZeroMemory(g_pageBitmap.pData, g_pageBitmap.qwLength);
+    g_sPageBitmap.pData   = pLargestSegment;
+    g_sPageBitmap.qwLength = nMemorySize / PAGE_SIZE / 8 + 1;
+    ZeroMemory(g_sPageBitmap.pData, g_sPageBitmap.qwLength);
     
-    ReservePages(0, g_nMemorySize / PAGE_SIZE + 1);
+    ReservePages(0, g_qwMemorySize / PAGE_SIZE + 1);
     
     for (QWORD i = 0; i < nMemoryMapSize; i += nMemoryDescriptorSize)
     {
@@ -201,13 +221,12 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
     }
     
     ReservePages(0, 256); // Reserve the first 1MiB.
-    ReservePages(g_pageBitmap.pData, g_pageBitmap.qwLength / PAGE_SIZE + 1); // Reserve the bitmap's pages.
+    ReservePages(g_sPageBitmap.pData, g_sPageBitmap.qwLength / PAGE_SIZE + 1); // Reserve the bitmap's pages.
     
     // Reserve the bootloader's pages.
     ReservePages((PVOID) nLoaderStart, (nLoaderEnd - nLoaderStart) / PAGE_SIZE + 1);
     
     g_pPML4 = AllocatePage();
-    ZeroMemory(g_pPML4, PAGE_SIZE);
 
     // Identity map the whole memory.
     MapPageRange(NULL, NULL, nMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);

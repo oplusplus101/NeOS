@@ -126,7 +126,7 @@ BOOL GetEntryFromPath(PCHAR szPath, sFAT32DirectoryEntry *pEntry)
 
 // Reads the entire file into pBuffer
 // Returns the total amount read
-void ReadEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer)
+void ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer)
 {
     DWORD dwFileSize = pEntry->dwFileSize;
     PVOID pClusterBuffer = HeapAlloc(g_wBytesPerCluster);

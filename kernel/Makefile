@@ -8,6 +8,8 @@ CC_PARAMS	= -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fno-stac
 			  -fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wall -Wpedantic -Werror# -Wno-packed-bitfield-compat
 OBJECTS		= obj/kernel.o \
 			  obj/common/screen.o \
+			  obj/memory/paging.o \
+			  obj/memory/bitmap.o \
 			  obj/hardware/gdt.o \
 			  obj/hardware/gdtasm.o \
 			  obj/hardware/idt.o \

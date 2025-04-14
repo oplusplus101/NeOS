@@ -3,13 +3,14 @@
 #define __PANIC_H
 
 #include <common/screen.h>
+#include <neos.h>
 
-#define _KERNEL_PANIC(...) { SetFGColor((color_t) { 255, 0, 0 }); \
+#define _KERNEL_PANIC(...) { SetFGColor(NEOS_ERROR_COLOR); \
                              PrintString("\nKERNEL PANIC!\nMessage: "); \
                              PrintFormat(__VA_ARGS__); \
                             __asm__ volatile ("cli\nhlt"); }
 
-#define _KERNEL_PANIC_EC(ec, ...) { SetFGColor((color_t) { 255, 0, 0 }); \
+#define _KERNEL_PANIC_EC(ec, ...) { SetFGColor(NEOS_ERROR_COLOR); \
                                     PrintString("\nKERNEL PANIC!\nMessage: "); \
                                     PrintFormat(__VA_ARGS__); \
                                     PrintFormat("\nError code: %d", ec); \
