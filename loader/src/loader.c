@@ -23,8 +23,8 @@ void LoaderMain(sBootData data)
 {
     DisableInterrupts();
 
-    InitGDT();
-    LoadGDT();
+    InitGDT(false, NULL);
+    WriteGDT();
 
     InitScreen(data.gop.nWidth, data.gop.nHeight, data.gop.pFramebuffer);
     ClearScreen();
@@ -40,8 +40,8 @@ void LoaderMain(sBootData data)
 
     // Paging
     InitPaging(data.pMemoryDescriptor,
-            data.nMemoryMapSize, data.nMemoryDescriptorSize,
-            data.nLoaderStart, data.nLoaderEnd);
+               data.nMemoryMapSize, data.nMemoryDescriptorSize,
+               data.nLoaderStart, data.nLoaderEnd);
 
     // Lock the GOP screen memory.
     ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);

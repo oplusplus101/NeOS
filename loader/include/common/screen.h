@@ -15,7 +15,7 @@ void InitScreen(int nWidth, int nHeight, DWORD *pScreenBuffer);
 void DrawPixel(int x, int y, color_t c);
 void PrintChar(char c);
 
-void PrintString(const PCHAR s);
+void PrintString(const PCHAR sz);
 void PrintDec(QWORD qw);
 void PrintHex(QWORD qw, BYTE nDigits, BOOL bUppercase);
 void PrintFormat(const PCHAR sFormat, ...);

@@ -13,9 +13,17 @@ A module is a generic interface between drivers and user-mode programs. Modules 
 
 The boot process:
 - The bootloader will load the loader located at: \NEOSLDR.SYS in the ESP
-- The loader will load the kernel at: C:/NeOS/neos.sys
-- The kernel will load the files: C:/NeOS/drivers.cfg, and C:/NeOS/modules.cfg. These files list which drivers/modules to be loaded
-- Finally the kernel will run the file C:/NeOS/autoexec.cmd
+- The loader will load the config file at: C:\NeOS\NeOS.cfg
+- The loader will then load the kernel at: C:\NeOS\NeOS.sys and execute it
+- The kernel will setup syscalls and processes then load the filesystem modules, whose location is specified in the config file.
+- The kernel will then load the files C:\NeOS\Drivers.cfg and C:\NeOS\Modules.cfg and load each enabled driver/module listed.
+- The kernel will then load the each subsystem at C:\NeOS\Subsystems
+- The kernel will finally run the autoexec file specified in the config file.
+
+
+Subsystem:
+- Applications will run under a so-called subsystem, which is basically just a module that interfaces between kernel functions and a more user-friendly API (e.g. POSIX, WIN-32)
+- The subsystem will be a kernel-level process (basically a kernel inside a kernel)
 
 Paths:
 - The seperator can either be '/' or '\'
@@ -28,16 +36,16 @@ Filesystem structure and operation:
 - The system directory will be C:\NeOS
 - There will be a directory for temp files in C:\Temp which will be cleared daily
 - There will be "virtual files", i.e. files that are only visible to a specific process and the kernel.
-  These virtual files can be persistent (they will stay when the process terminates) or non-persisdent (deleted once the process terminates)
+  These virtual files can be persistent (they will stay when the process terminates) or non-persistent (deleted once the process terminates)
 
 Coding Style:
 - Different types are prefixed:
     b for BYTE
-    b for BOOL
+    bl for BOOL
     w for WORD
     dw for DWORD
     qw for QWORD
-    us for a non-terminated string (e.g. A FAT-32 filename)
+    s for a non-terminated string (e.g. A FAT-32 filename)
     sz for a zero-terminated string
     arr for array
     lst for list
@@ -47,6 +55,7 @@ Coding Style:
     nX for a count of X element(s)
 - Opening curly brackets are always on a new line instead of following the statement.
 - Macro-functions are always prefixed with _
+- Globals are prefixed with g_
 
 Configuration:
 - The default file-format will be an INI-like format ending in either: .ini or .cfg

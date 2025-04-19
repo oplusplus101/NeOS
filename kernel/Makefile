@@ -7,9 +7,15 @@ AS_PARAMS	= -felf64 -O0
 CC_PARAMS	= -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
 			  -fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wall -Wpedantic -Werror# -Wno-packed-bitfield-compat
 OBJECTS		= obj/kernel.o \
+			  obj/timer.o \
+			  obj/process.o \
+			  obj/syscalls.o \
 			  obj/common/screen.o \
+			  obj/common/exceptions.o \
 			  obj/memory/paging.o \
 			  obj/memory/bitmap.o \
+			  obj/memory/heap.o \
+			  obj/memory/list.o \
 			  obj/hardware/gdt.o \
 			  obj/hardware/gdtasm.o \
 			  obj/hardware/idt.o \

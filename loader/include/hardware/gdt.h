@@ -28,9 +28,14 @@ typedef struct
     sSegmentDescriptor kernelDataSegment;
     sSegmentDescriptor userCodeSegment;
     sSegmentDescriptor userDataSegment;
+    sSegmentDescriptor tssSegment;
 } sGlobalDescriptorTable;
 
-void InitGDT();
-extern void LoadGDT();
+
+
+void MakeSegmentDescriptor(QWORD qwBase, DWORD nLimit, BYTE nAccessByte, BYTE nFlags, sSegmentDescriptor *pSegment);
+
+void InitGDT(BOOL bSetTSS, PVOID pTSS);
+extern void WriteGDT();
 
 #endif // __GDT_H

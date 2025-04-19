@@ -1,10 +1,10 @@
 
-%define NUM_SEGMENTS 5
+%define NUM_SEGMENTS 6
 
     extern g_gdt
 
-    global LoadGDT
-LoadGDT:
+    global WriteGDT
+WriteGDT:
     mov word [gdtr.nLimit], NUM_SEGMENTS * 16 - 1
     mov qword [gdtr.nBase], g_gdt
     lgdt [gdtr]

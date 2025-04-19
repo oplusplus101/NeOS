@@ -45,7 +45,7 @@ extern void HandleInterrupt0x20();
 extern void HandleInterrupt0x21();
 extern void HandleInterrupt0x22();
 extern void HandleInterrupt0x23();
-
+extern void HandleInterrupt0x81();
 extern void IgnoreInterrupt();
 
 void SetIDTEntry(BYTE nInterrupt, void (*pHandler)(), BYTE nFlags)
@@ -103,6 +103,7 @@ void InitIDT()
     SetIDTEntry(0x21, HandleInterrupt0x21, 0x8E);
     SetIDTEntry(0x22, HandleInterrupt0x22, 0x8E);
     SetIDTEntry(0x23, HandleInterrupt0x23, 0x8E);
+    SetIDTEntry(0x81, HandleInterrupt0x81, 0x8E);
     
     // Initialize the PIC
     outb(PIC_MASTER_COMMAND, 0x11);
@@ -135,12 +136,12 @@ void InitIDT()
     __asm__ volatile ("lidt %0" :: "m" (g_idtr));
 }
 
-QWORD HandleInterrupt(BYTE nInterrupt, QWORD rsp, BYTE nErrorCode)
+QWORD HandleInterrupt(BYTE nInterrupt, QWORD qwRSP, BYTE nErrorCode)
 {
     if (nInterrupt < 32 && g_ESRs[nInterrupt] != 0)
-        rsp = g_ESRs[nInterrupt](rsp, nErrorCode);
+        qwRSP = g_ESRs[nInterrupt](qwRSP, nErrorCode);
     else if (nInterrupt >= 32 && g_ISRs[nInterrupt - 32] != 0)
-        rsp = g_ISRs[nInterrupt - 32](rsp);
+        qwRSP = g_ISRs[nInterrupt - 32](qwRSP);
     
     if (nInterrupt >= 0x28)
     {
@@ -150,7 +151,7 @@ QWORD HandleInterrupt(BYTE nInterrupt, QWORD rsp, BYTE nErrorCode)
     
     outb(PIC_MASTER_COMMAND, 0x20);
     IOWait();
-    return rsp;
+    return qwRSP;
 }
 
 

@@ -65,8 +65,12 @@ IRQ 0x20
 IRQ 0x21
 IRQ 0x22
 IRQ 0x23
+IRQ 0x81
 
 Interrupt:
+
+    cli ; Disable interrupts so only one can happen at once
+    ; Push all registers (pusha doesn't exist in x64)
     push rbp
     push rdi
     push rsi
@@ -76,14 +80,14 @@ Interrupt:
     push rbx
     push rax
 
-    ; The compiler uses registers, instead of the stack for some reason.
-    mov rdx, qword [rsp]
-    mov rsi, rsp
+    ; The compiler uses registers instead of the stack, for some reason.
+    mov rdx, qword [rsp] ; Get the error code
+    mov rsi, rsp         ; Pass in the irq
     movzx rdi, byte [nInterrupt]
 
     extern HandleInterrupt
     call HandleInterrupt
-    mov rsp, rax
+    mov rsp, rax ; Set the stack to the returned value
 
     pop rax
     pop rbx
@@ -96,7 +100,7 @@ Interrupt:
 
     add rsp, 8
  
-    sti
+    sti ; Re-enable interrupts so more can come
     global IgnoreInterrupt
 IgnoreInterrupt:
     iretq

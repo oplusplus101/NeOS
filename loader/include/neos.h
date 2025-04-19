@@ -15,6 +15,7 @@
 #define NEOS_HEAP_SIZE        1024 * 1024 * 10       // 10 MiB heap
 #define NEOS_HEAP_START       0x100000000
 #define NEOS_KERNEL_LOCATION  0x200000
+#define NEOS_SYSCALL_IRQ      0x81                   // 0x81 so it doesn't conflict with the POSIX interrupts
 
 typedef struct
 {

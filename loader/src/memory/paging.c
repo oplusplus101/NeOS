@@ -57,7 +57,7 @@ PVOID AllocatePage()
 void FreePage(PVOID pAddress)
 {
     if (pAddress == NULL) return;
-    
+    MapPageToIdentity(pAddress, PF_WRITEABLE);
     ReturnPage(pAddress);
 }
 

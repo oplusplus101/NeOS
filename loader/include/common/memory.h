@@ -26,15 +26,15 @@ static inline void memcpy(PVOID pDest, PVOID pSource, QWORD qwSize)
 
 static inline int memcmp(PVOID pA, PVOID pB, QWORD qwSize)
 {
-	for (QWORD i = 0; i < qwSize; i++)
+    for (QWORD i = 0; i < qwSize; i++)
     {
-		if (((BYTE *) pA)[i] < ((BYTE *) pB)[i])
+        if (((BYTE *) pA)[i] < ((BYTE *) pB)[i])
             return -1;
-		else if (((BYTE *) pA)[i] > ((BYTE *) pB)[i])
+        else if (((BYTE *) pA)[i] > ((BYTE *) pB)[i])
             return 1;
-	}
+    }
 
-	return 0;
+    return 0;
 }
 
 static inline void ZeroMemory(PVOID pDest, QWORD qwSize)
