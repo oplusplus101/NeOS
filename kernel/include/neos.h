@@ -21,8 +21,9 @@ typedef struct
 {
     sGOPData sGOP;
     sPagingData sPaging;
+    QWORD qwHeapStart;
     BYTE nDriveNum;
     sList lstConfig;
-} __attribute__((packed)) sNEOSKernelHeader;
+} sNEOSKernelHeader;
 
 #endif // __NEOS_H

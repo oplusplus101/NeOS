@@ -23,7 +23,7 @@ void LoaderMain(sBootData data)
 {
     DisableInterrupts();
 
-    InitGDT(false, NULL);
+    InitGDT();
     WriteGDT();
 
     InitScreen(data.gop.nWidth, data.gop.nHeight, data.gop.pFramebuffer);
@@ -45,21 +45,14 @@ void LoaderMain(sBootData data)
 
     // Lock the GOP screen memory.
     ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
-    MapPageRange(data.gop.pFramebuffer, data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1, PF_WRITEABLE);
+    MapPageRangeToIdentity(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1, PF_WRITEABLE);
     LoadPML4();
     PrintString("Paging initialised!\n");
 
-    for (QWORD i = 0; i < NEOS_HEAP_SIZE / PAGE_SIZE; i++)
-    {
-        PVOID pPage = AllocatePage();
-        MapPage((PVOID) (NEOS_HEAP_START + i * PAGE_SIZE), pPage, PF_WRITEABLE);
-    }
-
-    InitHeap(NEOS_HEAP_START, _ALIGN_TO_PAGE(NEOS_HEAP_START + NEOS_HEAP_SIZE));
+    PVOID pHeapBuffer = AllocateContinousPages(NEOS_HEAP_SIZE / PAGE_SIZE);
+    MapPageRangeToIdentity(pHeapBuffer, NEOS_HEAP_SIZE / PAGE_SIZE, PF_WRITEABLE);
+    InitHeap((QWORD) pHeapBuffer, _ALIGN_TO_PAGE((QWORD) pHeapBuffer + NEOS_HEAP_SIZE));
     PrintString("Heap initialised!\n");
-
-    EnableInterrupts();
-    PrintString("Interrupts enabled!\n");
 
     PrintString("Scanning for PCI devices...\n");
     ScanPCIDevices();
@@ -100,12 +93,15 @@ void LoaderMain(sBootData data)
         PrintFormat("Loading kernel segment: %s at 0x%p\n", hdr->szName, qwAddress);
         
         memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwPointerToRawData, hdr->dwVirtualSize);
+        // Ensure the kernel isnt overwritten
+        ReservePages((PVOID) qwAddress, hdr->dwVirtualSize / PAGE_SIZE + 1);
     }
 
     sNEOSKernelHeader sHeader;
-    sHeader.sGOP = data.gop;
-    sHeader.sPaging = ExportPagingData();
-    
+    sHeader.qwHeapStart = (QWORD) pHeapBuffer;
+    sHeader.sGOP        = data.gop;
+    sHeader.sPaging     = ExportPagingData();
+
     // Load the config
     sFAT32DirectoryEntry sConfigEntry;
     _ASSERT(GetEntryFromPath("NEOS/NEOS    CFG", &sConfigEntry), "Config file \"C:\\NEOS\\NeOS.cfg\" not found");
@@ -115,8 +111,7 @@ void LoaderMain(sBootData data)
     
     PrintFormat("Executing C:\\NEOS\\NEOS.sys at 0x%p\n", pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase);
     ((void (*)(sNEOSKernelHeader)) (pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase))(sHeader);
-    
-    DisableInterrupts();
-    __asm__ volatile ("hlt");
-    for (;;);
+
+    // Somthing went very wrong
+    _KERNEL_PANIC("The kernel has crashed :/");
 }

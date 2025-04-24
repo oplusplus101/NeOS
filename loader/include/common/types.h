@@ -37,4 +37,33 @@ typedef WCHAR *PWCHAR;
 #define FALSE 0
 #define NULL ((PVOID) 0)
 
+typedef struct
+{
+    QWORD qwRAX;
+    QWORD qwRBX;
+    QWORD qwRCX;
+    QWORD qwRDX;
+
+    QWORD qwR8;
+    QWORD qwR9;
+    QWORD qwR10;
+    QWORD qwR11;
+    QWORD qwR12;
+    QWORD qwR13;
+    QWORD qwR14;
+    QWORD qwR15;
+
+    QWORD qwRSI;
+    QWORD qwRDI;
+    QWORD qwRBP;
+
+    QWORD qwError;
+
+    QWORD qwRIP;
+    QWORD qwCS;
+    QWORD qwFlags;
+    QWORD qwRSP;
+    QWORD qwSS;
+} __attribute__((packed)) sCPUState;
+
 #endif // __TYPES_H

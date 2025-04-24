@@ -8,16 +8,17 @@
 #define KERNEL_DATA_SEGMENT 0x20
 #define USER_CODE_SEGMENT   0x30
 #define USER_DATA_SEGMENT   0x40
+#define TASK_STATE_SEGMENT  0x50
 
 
 typedef struct
 {
     WORD  wLimitLow;
-    DWORD nBaseLow : 24;
+    DWORD nBaseLow    : 24;
     BYTE  nAccessByte;
-    BYTE  nLimitHigh : 4;
-    BYTE  nFlags : 4;
-    QWORD nBaseHigh : 40;
+    BYTE  nLimitHigh  : 4;
+    BYTE  nFlags      : 4;
+    QWORD nBaseHigh   : 40;
     DWORD dwReserved;
 } __attribute__((packed)) sSegmentDescriptor;
 
@@ -31,11 +32,31 @@ typedef struct
     sSegmentDescriptor tssSegment;
 } sGlobalDescriptorTable;
 
+typedef struct
+{
+    DWORD dwReserved0;
+    QWORD qwRSP0;
+    QWORD qwRSP1;
+    QWORD qwRSP2;
+    QWORD qwReserved1;
+    QWORD qwIST1;
+    QWORD qwIST2;
+    QWORD qwIST3;
+    QWORD qwIST4;
+    QWORD qwIST5;
+    QWORD qwIST6;
+    QWORD qwIST7;
+    QWORD qwReserved2;
+    WORD  wReserved3;
+    WORD  wIOMapBaseAddress;
+} __attribute__((packed)) sTaskStateSegment;
 
 
 void MakeSegmentDescriptor(QWORD qwBase, DWORD nLimit, BYTE nAccessByte, BYTE nFlags, sSegmentDescriptor *pSegment);
 
-void InitGDT(BOOL bSetTSS, PVOID pTSS);
+void SetTSS(sTaskStateSegment *pTSS);
+void InitGDT();
 extern void WriteGDT();
+extern void FlushTSS();
 
 #endif // __GDT_H

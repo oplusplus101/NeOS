@@ -46,7 +46,7 @@ typedef struct
     sBitmap sPageBitmap;
     QWORD qwMemorySize, qwFreeMemory;
     QWORD qwPageBitmapIndex;
-} __attribute__((packed)) sPagingData;
+} sPagingData;
 
 void ReservePage(PVOID pAddress);
 void ReservePages(PVOID pAddress, QWORD qwPages);
@@ -57,6 +57,7 @@ void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwPages, 
 void MapPageToIdentity(PVOID pPage, WORD wFlags);
 void MapPageRangeToIdentity(PVOID pPages, QWORD qwPages, WORD wFlags);
 PVOID AllocatePage();
+PVOID AllocateContinousPages(QWORD qwPages);
 void FreePage(PVOID pAddress);
 PVOID GetPhysicalAddress(PVOID pVirtualAddress);
 void LoadPML4();

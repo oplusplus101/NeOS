@@ -54,11 +54,40 @@ PVOID AllocatePage()
     return NULL;
 }
 
+PVOID AllocateContinousPages(QWORD qwPages)
+{
+    for (; g_qwPageBitmapIndex < g_sPageBitmap.qwLength * 8; g_qwPageBitmapIndex++)
+    {
+        BOOL bAllFree = true;
+        for (QWORD i = 0; i < qwPages; i++)
+            if (GetBitmap(&g_sPageBitmap, g_qwPageBitmapIndex + i))
+            {
+                g_qwPageBitmapIndex += i;
+                bAllFree = false;
+                break;
+            }
+        
+        if (!bAllFree) continue;
+        
+
+        ReservePages((PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex), qwPages);
+        // Clear the page
+        ZeroMemory((PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex), PAGE_SIZE * qwPages);
+
+        return (PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex);
+    }
+
+    
+    _KERNEL_PANIC("Out of pages");
+    return NULL;
+}
+
 void FreePage(PVOID pAddress)
 {
     if (pAddress == NULL) return;
     MapPageToIdentity(pAddress, PF_WRITEABLE);
     ReturnPage(pAddress);
+    g_qwPageBitmapIndex = _ADDRESS_TO_PAGE(pAddress);
 }
 
 void ReservePage(PVOID pAddress)
@@ -229,10 +258,10 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
     g_pPML4 = AllocatePage();
 
     // Identity map the whole memory.
-    MapPageRange(NULL, NULL, nMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
+    MapPageRangeToIdentity(NULL, nMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
 }
 
 void LoadPML4()
 {
-    __asm__ volatile ("mov %0, %%cr3" :: "r" (g_pPML4));
+    __asm__ volatile ("mov %0, %%cr3" : : "r" (g_pPML4));
 }

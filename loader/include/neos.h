@@ -13,7 +13,6 @@
 #define NEOS_ERROR_COLOR      _RGB(255, 0, 0)
 #define NEOS_MINIMUM_RAM_SIZE 1024 * 1024 * 1024 * 1 // 1 GiB minimum ram
 #define NEOS_HEAP_SIZE        1024 * 1024 * 10       // 10 MiB heap
-#define NEOS_HEAP_START       0x100000000
 #define NEOS_KERNEL_LOCATION  0x200000
 #define NEOS_SYSCALL_IRQ      0x81                   // 0x81 so it doesn't conflict with the POSIX interrupts
 
@@ -21,8 +20,9 @@ typedef struct
 {
     sGOPData sGOP;
     sPagingData sPaging;
+    QWORD qwHeapStart;
     BYTE nDriveNum;
     sList lstConfig;
-} __attribute__((packed)) sNEOSKernelHeader;
+} sNEOSKernelHeader;
 
 #endif // __NEOS_H

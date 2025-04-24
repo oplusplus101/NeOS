@@ -2,6 +2,7 @@
 #include <hardware/idt.h>
 #include <hardware/gdt.h>
 #include <hardware/ports.h>
+#include <common/screen.h>
 
 sIDTEntry g_idt[256];
 sIDTPointer g_idtr;
@@ -133,7 +134,7 @@ void InitIDT()
     
     g_idtr.wLimit = sizeof(sIDTEntry) * 256 - 1;
     g_idtr.qwBase  = (QWORD) g_idt;
-    __asm__ volatile ("lidt %0" :: "m" (g_idtr));
+    __asm__ volatile ("lidt %0" : : "m" (g_idtr));
 }
 
 QWORD HandleInterrupt(BYTE nInterrupt, QWORD qwRSP, BYTE nErrorCode)

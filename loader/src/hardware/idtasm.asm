@@ -75,15 +75,24 @@ Interrupt:
     push rdi
     push rsi
 
+    push r15
+    push r14
+    push r13
+    push r12
+    push r11
+    push r10
+    push r9
+    push r8
+
     push rdx
     push rcx
     push rbx
     push rax
 
     ; The compiler uses registers instead of the stack, for some reason.
-    mov rdx, qword [rsp] ; Get the error code
-    mov rsi, rsp         ; Pass in the irq
-    movzx rdi, byte [nInterrupt]
+    mov rdx, qword [rsp]         ; nErrorCode
+    mov rsi, rsp                 ; qwRSP
+    movzx rdi, byte [nInterrupt] ; nInterrupt
 
     extern HandleInterrupt
     call HandleInterrupt
@@ -94,12 +103,21 @@ Interrupt:
     pop rcx
     pop rdx
 
+    pop r8
+    pop r9
+    pop r10
+    pop r11
+    pop r12
+    pop r13
+    pop r14
+    pop r15
+
     pop rsi
     pop rdi
     pop rbp
 
     add rsp, 8
- 
+    
     sti ; Re-enable interrupts so more can come
     global IgnoreInterrupt
 IgnoreInterrupt:

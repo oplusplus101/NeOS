@@ -8,43 +8,22 @@
 
 typedef struct
 {
-    QWORD qwRAX;
-    QWORD qwRBX;
-    QWORD qwRCX;
-    QWORD qwRDX;
-
-    QWORD qwRSI;
-    QWORD qwRDI;
-    QWORD qwRBP;
-
-    QWORD qwError;
-
-    QWORD qwRIP;
-    QWORD qwCS;
-    QWORD qwFlags;
-    QWORD qwRSP;
-    QWORD qwSS;
-} __attribute__((packed)) sCPUState;
- 
-
-typedef struct
-{
-    PVOID pStack;
+    CHAR  szName[129]; // One extra byte for the null terminator
+    BYTE  nRing;
+    WORD  wOwner; // 0 is the kernel
+    INT iPID;
     QWORD qwStackSize;
+    PVOID pStackUnaligned, pStack;
     sCPUState *pCPUState;
-    BYTE nPermissionLevel;
-    WORD wOwner; // 0 is the kernel
 } sProcess;
 
 void InitProcessScheduler();
 
-sProcess CreateProcess(void (*pEntryPoint)(), QWORD qwStackSize, BYTE nPermissionLevel, WORD wOwner);
-
 // Returns the PID
-DWORD StartProcess(sProcess *pProcess);
-BOOL  StopProcess(DWORD dwPID);
+INT StartProcess(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner);
+BOOL StopProcess(INT iPID);
+sProcess *GetProcess(INT iPID);
 
-sCPUState *ScheduleProcesses(sCPUState *pCPUState);
-
+QWORD ScheduleProcesses(QWORD qwRSP);
 
 #endif // __PROCESS_H

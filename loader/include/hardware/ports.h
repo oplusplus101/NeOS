@@ -29,17 +29,17 @@ static inline DWORD inl(WORD wPort)
 
 static inline void outb(WORD wPort, BYTE nValue)
 {
-    __asm__ volatile ("out %%al, %%dx" :: "a"(nValue), "d"(wPort));
+    __asm__ volatile ("out %%al, %%dx" : : "a"(nValue), "d"(wPort));
 }
 
 static inline void outw(WORD wPort, WORD wValue)
 {
-    __asm__ volatile ("out %%ax, %%dx" :: "a"(wValue), "Nd"(wPort));
+    __asm__ volatile ("out %%ax, %%dx" : : "a"(wValue), "Nd"(wPort));
 }
 
 static inline void outl(WORD wPort, DWORD dwValue)
 {
-    __asm__ volatile ("out %%eax, %%dx" :: "a"(dwValue), "Nd"(wPort));
+    __asm__ volatile ("out %%eax, %%dx" : : "a"(dwValue), "Nd"(wPort));
 }
 
 static inline void insw(WORD wPort, PVOID pBuffer, QWORD nLength) {

@@ -13,22 +13,34 @@
 #include <process.h>
 #include <timer.h>
 
-QWORD Scheduler(QWORD qwRSP)
+void TestA()
 {
-    return (QWORD) ScheduleProcesses((sCPUState *) qwRSP);
+    for (;;) __asm__ volatile ("int $0x81" : : "a"(0), "b"("A"));
 }
 
-void TestPrint(sCPUState *sState)
+void TestB()
 {
-    PrintString((PCHAR) sState->qwRBX);
+    for (;;) __asm__ volatile ("int $0x81" : : "a"(0), "b"("B"));
+}
+
+void TestC()
+{
+    for (;;) __asm__ volatile ("int $0x81" : : "a"(0), "b"("C"));
+}
+
+void Syscall_KNeoPrintString(sCPUState *pCPUState)
+{
+    PrintString((PCHAR) pCPUState->qwRBX);
 }
 
 void KernelMain(sNEOSKernelHeader hdr)
 {
     DisableInterrupts();
 
-    // Init the GDT
-    InitGDT(false, NULL);
+    sTaskStateSegment sTSS = { 0 };
+    
+    InitGDT();
+    SetTSS(&sTSS);
     WriteGDT();
     
     InitIDT();
@@ -39,24 +51,24 @@ void KernelMain(sNEOSKernelHeader hdr)
     SetBGColor(NEOS_BACKGROUND_COLOR);
     ClearScreen();
     PrintFormat("Kernel loaded!\n");
-    
+
     ImportPagingData(hdr.sPaging);
     PrintFormat("Paging initialised (%u bytes free)\n", hdr.sPaging.qwFreeMemory);
     
-    InitHeap(NEOS_HEAP_START, NEOS_HEAP_SIZE);
+    InitHeap(hdr.qwHeapStart, hdr.qwHeapStart + NEOS_HEAP_SIZE);
     
     InitSyscalls();
-    PrintFormat("Syscalls initialized to interrput 0x%02X\n", NEOS_SYSCALL_IRQ);
+    PrintFormat("Syscalls initialised to interrput 0x%02X\n", NEOS_SYSCALL_IRQ);
+    RegisterSyscall(0, 0, Syscall_KNeoPrintString);
     
     InitProcessScheduler();
-    RegisterInterrupt(32, Scheduler);
+    RegisterInterrupt(32, ScheduleProcesses);
     PrintFormat("Process scheduler initialised\n");
     
-    EnableInterrupts();
-    RegisterSyscall(0, 0, TestPrint);
+    StartProcess("Test A", TestA, 1024 * 1024, 0, 0);
+    StartProcess("Test B", TestB, 1024 * 1024, 0, 0);
+    StartProcess("Test C", TestC, 1024 * 1024, 0, 0);
 
-    __asm__ volatile ("int $0x81" :: "a"(0), "b"("This is a syscall string"));
-    
+    EnableInterrupts();
     for (;;);
 }
-
