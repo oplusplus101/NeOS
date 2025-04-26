@@ -1,36 +1,64 @@
 
 #include <neos.h>
-#include <common/types.h>
 #include <common/bootstructs.h>
 #include <common/exceptions.h>
-#include <common/math.h>
 #include <common/screen.h>
+#include <common/types.h>
+#include <common/panic.h>
+#include <common/math.h>
 #include <memory/heap.h>
-#include <hardware/gdt.h>
-#include <hardware/idt.h>
+#include <common/ini.h>
 #include <hardware/ports.h>
+#include <hardware/idt.h>
+#include <hardware/gdt.h>
 #include <syscalls.h>
 #include <process.h>
 #include <timer.h>
 
-void TestA()
+sList g_lstDrivers, g_lstModules;
+
+sList LoadINI(PCHAR szPath, sNEOSKernelHeader *pHeader)
 {
-    for (;;) __asm__ volatile ("int $0x81" : : "a"(0), "b"("A"));
+    PVOID pFile = pHeader->GetFile(szPath);
+    _ASSERT(pConfigFilePointer, "File \"C:\\NeOS\\NeOS.cfg\" not found");
+    QWORD qwFileSize = pHeader->GetFileSize(pFile);
+    PVOID szText = HeapAlloc(qwFileSize + 1);
+    pHeader->ReadFile(pFile, szText);
+    ((PBYTE) szText)[qwFileSize] = 0;
+    sList lst = ParseINIFile(szText);
+    HeapFree(pFile);
+    HeapFree(szText);
+    return lst;
 }
 
-void TestB()
-{
-    for (;;) __asm__ volatile ("int $0x81" : : "a"(0), "b"("B"));
-}
+// 0x0000 - 0x000F Print functions
 
-void TestC()
-{
-    for (;;) __asm__ volatile ("int $0x81" : : "a"(0), "b"("C"));
-}
-
+// RBX is the address of a zero-terminated string
 void Syscall_KNeoPrintString(sCPUState *pCPUState)
 {
     PrintString((PCHAR) pCPUState->qwRBX);
+}
+
+// RBX is the address of a zero-terminated string
+void Syscall_KNeoKernelPanic(sCPUState *pCPUState)
+{
+    _KERNEL_PANIC((PCHAR) pCPUState->qwRBX);
+}
+
+// 0x0010 - 0x001F Driver and Module functions
+
+// RBX is the address of the driver name
+// RCX will then be the memory address of the allocated driver
+void Syscall_KNeoLoadDriver(sCPUState *pCPUState)
+{
+    
+}
+
+// RBX is the address of the module name
+// RCX will then be the memory address of the allocated module
+void Syscall_KNeoLoadModule(sCPUState *pCPUState)
+{
+    
 }
 
 void KernelMain(sNEOSKernelHeader hdr)
@@ -59,15 +87,28 @@ void KernelMain(sNEOSKernelHeader hdr)
     
     InitSyscalls();
     PrintFormat("Syscalls initialised to interrput 0x%02X\n", NEOS_SYSCALL_IRQ);
-    RegisterSyscall(0, 0, Syscall_KNeoPrintString);
+    RegisterSyscall(0x0000, 0, Syscall_KNeoPrintString);
+    RegisterSyscall(0x0001, 0, Syscall_KNeoKernelPanic);
+    RegisterSyscall(0x0010, 0, Syscall_KNeoLoadDriver);
+    RegisterSyscall(0x0011, 0, Syscall_KNeoLoadModule);
     
     InitProcessScheduler();
     RegisterInterrupt(32, ScheduleProcesses);
     PrintFormat("Process scheduler initialised\n");
     
-    StartProcess("Test A", TestA, 1024 * 1024, 0, 0);
-    StartProcess("Test B", TestB, 1024 * 1024, 0, 0);
-    StartProcess("Test C", TestC, 1024 * 1024, 0, 0);
+    PVOID pModuleFilePointer = hdr.GetFile("NeOS/Modules.cfg");
+    PVOID pDriverFilePointer = hdr.GetFile("NeOS/Drivers.cfg");
+    PVOID pConfigFilePointer = hdr.GetFile("NeOS/NeOS.cfg");
+    _ASSERT(pModuleFilePointer, "File \"C:\\NeOS\\Modules.cfg\" not found");
+    _ASSERT(pDriverFilePointer, "File \"C:\\NeOS\\Drivers.cfg\" not found");
+    _ASSERT(pConfigFilePointer, "File \"C:\\NeOS\\NeOS.cfg\" not found");
+    PVOID pModuleFileText = HeapAlloc(hdr.GetFile(pModuleFilePointer) + 1);
+    PVOID pDriverFileText = HeapAlloc(hdr.GetFile(pDriverFilePointer) + 1);
+    PVOID pConfigFileText = HeapAlloc(hdr.GetFile(pDriverFilePointer) + 1);
+    hdr.ReadFile(pModuleFilePointer, pModuleFileText);
+    hdr.ReadFile(pDriverFilePointer, pDriverFileText);
+    sList lstModules = ParseINIFile(pModuleFileText);
+    sList lstDrivers = ParseINIFile(pDriverFileText);
 
     EnableInterrupts();
     for (;;);

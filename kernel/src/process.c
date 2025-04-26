@@ -28,7 +28,7 @@ INT StartProcess(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nR
     sProc.iPID        = g_lstProcesses.qwLength;
     sProc.qwStackSize = qwStackSize;
 
-    // Keep an unaligned stack so it can be freed
+    // Keep an unaligned copy of the stack so it can be freed
     sProc.pStackUnaligned = HeapAlloc(qwStackSize + 16);
     QWORD qwAlignOffset   = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
     // Align the stack
@@ -57,7 +57,10 @@ INT StartProcess(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nR
     sProc.pCPUState->qwRSP   = (QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState);
     sProc.pCPUState->qwRIP   = (QWORD) pEntryPoint;
     sProc.pCPUState->qwCS    = KERNEL_CODE_SEGMENT;
-    sProc.pCPUState->qwFlags = 0x0212; // Set the reserved and interrupt enable flags
+    sProc.pCPUState->qwFlags = 0x0202; // Set the reserved and interrupt enable flags
+
+    // Setup paging
+    sProc.pPageTable = CloneCurrentPageTable();
 
     AddListElement(&g_lstProcesses, &sProc);
     return g_lstProcesses.qwLength - 1;
@@ -66,7 +69,11 @@ INT StartProcess(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nR
 BOOL StopProcess(INT iPID)
 {
     // TODO: Add a remove list element function and kill the process
-    return false;
+    sProcess *pProcess = (sProcess *) GetListElement(&g_lstProcesses, iPID);
+    HeapFree(pProcess->pStackUnaligned);
+    FreePage(pProcess->pPageTable);
+    RemoveListElement(&g_lstProcesses, iPID);
+    return true;
 }
 
 sProcess *GetProcess(INT iPID)
@@ -86,5 +93,8 @@ QWORD ScheduleProcesses(QWORD qwRSP)
     if (++g_iCurrentPID >= g_lstProcesses.qwLength)
         g_iCurrentPID = 0;
     
-    return (QWORD) ((sProcess *) GetListElement(&g_lstProcesses, g_iCurrentPID))->pCPUState;
+    sProcess *pProcess = (sProcess *) GetListElement(&g_lstProcesses, g_iCurrentPID);
+    LoadPageTable(pProcess);
+        
+    return (QWORD) pProcess->pCPUState;
 }

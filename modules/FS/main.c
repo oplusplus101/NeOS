@@ -1,5 +1,5 @@
 
-#include <NeOS.h>
+#include <KNeOS.h>
 
 // This module implements the interface between software and the filesystem driver.
 // To ensure that multiple filesystems are supported, the software interfave is split from the filesystem handler.
@@ -22,6 +22,12 @@ typedef struct
 
 sDriver *g_pDriver;
 
+// Can either be a drive letter (A-Z) or a mount point, if the filesystem containing the supports it
+INT NeoGetFilesystemType(PCHAR szDrivePath)
+{
+
+}
+
 sFile *NeoOpenFile(PCHAR szFilename, BYTE nMode)
 {
     sFile sFile = NeoHeapAlloc();
@@ -29,7 +35,7 @@ sFile *NeoOpenFile(PCHAR szFilename, BYTE nMode)
 
 void NeoCloseFile(sFile *pFile)
 {
-    ((void (*)(sFile *)) NeoGetDriverFunction(g_pDriver, "CloseFile"))(pFile);
+    ((void (*)(sFile *)) KNeoGetDriverFunction(g_pDriver, "CloseFile"))(pFile);
 }
 
 
@@ -50,7 +56,7 @@ void NeoWriteFile(sFile *pFile, PVOID pBuffer, QWORD qwSize)
 
 void ModuleEnable()
 {
-    g_pDriver = NeoOpenDriver(NeoGetRegistry("NEOS/DEFAULTS/FILESYSTEM_DRIVER"));
+    g_pDriver = KNeoLoadDriver(KNeoGetRegistry("NEOS/DEFAULTS/FILESYSTEM_DRIVER"));
 }
 
 void ModuleDisable()

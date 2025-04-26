@@ -15,6 +15,7 @@ typedef struct
     QWORD qwStackSize;
     PVOID pStackUnaligned, pStack;
     sCPUState *pCPUState;
+    sPageTable *pPageTable;
 } sProcess;
 
 void InitProcessScheduler();

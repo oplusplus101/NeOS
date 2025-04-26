@@ -104,6 +104,13 @@ inline static PCHAR StripString(PCHAR sz)
     return sz;
 }
 
+inline static PCHAR ToUppercase(PCHAR sz)
+{
+    for (; *sz != 0; sz++)
+        if (*sz >= 'a' && *sz <= 'z')
+            *sz -= 'a' - 'A';
+    return sz;
+}
 
 PCHAR strtok(PCHAR sz, const PCHAR szDelim);
 

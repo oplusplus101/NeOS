@@ -20,5 +20,6 @@ void SwapElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index);
 PVOID GetListElement(sList *pList, QWORD qwIndex);
 PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData);
 PVOID AddListElement(sList *pList, PVOID pData);
+void RemoveListElement(sList *pList, QWORD qwIndex);
 
 #endif // __LIST_H

@@ -16,8 +16,21 @@
 #include <memory/paging.h>
 #include <memory/heap.h>
 #include <common/memory.h>
+#include <common/string.h>
 #include <common/ini.h>
 #include <neos.h>
+
+QWORD GetFileSize(sFAT32DirectoryEntry *pFile)
+{
+    return pFile->dwFileSize;
+}
+
+PVOID GetFile(PCHAR szPath)
+{
+    PVOID pEntry = HeapAlloc(sizeof(sFAT32DirectoryEntry));
+    if (!GetEntryFromPath(szPath, pEntry)) return 0;
+    return pEntry;
+}
 
 void LoaderMain(sBootData data)
 {
@@ -46,7 +59,6 @@ void LoaderMain(sBootData data)
     // Lock the GOP screen memory.
     ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
     MapPageRangeToIdentity(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1, PF_WRITEABLE);
-    LoadPML4();
     PrintString("Paging initialised!\n");
 
     PVOID pHeapBuffer = AllocateContinousPages(NEOS_HEAP_SIZE / PAGE_SIZE);
@@ -67,7 +79,7 @@ void LoaderMain(sBootData data)
     LoadFAT32(DRIVE_TYPE_AHCI_SATA, sKernelPartition);
 
     sFAT32DirectoryEntry sKernelEntry;
-    _ASSERT(GetEntryFromPath("NEOS/NEOS    SYS", &sKernelEntry), "Kernel not found at C:\\NeOS\\NeOS.sys");
+    _ASSERT(GetEntryFromPath("NeOS/NeOS.sys", &sKernelEntry), "Kernel not found at C:\\NeOS\\NeOS.sys");
     
     PBYTE pKernelData = HeapAlloc(sKernelEntry.dwFileSize);
     ReadDirectoryEntry(&sKernelEntry, pKernelData);
@@ -99,17 +111,14 @@ void LoaderMain(sBootData data)
 
     sNEOSKernelHeader sHeader;
     sHeader.qwHeapStart = (QWORD) pHeapBuffer;
+    sHeader.qwHeapSize  = NEOS_HEAP_SIZE; // TODO: Make the heap size change based on the total RAM size
     sHeader.sGOP        = data.gop;
     sHeader.sPaging     = ExportPagingData();
+    sHeader.GetFileSize = (QWORD (*)(PVOID)) GetFileSize;
+    sHeader.GetFile     = (PVOID (*)(PCHAR)) GetFile;
+    sHeader.ReadFile    = (void (*)(PVOID, PVOID)) ReadDirectoryEntry;
 
-    // Load the config
-    sFAT32DirectoryEntry sConfigEntry;
-    _ASSERT(GetEntryFromPath("NEOS/NEOS    CFG", &sConfigEntry), "Config file \"C:\\NEOS\\NeOS.cfg\" not found");
-    PCHAR szConfigContents = HeapAlloc(sConfigEntry.dwFileSize + 1);
-    ReadDirectoryEntry(&sConfigEntry, szConfigContents);
-    szConfigContents[sConfigEntry.dwFileSize] = 0;
-    
-    PrintFormat("Executing C:\\NEOS\\NEOS.sys at 0x%p\n", pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase);
+    PrintFormat("Executing C:\\NeOS\\NeOS.sys at 0x%p\n", pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase);
     ((void (*)(sNEOSKernelHeader)) (pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase))(sHeader);
 
     // Somthing went very wrong

@@ -42,7 +42,7 @@ typedef struct
 
 typedef struct
 {
-    sPageTable *pPML4;
+    sPageTable *pPageTable;
     sBitmap sPageBitmap;
     QWORD qwMemorySize, qwFreeMemory;
     QWORD qwPageBitmapIndex;
@@ -60,7 +60,8 @@ PVOID AllocatePage();
 PVOID AllocateContinousPages(QWORD qwPages);
 void FreePage(PVOID pAddress);
 PVOID GetPhysicalAddress(PVOID pVirtualAddress);
-void LoadPML4();
+sPageTable *GetCurrentPageTable();
+void LoadPageTable(sPageTable *pTable);
 sPagingData ExportPagingData();
 void ImportPagingData(sPagingData sData);
 

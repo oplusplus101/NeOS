@@ -3,7 +3,6 @@
 #include <common/string.h>
 #include <common/screen.h>
 
-// if pEntries->pData is NULL, the function will allocate a new list on the heap
 sList ParseINIFile(PCHAR szContents)
 {
     sList lstEntries = CreateEmptyList(sizeof(sINIEntry));

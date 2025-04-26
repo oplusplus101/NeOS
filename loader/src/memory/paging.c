@@ -7,7 +7,7 @@
 #include <common/memory.h>
 #include <common/panic.h>
 
-sPageTable *g_pPML4;
+sPageTable *g_pCurrentPageTable, *g_pKernelPageTable;
 sBitmap g_sPageBitmap;
 QWORD g_qwMemorySize = 0, g_qwFreeMemory = 0;
 QWORD g_qwPageBitmapIndex = 0;
@@ -16,10 +16,10 @@ sPagingData ExportPagingData()
 {
     sPagingData sData =
     {
-        .pPML4        = g_pPML4,
-        .sPageBitmap  = g_sPageBitmap,
-        .qwMemorySize = g_qwMemorySize,
-        .qwFreeMemory = g_qwFreeMemory,
+        .pPageTable        = g_pCurrentPageTable,
+        .sPageBitmap       = g_sPageBitmap,
+        .qwMemorySize      = g_qwMemorySize,
+        .qwFreeMemory      = g_qwFreeMemory,
         .qwPageBitmapIndex = g_qwPageBitmapIndex
     };
 
@@ -28,7 +28,7 @@ sPagingData ExportPagingData()
 
 void ImportPagingData(sPagingData sData)
 {
-    g_pPML4 = sData.pPML4;
+    g_pCurrentPageTable = sData.pPageTable;
     g_sPageBitmap = sData.sPageBitmap;
     g_qwMemorySize = sData.qwMemorySize;
     g_qwFreeMemory = sData.qwFreeMemory;
@@ -126,7 +126,7 @@ void ReturnPages(PVOID pAddress, QWORD nPages)
 PVOID GetPhysicalAddress(PVOID pVirtualAddress)
 {
     // Page Directory Pointer
-    sPageTableEntry *pEntry = &g_pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
+    sPageTableEntry *pEntry = &g_pCurrentPageTable->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
     if (!(pEntry->nFlags & PF_PRESENT)) return NULL;
     sPageTable *pPageDirectoryPointer = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->nAddress);
 
@@ -148,14 +148,14 @@ PVOID GetPhysicalAddress(PVOID pVirtualAddress)
 void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags)
 {
     // Page Directory Pointer
-    sPageTableEntry *pEntry = &g_pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
+    sPageTableEntry *pEntry = &g_pCurrentPageTable->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
     sPageTable *pPageDirectoryPointer;
     if (!(pEntry->nFlags & PF_PRESENT))
     {
         pPageDirectoryPointer = AllocatePage();
         pEntry->nAddress = _ADDRESS_TO_PAGE(pPageDirectoryPointer);
         pEntry->nFlags   = PF_PRESENT | PF_WRITEABLE;
-        g_pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)] = *pEntry;
+        g_pCurrentPageTable->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
         pPageDirectoryPointer = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->nAddress);
@@ -255,13 +255,29 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
     // Reserve the bootloader's pages.
     ReservePages((PVOID) nLoaderStart, (nLoaderEnd - nLoaderStart) / PAGE_SIZE + 1);
     
-    g_pPML4 = AllocatePage();
+    g_pKernelPageTable = AllocatePage();
+    g_pCurrentPageTable = g_pKernelPageTable;
 
     // Identity map the whole memory.
     MapPageRangeToIdentity(NULL, nMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
+
+    LoadPageTable(g_pCurrentPageTable);
 }
 
-void LoadPML4()
+sPageTable *GetCurrentPageTable()
 {
-    __asm__ volatile ("mov %0, %%cr3" : : "r" (g_pPML4));
+    return g_pCurrentPageTable;
+}
+
+sPageTable *CloneCurrentPageTable()
+{
+    sPageTable *pClone = AllocatePage();
+    memcpy(pClone, g_pCurrentPageTable, PAGE_TABLE_SIZE);
+    return pClone;
+}
+
+void LoadPageTable(sPageTable *pTable)
+{
+    g_pCurrentPageTable = pTable;
+    __asm__ volatile ("mov %0, %%cr3" : : "r" (pTable));
 }

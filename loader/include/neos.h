@@ -20,9 +20,13 @@ typedef struct
 {
     sGOPData sGOP;
     sPagingData sPaging;
-    QWORD qwHeapStart;
+    QWORD qwHeapStart, qwHeapSize;
     BYTE nDriveNum;
-    sList lstConfig;
+    
+    // These functions need to exist in order to avoid a chicken and egg type scenario, i.e. you are trying to load the filesystem module with the filesystem module
+    PVOID (*GetFile)(PCHAR szFilename);
+    QWORD (*GetFileSize)(PVOID pFile);
+    void (*ReadFile)(PVOID pFile, PVOID pBuffer);
 } sNEOSKernelHeader;
 
 #endif // __NEOS_H

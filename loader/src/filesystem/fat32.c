@@ -40,22 +40,32 @@ BYTE LFNChecksum(PBYTE sFilename)
     return nSum;
 }
 
-BOOL ConvertTo83Filename(PBYTE szFilename, PBYTE sResult)
+BOOL ConvertTo83Filename(PCHAR szFilename, PBYTE sResult)
 {
     if (strlen((PCHAR) szFilename) > 12) return false;
-    BYTE i;
 
+    BOOL bContainsDot;
+    for (BYTE i = 0; i < strlen((PCHAR) szFilename); i++)
+        if (szFilename[i] == '.')
+        {
+            bContainsDot = true;
+            break;
+        }
+
+    memset(sResult, ' ', 11);
+    if (!bContainsDot)
+    {
+        memcpy(sResult, szFilename, 11);
+        return true;
+    }
+
+    BYTE i;
     for (i = 0; szFilename[i] != '.'; i++)
-    {
-        if (i > 8) return false;
         sResult[i] = szFilename[i];
-    }
-    
-    for (BYTE j = 0; szFilename[i] != 0; i++, j++)
-    {
-        if (j > 3) return false;
+
+    i++; // Skip .
+    for (BYTE j = 0; szFilename[i]; i++, j++)
         sResult[8 + j] = szFilename[i];
-    }
 
     return true;
 }
@@ -94,8 +104,10 @@ BOOL SearchForFileInCluster(PBYTE sEntryName, DWORD dwCluster, sFAT32DirectoryEn
 
 BOOL GetEntryFromPath(PCHAR szPath, sFAT32DirectoryEntry *pEntry)
 {
-    BYTE arrParsedPath[256][11]; // Assume a maximum path depth of 256
-    memset(arrParsedPath, ' ', 256 * 11);
+    ToUppercase(szPath); // Will overwrite the caller's string
+
+    BYTE arrParsedPath[256][12]; // Assume a maximum path depth of 256
+    memset(arrParsedPath, ' ', 256 * 12);
     DWORD dwCurrentCluster = 2; // FAT-32 clusters start at 2
     WORD wDepth = 0;
 
@@ -110,6 +122,11 @@ BOOL GetEntryFromPath(PCHAR szPath, sFAT32DirectoryEntry *pEntry)
         }
         arrParsedPath[wDepth][j] = szPath[i];
     }
+
+    CHAR szFilename[13];
+    memcpy(szFilename, arrParsedPath[wDepth], 12);
+    szFilename[12] = 0;
+    ConvertTo83Filename(szFilename, arrParsedPath[wDepth]);
     wDepth++;
     
     for (WORD i = 0; dwCurrentCluster != 0x0FFFFFF8 && i < wDepth;

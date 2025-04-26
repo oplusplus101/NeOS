@@ -65,3 +65,12 @@ PVOID AddListElement(sList *pList, PVOID pData)
     pList->pData = HeapReAlloc(pList->pData, (++pList->qwLength) * pList->qwElementSize);
     return SetListElement(pList, pList->qwLength - 1, pData);
 }
+
+void RemoveListElement(sList *pList, QWORD qwIndex)
+{
+    _ASSERT(pList != NULL, "Tried to remove an element from a NULL list");
+    _ASSERT(qwIndex < pList->qwLength, "Tried to remove list element outside list, index: %d, list length %d", qwIndex, pList->qwLength);
+    memcpy(pList->pData + qwIndex * pList->qwElementSize, pList->pData + (qwIndex + 1) * pList->qwElementSize, pList->qwLength - qwIndex);
+    pList->qwLength--;
+    pList->pData = HeapReAlloc(pList->pData, pList->qwLength * pList->qwElementSize);
+}

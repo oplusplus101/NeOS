@@ -9,7 +9,7 @@ int (*KNeoGetSystemDrive)();
 
 void EnableDriver()
 {
-    g_pDiskModule = KNeoGetModule("disk.mod");
+    g_pDiskModule = KNeoLoadModule("disk.mod");
     KNeoAssert(g_pDiskModule, "Disk module (disk.mod) either not loaded or doesn't exist");
     KNeoReadDiskSectors = KNeoGetModuleFunction(g_pDiskModule, "KNeoReadDiskSectors");
     KNeoGetSystemDrive = KNeoGetModuleFunction(g_pDiskModule, "KNeoGetSystemDrive");
