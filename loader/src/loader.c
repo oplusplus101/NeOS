@@ -25,10 +25,10 @@ QWORD GetFileSize(sFAT32DirectoryEntry *pFile)
     return pFile->dwFileSize;
 }
 
-PVOID GetFile(PCHAR szPath)
+PVOID GetFile(PWCHAR wszPath)
 {
     PVOID pEntry = HeapAlloc(sizeof(sFAT32DirectoryEntry));
-    if (!GetEntryFromPath(szPath, pEntry)) return 0;
+    if (!GetEntryFromPath(wszPath, pEntry)) return 0;
     return pEntry;
 }
 
@@ -68,7 +68,6 @@ void LoaderMain(sBootData data)
 
     PrintString("Scanning for PCI devices...\n");
     ScanPCIDevices();
-    PrintString("PCI scan done\nLoading GPT partitions...\n");
 
     InitDrives();
 
@@ -78,12 +77,15 @@ void LoaderMain(sBootData data)
     sGPTPartitionEntry sKernelPartition = GetKernelPartition();
     LoadFAT32(DRIVE_TYPE_AHCI_SATA, sKernelPartition);
 
+    PrintFormat("Loading kernel...\n");
     sFAT32DirectoryEntry sKernelEntry;
-    _ASSERT(GetEntryFromPath("NeOS/NeOS.sys", &sKernelEntry), "Kernel not found at C:\\NeOS\\NeOS.sys");
-    
+
+    _ASSERT(GetEntryFromPath(L"NeOS\\NeOS.sys", &sKernelEntry), "Kernel not found at C:\\NeOS\\NeOS.sys");
+
     PBYTE pKernelData = HeapAlloc(sKernelEntry.dwFileSize);
     ReadDirectoryEntry(&sKernelEntry, pKernelData);
     
+    PrintFormat("Loading PE headers...\n");
     // Parse the file (PE32+)
     sMZHeader *pMZHeader = (sMZHeader *) pKernelData;
     _ASSERT(pMZHeader->wMagic == 0x5A4D, "Invalid DOS stub.");
@@ -95,6 +97,7 @@ void LoaderMain(sBootData data)
     
     sPE32OptionalHeader *pPEOHeader = (sPE32OptionalHeader *) (pPEHeader + 1);
     _ASSERT(pPEOHeader->wMagic == 0x020B, "Invalid PE32 optional header.");
+    PrintFormat("Loading sections...\n");
 
     // TODO: Add saftey checks to ensure that the entrypoint inside the file matches the expected value (NEOS_KERNEL_LOCATION).
     DisableInterrupts(); // To ensure that everything is loaded in the right order
@@ -102,24 +105,28 @@ void LoaderMain(sBootData data)
     {
         sPE32SectionHeader *hdr = (sPE32SectionHeader *) ((PBYTE) pPEOHeader + pPEHeader->wSizeOfOptionalHeader + sizeof(sPE32SectionHeader) * i);
         QWORD qwAddress = hdr->dwVirtualAddress + pPEOHeader->qwImageBase;
-        PrintFormat("Loading kernel segment: %s at 0x%p\n", hdr->szName, qwAddress);
+        PrintFormat("Loading section: %s at 0x%p\n", hdr->szName, qwAddress);
         
         memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwPointerToRawData, hdr->dwVirtualSize);
-        // Ensure the kernel isnt overwritten
-        ReservePages((PVOID) qwAddress, hdr->dwVirtualSize / PAGE_SIZE + 1);
     }
+    
+    HeapFree(pKernelData);
 
+    // Assume the kernel will be between 0x200000 - 0x300000
+    ReservePages((PVOID) 0x200000, 0x100000 / PAGE_SIZE);
+    MapPageRangeToIdentity((PVOID) 0x200000, 0x100000 / PAGE_SIZE, PF_WRITEABLE);
+    
     sNEOSKernelHeader sHeader;
     sHeader.qwHeapStart = (QWORD) pHeapBuffer;
     sHeader.qwHeapSize  = NEOS_HEAP_SIZE; // TODO: Make the heap size change based on the total RAM size
     sHeader.sGOP        = data.gop;
     sHeader.sPaging     = ExportPagingData();
     sHeader.GetFileSize = (QWORD (*)(PVOID)) GetFileSize;
-    sHeader.GetFile     = (PVOID (*)(PCHAR)) GetFile;
+    sHeader.GetFile     = (PVOID (*)(PWCHAR)) GetFile;
     sHeader.ReadFile    = (void (*)(PVOID, PVOID)) ReadDirectoryEntry;
-
-    PrintFormat("Executing C:\\NeOS\\NeOS.sys at 0x%p\n", pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase);
-    ((void (*)(sNEOSKernelHeader)) (pPEOHeader->dwAddressOfEntrypoint + pPEOHeader->qwImageBase))(sHeader);
+    
+    PrintFormat("Executing C:\\NeOS\\NeOS.sys at 0x%p\n", pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint);
+    ((void (*)(sNEOSKernelHeader)) (pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint))(sHeader);
 
     // Somthing went very wrong
     _KERNEL_PANIC("The kernel has crashed :/");

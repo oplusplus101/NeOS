@@ -5,6 +5,7 @@
 #include <memory/list.h>
 #include <hardware/idt.h>
 #include <common/types.h>
+#include <memory/paging.h>
 
 typedef struct
 {
@@ -21,6 +22,7 @@ typedef struct
 void InitProcessScheduler();
 
 // Returns the PID
+INT StartProcessPE(PCHAR szName, BYTE nRing, WORD wOwner, PVOID *pFileData);
 INT StartProcess(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner);
 BOOL StopProcess(INT iPID);
 sProcess *GetProcess(INT iPID);

@@ -42,10 +42,24 @@ inline static void strncpy(PCHAR szDest, PCHAR szSrc, QWORD n)
     *szDest = 0;
 }
 
+inline static PCHAR strcat(PCHAR szDest, PCHAR sz)
+{
+    strcpy(&szDest[strlen(szDest)], sz);
+    return szDest;
+}
+
 inline static INT strncmp(PCHAR szA, PCHAR szB, QWORD n)
 {
     for (QWORD i = 0; szA[i] && szB[i] && i < n; i++)
         if (szA[i] != szB[i]) return 1;
+
+    return 0;
+}
+
+inline static INT strncmpW(PWCHAR wszA, PWCHAR wszB, QWORD n)
+{
+    for (QWORD i = 0; wszA[i] && wszB[i] && i < n; i++)
+        if (wszA[i] != wszB[i]) return 1;
 
     return 0;
 }
@@ -104,14 +118,21 @@ inline static PCHAR StripString(PCHAR sz)
     return sz;
 }
 
-inline static PCHAR ToUppercase(PCHAR sz)
+inline static void ToUppercase(PCHAR sz)
 {
     for (; *sz != 0; sz++)
         if (*sz >= 'a' && *sz <= 'z')
             *sz -= 'a' - 'A';
-    return sz;
+}
+
+inline static void ToUppercaseW(PWCHAR wsz)
+{
+    for (; *wsz != 0; wsz++)
+        if (*wsz >= L'a' && *wsz <= L'z')
+            *wsz -= L'a' - L'A';
 }
 
 PCHAR strtok(PCHAR sz, const PCHAR szDelim);
+PWCHAR strtokW(PWCHAR wsz, const PWCHAR wszDelim);
 
 #endif // __STRING_H

@@ -25,13 +25,13 @@ typedef struct
 typedef struct
 {
     DWORD dwMagic;
-    WORD wMachine;
-    WORD wNumberOfSections;
+    WORD  wMachine;
+    WORD  wNumberOfSections;
     DWORD dwTimeDateStamp;
     DWORD dwPointerToSymbolTable;
     DWORD dwNumberOfSymbols;
-    WORD wSizeOfOptionalHeader;
-    WORD wCharacteristics;
+    WORD  wSizeOfOptionalHeader;
+    WORD  wCharacteristics;
 } __attribute__((packed)) sPE32Header;
 
 typedef struct
@@ -75,7 +75,7 @@ typedef struct
     DWORD dwSizeOfRawData;
     DWORD dwPointerToRawData;
     DWORD dwPointerToRelocations;
-    DWORD dwPointerToLinenumbers;
+    DWORD dwPointerToLineNumbers;
     WORD  wNumberOfRelocations;
     WORD  wNumberOfLineNumbers;
     DWORD dwCharacteristics;

@@ -2,8 +2,7 @@
 #ifndef __PCI_H
 #define __PCI_H
 
-#include <common/types.h>
-#include <hardware/ports.h>
+#include <KNeOS.h>
 
 typedef struct
 {
@@ -34,13 +33,5 @@ typedef struct
     } eType;
     BOOL bPrefetchable;
 } sBaseAddressRegister;
-
-sBaseAddressRegister GetBaseAddressRegister(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nBAR);
-DWORD PCIRead(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset);
-void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD dwValue);
-
-sPCIDeviceDescriptor GetDeviceDescriptor(BYTE nBus, BYTE nSlot, BYTE nFunction);
-
-void ScanPCIDevices();
 
 #endif // __PCI_H

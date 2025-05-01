@@ -70,9 +70,12 @@ BOOL ConvertTo83Filename(PCHAR szFilename, PBYTE sResult)
     return true;
 }
 
-BOOL SearchForFileInCluster(PBYTE sEntryName, DWORD dwCluster, sFAT32DirectoryEntry *pEntry)
+BOOL SearchForFileInCluster(PWCHAR wszEntryName, DWORD dwCluster, sFAT32DirectoryEntry *pEntry)
 {
     PBYTE pBuffer = HeapAlloc(g_wBytesPerCluster);
+    WCHAR wszLongFileNameBuffer[256];
+    ZeroMemory(wszLongFileNameBuffer, 256);
+    BOOL bLastLFNEntry = false;
 
     for (; dwCluster != 0x0FFFFFF8; dwCluster = GetNextCluster(dwCluster))
     {
@@ -82,14 +85,28 @@ BOOL SearchForFileInCluster(PBYTE sEntryName, DWORD dwCluster, sFAT32DirectoryEn
         {
             memcpy(pEntry, pBuffer + i * sizeof(sFAT32DirectoryEntry), sizeof(sFAT32DirectoryEntry));
             
-            if (*pEntry->sFilename == 0x00)
-                break;
-            
-            if (*pEntry->sFilename == 0xE5 ||
-                pEntry->nAttributes == FAT32_ATTR_LFN)
-                continue;
+            if (*pEntry->sFilename == 0x00) break;
+            if (*pEntry->sFilename == 0xE5) continue;
 
-            if (!memcmp(pEntry->sFilename, sEntryName, 11))
+            if (pEntry->nAttributes == FAT32_ATTR_LFN)
+            {
+                if (bLastLFNEntry)
+                {
+                    bLastLFNEntry = false;
+                    ZeroMemory(wszLongFileNameBuffer, 256);
+                }
+
+                sFAT32LongFilenameEntry *pLFNEntry = (sFAT32LongFilenameEntry *) pEntry;
+                BYTE nOffset = (pLFNEntry->nSequence & 0x0F) - 1;
+                memcpy(&wszLongFileNameBuffer[nOffset * 13], pLFNEntry->sFirstPart, 10);
+                memcpy(&wszLongFileNameBuffer[nOffset * 13 + 5], pLFNEntry->sSecondPart, 12);
+                memcpy(&wszLongFileNameBuffer[nOffset * 13 + 11], pLFNEntry->sThirdPart, 4);
+            }
+            else
+                bLastLFNEntry = true;
+
+            ToUppercaseW(wszLongFileNameBuffer);
+            if (bLastLFNEntry && !strcmpW(wszLongFileNameBuffer, wszEntryName))
             {
                 HeapFree(pBuffer);
                 return true;
@@ -102,37 +119,18 @@ BOOL SearchForFileInCluster(PBYTE sEntryName, DWORD dwCluster, sFAT32DirectoryEn
     return false;
 }
 
-BOOL GetEntryFromPath(PCHAR szPath, sFAT32DirectoryEntry *pEntry)
+BOOL GetEntryFromPath(PWCHAR wszPath, sFAT32DirectoryEntry *pEntry)
 {
-    ToUppercase(szPath); // Will overwrite the caller's string
+    ToUppercaseW(wszPath); // Will overwrite the caller's string
+    PWCHAR wszFileName = strtokW(wszPath, L"/\\");
 
-    BYTE arrParsedPath[256][12]; // Assume a maximum path depth of 256
-    memset(arrParsedPath, ' ', 256 * 12);
-    DWORD dwCurrentCluster = 2; // FAT-32 clusters start at 2
-    WORD wDepth = 0;
-
-    for (WORD i = 0, j = 0; szPath[i]; i++, j++)
+    for (DWORD i = 0, dwCurrentCluster = 2;
+         dwCurrentCluster != 0x0FFFFFF8 && wszFileName != NULL;
+         dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow,
+         i++, wszFileName = strtokW(NULL, L"/\\"))
     {
-        _ASSERT(wDepth < 256, "Path \"%s\" has a depth more than.");
-        if (szPath[i] == '/' || szPath[i] == '\\')
-        {
-            wDepth++;
-            j = 0xFFFF; // Rolls over to 0 after continue
-            continue;
-        }
-        arrParsedPath[wDepth][j] = szPath[i];
-    }
-
-    CHAR szFilename[13];
-    memcpy(szFilename, arrParsedPath[wDepth], 12);
-    szFilename[12] = 0;
-    ConvertTo83Filename(szFilename, arrParsedPath[wDepth]);
-    wDepth++;
-    
-    for (WORD i = 0; dwCurrentCluster != 0x0FFFFFF8 && i < wDepth;
-         dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow, i++)
-    {
-        if (!SearchForFileInCluster(arrParsedPath[i], dwCurrentCluster, pEntry))
+        PrintFormat("Name: %w PATH: %w\n", wszFileName, wszPath);
+        if (!SearchForFileInCluster(wszFileName, dwCurrentCluster, pEntry))
         {
             ZeroMemory(pEntry, sizeof(sFAT32DirectoryEntry));
             return false;

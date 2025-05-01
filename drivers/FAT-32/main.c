@@ -9,8 +9,8 @@ int (*KNeoGetSystemDrive)();
 
 void EnableDriver()
 {
-    g_pDiskModule = KNeoLoadModule("disk.mod");
-    KNeoAssert(g_pDiskModule, "Disk module (disk.mod) either not loaded or doesn't exist");
+    g_pDiskModule = KNeoLoadModule("storage");
+    KNeoAssert(g_pDiskModule, "Storage module (storage.mod) either not loaded or doesn't exist");
     KNeoReadDiskSectors = KNeoGetModuleFunction(g_pDiskModule, "KNeoReadDiskSectors");
     KNeoGetSystemDrive = KNeoGetModuleFunction(g_pDiskModule, "KNeoGetSystemDrive");
     g_nSystemDrive = KNeoGetSystemDrive();
@@ -18,10 +18,5 @@ void EnableDriver()
     // Read the boot sector
     KNeoReadDiskSectors(g_nSystemDrive, 0, 1, &g_sBootSector);
     
+    for (;;);
 }
-
-void DisableDriver()
-{
-
-}
-

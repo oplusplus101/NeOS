@@ -48,6 +48,8 @@ PVOID HeapAlloc(QWORD qwLength)
 
 void HeapFree(PVOID pMemory)
 {
+    _ASSERT(pMemory, "Tried to free a NULL address");
+    
     sMemoryChunk *pChunk = (sMemoryChunk *) ((QWORD) pMemory - sizeof(sMemoryChunk));
     pChunk->bAllocated   = false;
     g_qwFreeMemory += pChunk->qwLength;

@@ -1,0 +1,8 @@
+
+#ifndef __STORAGE_H
+#define __STORAGE_H
+
+#define DRIVE_LETTERS "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+#define DEFAULT_DRIVE 'C'
+
+#endif // __STORAGE_H

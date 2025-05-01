@@ -94,7 +94,7 @@ typedef struct
     WORD sThirdPart[2];
 } __attribute__((packed)) sFAT32LongFilenameEntry;
 
-BOOL GetEntryFromPath(PCHAR szPath, sFAT32DirectoryEntry *pEntry);
+BOOL GetEntryFromPath(PWCHAR wszPath, sFAT32DirectoryEntry *pEntry);
 void ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer);
 void LoadFAT32(BYTE nDrive, sGPTPartitionEntry kernelPartition);
 

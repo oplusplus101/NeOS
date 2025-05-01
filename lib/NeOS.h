@@ -5,9 +5,25 @@
 typedef struct
 {
     DWORD dwWidth, dwHeight;
-    BYTE  nColorsPerPixel;
-    BYTE  nBytesPerPixel;
-    DWORD dwRefreshRate;
-} sNeoScreenData;
+} sSize;
+
+typedef struct
+{
+    INT dwWidth, dwHeight;
+} sPoint;
+
+typedef struct
+{
+    sPoint pt;
+    sSize sz;
+} sRectangle;
+
+typedef struct
+{
+    sRectangle rectArea;
+    BYTE       nColorsPerPixel;
+    BYTE       nBytesPerPixel;
+    DWORD      dwRefreshRate;
+} sNeoScreenInfo;
 
 #endif // __NEOS_H

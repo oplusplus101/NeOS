@@ -82,6 +82,14 @@ PVOID AllocateContinousPages(QWORD qwPages)
     return NULL;
 }
 
+void FreeContinousPages(PVOID pAddress, QWORD qwPages)
+{
+    if (pAddress == NULL) return;
+    MapPageRangeToIdentity(pAddress, qwPages, PF_WRITEABLE);
+    ReturnPages(pAddress, qwPages);
+    g_qwPageBitmapIndex = _ADDRESS_TO_PAGE(pAddress);
+}
+
 void FreePage(PVOID pAddress)
 {
     if (pAddress == NULL) return;

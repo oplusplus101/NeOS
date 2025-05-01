@@ -22,6 +22,9 @@ QEMU_PARAMS = -m 1G -cpu qemu64 -monitor stdio \
 			  -drive id=disk,file=$(IMG),if=none,format=vmdk -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0
 #			  -drive file=$(IMG),format=raw,if=none,id=nvm -device nvme,serial=cafebabe,drive=nvm
 
+DRIVERS		= drivers/GOP-GFX
+MODULES		= 
+
 $(IMG): $(BOOTLOADER_EXEC) $(LOADER_EXEC) init-ospart
 	make nbd-connect
 	sudo dd if=/dev/zero of=$(ESP) bs=1k count=1440
@@ -53,7 +56,10 @@ $(LOADER_EXEC):
 $(KERNEL_EXEC):
 	cd kernel && make
 
-init-ospart: $(KERNEL_EXEC) $(OSDRIVE)
+drivers/%: drivers/%/%.drv
+	cd $@ && make
+
+init-ospart: $(KERNEL_EXEC) $(OSDRIVE) $(DRIVERS)
 	make nbd-connect
 	mkdir -p ospart && sleep 0.5
 	sudo mount $(OSPART) ospart
@@ -61,7 +67,8 @@ init-ospart: $(KERNEL_EXEC) $(OSDRIVE)
 	sudo cp -r $(OSDRIVE)/* ospart
 	sudo cp $(KERNEL_EXEC) ospart/NeOS/NeOS.sys
 
-	# TODO: Copy over all the drivers and modules
+	sudo cp drivers/*/*.drv ospart/NeOS/Drivers
+	
 	sudo umount ospart
 	rm -rf ospart
 	make nbd-disconnect

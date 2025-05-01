@@ -24,7 +24,7 @@ typedef struct
     BYTE nDriveNum;
     
     // These functions need to exist in order to avoid a chicken and egg type scenario, i.e. you are trying to load the filesystem module with the filesystem module
-    PVOID (*GetFile)(PCHAR szFilename);
+    PVOID (*GetFile)(PWCHAR wszFilename);
     QWORD (*GetFileSize)(PVOID pFile);
     void (*ReadFile)(PVOID pFile, PVOID pBuffer);
 } sNEOSKernelHeader;

@@ -12,7 +12,7 @@ color_t g_fgColor, g_bgColor;
 BOOL g_bControlCharState = true;
 
 // Array from: https://files.osdev.org/mirrors/geezer/osd/graphics/modes.c
-const BYTE g_8x16_font[4096] =
+const static BYTE g_8x16_font[4096] =
 {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x7E, 0x81, 0xA5, 0x81, 0x81, 0xBD, 0x99, 0x81, 0x81, 0x7E, 0x00, 0x00, 0x00, 0x00,
@@ -382,6 +382,12 @@ void PrintString(const PCHAR sz)
         PrintChar(sz[i]);
 }
 
+void PrintStringW(const PWCHAR wsz)
+{
+    for (INT i = 0; wsz[i] != 0; i++)
+        PrintChar(wsz[i]);
+}
+
 void PrintFormat(const PCHAR szFormat, ...)
 {
     __builtin_va_list args;
@@ -404,18 +410,26 @@ void PrintFormat(const PCHAR szFormat, ...)
                 PrintDec(n);
                 break;
             case 'u':
-                PrintDec(__builtin_va_arg(args, DWORD));
+                PrintDec(__builtin_va_arg(args, QWORD));
                 break;
             case 'p':
                 PrintHex(__builtin_va_arg(args, QWORD), 16, true);
                 break;
-            case 's':
+                case 's':
                 const PCHAR sz = __builtin_va_arg(args, const PCHAR);
                 if (sz == NULL)
                     PrintString("(null)");
                 else
                     PrintString(sz);
                 break;
+            case 'w':
+                const PWCHAR wsz = __builtin_va_arg(args, const PWCHAR);
+                if (wsz == NULL)
+                    PrintString("(null)");
+                else
+                    PrintStringW(wsz);
+                break;
+            
             case 'c':
                 PrintChar((char) __builtin_va_arg(args, DWORD));
                 break;

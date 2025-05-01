@@ -1,8 +1,8 @@
 
 #include <process.h>
-#include <hardware/gdt.h>
-#include <memory/paging.h>
+#include <exe.h>
 #include <memory/heap.h>
+#include <hardware/gdt.h>
 #include <common/screen.h>
 #include <common/memory.h>
 #include <common/string.h>
@@ -14,6 +14,70 @@ void InitProcessScheduler()
 {
     g_lstProcesses = CreateEmptyList(sizeof(sProcess));
     g_iCurrentPID = -1;
+}
+
+INT StartProcessPE(PCHAR szName, BYTE nRing, WORD wOwner, PVOID *pFileData)
+{
+    sExecutable sEXE = ParsePE32(pFileData);
+
+    QWORD qwStackSize = 4096;
+    
+    sProcess sProc;
+    if (szName == NULL)
+        *sProc.szName = 0;
+    else
+        strncpy(sProc.szName, szName, 128);
+    sProc.nRing       = nRing;
+    sProc.wOwner      = wOwner;
+    sProc.iPID        = g_lstProcesses.qwLength;
+    sProc.qwStackSize = qwStackSize;
+
+    // Keep an unaligned copy of the stack so it can be freed
+    sProc.pStackUnaligned = HeapAlloc(qwStackSize + 16);
+    QWORD qwAlignOffset   = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
+    // Align the stack
+    sProc.pStack          = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
+    sProc.pCPUState       = (sCPUState *) ((QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState));
+
+    // Setup the CPU State
+    sProc.pCPUState->qwRAX   = 0;
+    sProc.pCPUState->qwRBX   = 0;
+    sProc.pCPUState->qwRCX   = 0;
+    sProc.pCPUState->qwRDX   = 0;
+
+    sProc.pCPUState->qwR8    = 0;
+    sProc.pCPUState->qwR9    = 0;
+    sProc.pCPUState->qwR10   = 0;
+    sProc.pCPUState->qwR11   = 0;
+    sProc.pCPUState->qwR12   = 0;
+    sProc.pCPUState->qwR13   = 0;
+    sProc.pCPUState->qwR14   = 0;
+    sProc.pCPUState->qwR15   = 0;
+
+    sProc.pCPUState->qwRSI   = 0;
+    sProc.pCPUState->qwRDI   = 0;
+    sProc.pCPUState->qwRBP   = 0;
+
+    sProc.pCPUState->qwRSP   = (QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState);
+    sProc.pCPUState->qwRIP   = (QWORD) sEXE.pEntryPoint;
+    sProc.pCPUState->qwCS    = KERNEL_CODE_SEGMENT;
+    sProc.pCPUState->qwFlags = 0x0202; // Set the reserved and interrupt enable flags
+
+    // Setup paging
+    sProc.pPageTable = CloneCurrentPageTable();
+    sPageTable *pCurrentPageTable = GetCurrentPageTable();
+    LoadPageTable(sProc.pPageTable);
+
+    for (WORD i = 0; i < sEXE.lstSections.qwLength; i++)
+    {
+        sExecutableSection *pSection = GetListElement(&sEXE.lstSections, i);
+        MapPageRange((PVOID) pSection->qwVirtualAddress, pSection->pData, pSection->dwVirtualSize / PAGE_SIZE + 1, PF_WRITEABLE);
+    }
+    
+
+    LoadPageTable(pCurrentPageTable);
+    AddListElement(&g_lstProcesses, &sProc);
+    return g_lstProcesses.qwLength - 1;
 }
 
 INT StartProcess(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner)
@@ -94,7 +158,7 @@ QWORD ScheduleProcesses(QWORD qwRSP)
         g_iCurrentPID = 0;
     
     sProcess *pProcess = (sProcess *) GetListElement(&g_lstProcesses, g_iCurrentPID);
-    LoadPageTable(pProcess);
+    LoadPageTable(pProcess->pPageTable);
         
     return (QWORD) pProcess->pCPUState;
 }
