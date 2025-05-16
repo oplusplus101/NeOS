@@ -4,6 +4,7 @@
 
 #include <common/types.h>
 
+
 typedef struct _tagMemoryChunk
 {
     struct _tagMemoryChunk *pNext, *pPrevious;
@@ -11,9 +12,22 @@ typedef struct _tagMemoryChunk
     QWORD qwLength;
 } __attribute__((packed)) sMemoryChunk;
 
-void InitHeap(QWORD qwStart, QWORD qwEnd);
-PVOID HeapAlloc(QWORD qwLength);
-void HeapFree(PVOID pMemory);
-PVOID HeapReAlloc(PVOID pMemory, QWORD qwNewSize);
+typedef struct
+{
+    sMemoryChunk *pFirstChunk;
+    QWORD qwStart, qwSize;
+    QWORD qwFreeMemory;
+} sHeap;
+
+void  SetKernelHeap(sHeap *pHeap);
+sHeap CreateHeap(QWORD qwSizeInPages, BOOL bUser);
+void  DestroyHeap(sHeap *pHeap);
+PVOID HeapAlloc(sHeap *pHeap, QWORD qwLength);
+void  HeapFree(sHeap *pHeap, PVOID pMemory);
+PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewLength);
+PVOID KHeapAlloc(QWORD qwLength);
+void  KHeapFree(PVOID pMemory);
+BOOL HeapDefragment(sHeap *pHeap);
+PVOID KHeapReAlloc(PVOID pMemory, QWORD qwLength);
 
 #endif // __HEAP_HH

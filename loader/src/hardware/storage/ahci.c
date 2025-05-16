@@ -209,7 +209,7 @@ sHBAPort *GetHBAPort(BYTE nPort)
 void SetupAHCI(BYTE nBus, BYTE nSlot, BYTE nFunction)
 {
     sBaseAddressRegister bar5 = GetBaseAddressRegister(nBus, nSlot, nFunction, 5);
-    MapPage((PVOID) bar5.qwAddress, (PVOID) bar5.qwAddress, PF_CACHEDISABLE | PF_WRITEABLE);
+    MapPageToIdentity(NULL, (PVOID) bar5.qwAddress, PF_CACHEDISABLE | PF_WRITEABLE);
 
     g_nActiveDevices = 0;
 

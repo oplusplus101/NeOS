@@ -7,7 +7,7 @@
 sList CreateEmptyList(QWORD qwElementSize)
 {
     sList list;
-    list.pData = HeapAlloc(qwElementSize);
+    list.pData = KHeapAlloc(qwElementSize);
     list.qwLength = 0;
     list.qwElementSize = qwElementSize;
     return list;
@@ -16,7 +16,7 @@ sList CreateEmptyList(QWORD qwElementSize)
 sList CreateSizedList(QWORD qwLength, QWORD qwElementSize)
 {
     sList list;
-    list.pData = HeapAlloc(qwElementSize * qwLength);
+    list.pData = KHeapAlloc(qwElementSize * qwLength);
     list.qwLength = qwLength;
     list.qwElementSize = qwElementSize;
     ZeroMemory(list.pData, qwLength * qwElementSize);
@@ -25,7 +25,7 @@ sList CreateSizedList(QWORD qwLength, QWORD qwElementSize)
 
 void DestroyList(sList *pList)
 {
-    HeapFree(pList->pData);
+    KHeapFree(pList->pData);
     pList->qwLength = 0;
     pList->qwElementSize = 0;
 }
@@ -35,7 +35,7 @@ void SwapListElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index
     _ASSERT(pList != NULL, "Tried to swap elements from a NULL list");
     _ASSERT(qwElement1Index < pList->qwLength, "Tried to move element outside the list, index: %d, list length: %d", qwElement1Index, pList->qwLength);
     _ASSERT(qwElement2Index < pList->qwLength, "Tried to move element outside the list, index: %d, list length: %d", qwElement2Index, pList->qwLength);
-    PVOID pTemp = HeapAlloc(pList->qwElementSize);
+    PVOID pTemp = KHeapAlloc(pList->qwElementSize);
     memcpy(pTemp, GetListElement(pList, qwElement1Index), pList->qwElementSize); // Backup the first element.
     SetListElement(pList, qwElement1Index, GetListElement(pList, qwElement2Index)); // Move element 2 to element 1.
     SetListElement(pList, qwElement2Index, pTemp);
@@ -62,7 +62,7 @@ PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
 PVOID AddListElement(sList *pList, PVOID pData)
 {
     _ASSERT(pList != NULL, "Tried to add an element to a NULL list");
-    pList->pData = HeapReAlloc(pList->pData, (++pList->qwLength) * pList->qwElementSize);
+    pList->pData = KHeapReAlloc(pList->pData, (++pList->qwLength) * pList->qwElementSize);
     return SetListElement(pList, pList->qwLength - 1, pData);
 }
 
@@ -72,5 +72,6 @@ void RemoveListElement(sList *pList, QWORD qwIndex)
     _ASSERT(qwIndex < pList->qwLength, "Tried to remove list element outside list, index: %d, list length %d", qwIndex, pList->qwLength);
     memcpy((PBYTE) pList->pData + qwIndex * pList->qwElementSize, (PBYTE) pList->pData + (qwIndex + 1) * pList->qwElementSize, pList->qwLength - qwIndex);
     pList->qwLength--;
-    pList->pData = HeapReAlloc(pList->pData, pList->qwLength * pList->qwElementSize);
+    if (pList->qwLength > 0)
+        pList->pData = KHeapReAlloc(pList->pData, pList->qwLength * pList->qwElementSize);
 }

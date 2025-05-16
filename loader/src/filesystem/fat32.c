@@ -30,54 +30,15 @@ void ReadCluster(DWORD dwCurrentCluster, PVOID pBuffer)
     ReadFromDrive(g_nDrive, ClusterToSector(dwCurrentCluster), g_nSectorsPerCluster, pBuffer);
 }
 
-BYTE LFNChecksum(PBYTE sFilename)
-{
-    BYTE nSum = 0;
-
-    for (CHAR i = 11; i; i--)
-        nSum = ((nSum & 1) << 7) + (nSum >> 1) + *sFilename++;
-
-    return nSum;
-}
-
-BOOL ConvertTo83Filename(PCHAR szFilename, PBYTE sResult)
-{
-    if (strlen((PCHAR) szFilename) > 12) return false;
-
-    BOOL bContainsDot;
-    for (BYTE i = 0; i < strlen((PCHAR) szFilename); i++)
-        if (szFilename[i] == '.')
-        {
-            bContainsDot = true;
-            break;
-        }
-
-    memset(sResult, ' ', 11);
-    if (!bContainsDot)
-    {
-        memcpy(sResult, szFilename, 11);
-        return true;
-    }
-
-    BYTE i;
-    for (i = 0; szFilename[i] != '.'; i++)
-        sResult[i] = szFilename[i];
-
-    i++; // Skip .
-    for (BYTE j = 0; szFilename[i]; i++, j++)
-        sResult[8 + j] = szFilename[i];
-
-    return true;
-}
-
 BOOL SearchForFileInCluster(PWCHAR wszEntryName, DWORD dwCluster, sFAT32DirectoryEntry *pEntry)
 {
-    PBYTE pBuffer = HeapAlloc(g_wBytesPerCluster);
+    PBYTE pBuffer = KHeapAlloc(g_wBytesPerCluster);
+    _ASSERT(pBuffer, "Could not allocate memory for file search");
     WCHAR wszLongFileNameBuffer[256];
-    ZeroMemory(wszLongFileNameBuffer, 256);
+    ZeroMemory(wszLongFileNameBuffer, 256 * sizeof(WCHAR));
     BOOL bLastLFNEntry = false;
 
-    for (; dwCluster != 0x0FFFFFF8; dwCluster = GetNextCluster(dwCluster))
+    for (; dwCluster != 0x0FFFFFF8 && dwCluster != 0x0FFFFFFE && dwCluster != 0x0FFFFFFF; dwCluster = GetNextCluster(dwCluster))
     {
         ReadCluster(dwCluster, pBuffer);
 
@@ -93,7 +54,7 @@ BOOL SearchForFileInCluster(PWCHAR wszEntryName, DWORD dwCluster, sFAT32Director
                 if (bLastLFNEntry)
                 {
                     bLastLFNEntry = false;
-                    ZeroMemory(wszLongFileNameBuffer, 256);
+                    ZeroMemory(wszLongFileNameBuffer, 256 * sizeof(WCHAR));
                 }
 
                 sFAT32LongFilenameEntry *pLFNEntry = (sFAT32LongFilenameEntry *) pEntry;
@@ -101,20 +62,21 @@ BOOL SearchForFileInCluster(PWCHAR wszEntryName, DWORD dwCluster, sFAT32Director
                 memcpy(&wszLongFileNameBuffer[nOffset * 13], pLFNEntry->sFirstPart, 10);
                 memcpy(&wszLongFileNameBuffer[nOffset * 13 + 5], pLFNEntry->sSecondPart, 12);
                 memcpy(&wszLongFileNameBuffer[nOffset * 13 + 11], pLFNEntry->sThirdPart, 4);
+                continue;
             }
-            else
-                bLastLFNEntry = true;
+
+            bLastLFNEntry = true;
 
             ToUppercaseW(wszLongFileNameBuffer);
-            if (bLastLFNEntry && !strcmpW(wszLongFileNameBuffer, wszEntryName))
+            if (!strcmpW(wszLongFileNameBuffer, wszEntryName))
             {
-                HeapFree(pBuffer);
+                KHeapFree(pBuffer);
                 return true;
             }
         }
     }
 
-    HeapFree(pBuffer);
+    KHeapFree(pBuffer);
     ZeroMemory(pEntry, sizeof(sFAT32DirectoryEntry));
     return false;
 }
@@ -129,7 +91,6 @@ BOOL GetEntryFromPath(PWCHAR wszPath, sFAT32DirectoryEntry *pEntry)
          dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow,
          i++, wszFileName = strtokW(NULL, L"/\\"))
     {
-        PrintFormat("Name: %w PATH: %w\n", wszFileName, wszPath);
         if (!SearchForFileInCluster(wszFileName, dwCurrentCluster, pEntry))
         {
             ZeroMemory(pEntry, sizeof(sFAT32DirectoryEntry));
@@ -145,7 +106,8 @@ BOOL GetEntryFromPath(PWCHAR wszPath, sFAT32DirectoryEntry *pEntry)
 void ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer)
 {
     DWORD dwFileSize = pEntry->dwFileSize;
-    PVOID pClusterBuffer = HeapAlloc(g_wBytesPerCluster);
+    PVOID pClusterBuffer = KHeapAlloc(g_wBytesPerCluster);
+    _ASSERT(pClusterBuffer != NULL, "Could not allocate memory for directory read");
     
     for (DWORD dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow;
          dwFileSize != 0;
@@ -165,7 +127,7 @@ void ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer)
         }
     }
 
-    HeapFree(pClusterBuffer);
+    KHeapFree(pClusterBuffer);
 }
 
 void LoadFAT32(BYTE nDrive, sGPTPartitionEntry kernelPartition)

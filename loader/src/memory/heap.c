@@ -1,86 +1,115 @@
 
 #include <memory/heap.h>
-#include <common/memory.h>
+#include <memory/bitmap.h>
 #include <common/panic.h>
+#include <common/memory.h>
 
-static sMemoryChunk *g_pFirst;
-static QWORD g_qwFreeMemory;
+sHeap *g_pKernelHeap;
 
-void InitHeap(QWORD qwStart, QWORD qwEnd)
+sHeap CreateHeap(QWORD qwSizeInPages, BOOL bUser)
 {
-    g_pFirst             = (sMemoryChunk *) qwStart;
-    g_pFirst->bAllocated = false;
-    g_pFirst->pPrevious  = NULL;
-    g_pFirst->pNext      = NULL;
-    g_pFirst->qwLength   = qwEnd - qwStart - sizeof(sMemoryChunk);
-    g_qwFreeMemory = g_pFirst->qwLength;
+    sHeap h;
+    h.qwStart                 = (QWORD) AllocateContinousPages(qwSizeInPages);
+    h.qwSize                  = qwSizeInPages * PAGE_SIZE;
+    h.pFirstChunk             = (sMemoryChunk *) h.qwStart;
+    h.pFirstChunk->bAllocated = false;
+    h.pFirstChunk->pPrevious  = NULL;
+    h.pFirstChunk->pNext      = NULL;
+    h.pFirstChunk->qwLength   = qwSizeInPages * PAGE_SIZE - sizeof(sMemoryChunk);
+    h.qwFreeMemory            = h.pFirstChunk->qwLength;
+    MapPageRangeToIdentity(NULL, (PVOID) h.qwStart, qwSizeInPages, PF_WRITEABLE | (bUser ? PF_USER : 0));
+    return h;
 }
 
-PVOID HeapAlloc(QWORD qwLength)
+void DestroyHeap(sHeap *pHeap)
 {
-    _ASSERT(qwLength > 0, "Tried to allocate 0 bytes");
+    FreeContinousPages(pHeap->pFirstChunk, pHeap->qwSize / PAGE_SIZE);
+}
+
+void SetKernelHeap(sHeap *pHeap)
+{
+    g_pKernelHeap = pHeap;
+}
+
+PVOID KHeapAlloc(QWORD qwLength)
+{
+    _ASSERT(g_pKernelHeap, "Kernel heap not set");
+    return HeapAlloc(g_pKernelHeap, qwLength);
+}
+
+void KHeapFree(PVOID pMemory)
+{
+    _ASSERT(g_pKernelHeap, "Kernel heap not set");
+    HeapFree(g_pKernelHeap, pMemory);
+}
+
+PVOID KHeapReAlloc(PVOID pMemory, QWORD qwLength)
+{
+    _ASSERT(g_pKernelHeap, "Kernel heap not set");
+    return HeapReAlloc(g_pKernelHeap, pMemory, qwLength);
+}
+
+void MergeChunks(sMemoryChunk *pFirstChunk, sMemoryChunk *pSecondChunk)
+{
+    if (pFirstChunk == NULL || pSecondChunk == NULL || pSecondChunk->pNext == NULL) return;
+
+}
+
+// Returns the second chunk
+sMemoryChunk *SplitChunk(sMemoryChunk *pChunk, QWORD qwLength)
+{
+    sMemoryChunk *pSecondChunk = (sMemoryChunk *) ((QWORD) pChunk + qwLength + sizeof(sMemoryChunk));
+    pSecondChunk->bAllocated   = false;
+    pSecondChunk->pNext        = pChunk->pNext;
+    pSecondChunk->pPrevious    = pChunk;
+    pSecondChunk->qwLength     = pChunk->qwLength - qwLength;
+    pChunk->pNext              = pSecondChunk;
+    pChunk->qwLength           = qwLength;
+    return pSecondChunk;
+}
+
+PVOID HeapAlloc(sHeap *pHeap, QWORD qwLength)
+{
+    if (qwLength == 0) return NULL;
     sMemoryChunk *pResult = NULL;
-    for (sMemoryChunk *pChunk = g_pFirst; pChunk != NULL && pResult == NULL; pChunk = pChunk->pNext)
+    for (sMemoryChunk *pChunk = pHeap->pFirstChunk; pChunk != NULL && pResult == NULL; pChunk = pChunk->pNext)
+    {
         if (pChunk->qwLength >= qwLength && !pChunk->bAllocated)
             pResult = pChunk;
-    
-    _ASSERT(pResult != NULL, "Out of memory! Tried to allocate %u bytes with %u bytes free", qwLength, g_qwFreeMemory);
+    }
+
+    if (pResult == NULL) return NULL;
 
     if (pResult->qwLength >= qwLength + sizeof(sMemoryChunk) + 1)
-    {
-        sMemoryChunk *pTemp = (sMemoryChunk *) (((QWORD) pResult) + sizeof(sMemoryChunk) + qwLength);
-        pTemp->pNext      = pResult->pNext;
-        pTemp->pPrevious  = pResult;
-        pTemp->bAllocated = false;
-        pTemp->qwLength   = pResult->qwLength - qwLength - sizeof(sMemoryChunk);
+        SplitChunk(pResult, qwLength);
 
-        if (pTemp->pNext != NULL)
-            pTemp->pNext->pPrevious = pTemp;
-        
-        pResult->qwLength = qwLength;
-        pResult->pNext    = pTemp;
-    }
+    pResult->bAllocated  = true;
+    pHeap->qwFreeMemory -= qwLength + sizeof(sMemoryChunk);
 
-    pResult->bAllocated = true;
-    g_qwFreeMemory -= qwLength;
-    return (PVOID) (((QWORD) pResult) + sizeof(sMemoryChunk));
+    return (sMemoryChunk *) pResult + 1;
 }
 
-void HeapFree(PVOID pMemory)
+void HeapFree(sHeap *pHeap, PVOID pMemory)
 {
-    _ASSERT(pMemory, "Tried to free a NULL address");
+    _ASSERT(pMemory != NULL, "Tried to free a NULL address");
+    sMemoryChunk *pChunk = (sMemoryChunk *) pMemory - 1;
+    _ASSERT(pChunk->bAllocated, "Tried to free a non allocated chunk");
     
-    sMemoryChunk *pChunk = (sMemoryChunk *) ((QWORD) pMemory - sizeof(sMemoryChunk));
+    return;
     pChunk->bAllocated   = false;
-    g_qwFreeMemory += pChunk->qwLength;
+    pHeap->qwFreeMemory += pChunk->qwLength + sizeof(sMemoryChunk);
 
-    if (pChunk->pPrevious != NULL && !pChunk->pPrevious->bAllocated)
-    {
-        pChunk->pPrevious->pNext     = pChunk->pNext;
-        pChunk->pPrevious->qwLength += pChunk->qwLength + sizeof(sMemoryChunk);
-
-        if (pChunk->pNext != NULL)
-            pChunk->pNext->pPrevious = pChunk;
-        
-        pChunk = pChunk->pPrevious;
-    }
-
-    if (pChunk->pNext != NULL && !pChunk->pNext->bAllocated)
-    {
-        pChunk->qwLength += pChunk->pNext->qwLength + sizeof(sMemoryChunk);
-        pChunk->pNext     = pChunk->pNext->pNext;
-
-        if (pChunk->pNext != NULL)
-            pChunk->pNext->pPrevious = pChunk;
-    }
+    if (!pChunk->pPrevious->bAllocated) MergeChunks(pChunk->pPrevious, pChunk);
+    if (!pChunk->pNext->bAllocated)     MergeChunks(pChunk, pChunk->pNext);
 }
 
-PVOID HeapReAlloc(PVOID pMemory, QWORD qwNewSize)
+PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewLength)
 {
+    if (pMemory == NULL) return HeapAlloc(pHeap, qwNewLength);
     sMemoryChunk *pChunk = (sMemoryChunk *) ((QWORD) pMemory - sizeof(sMemoryChunk));
     QWORD qwPreviousSize = pChunk->qwLength;
-    PVOID pNewMemory = HeapAlloc(qwNewSize);
-    memcpy(pNewMemory, pMemory, qwNewSize >= qwPreviousSize ? qwPreviousSize : qwNewSize);
-    HeapFree(pMemory);
+    PVOID pNewMemory = HeapAlloc(pHeap, qwNewLength);
+    memcpy(pNewMemory, pMemory, qwNewLength >= qwPreviousSize ? qwPreviousSize : qwNewLength);
+    HeapFree(pHeap, pMemory);
     return pNewMemory;
 }

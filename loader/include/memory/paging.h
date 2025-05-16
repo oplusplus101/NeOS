@@ -13,6 +13,7 @@
 #define _ADDRESS_TO_PD_INDEX(a)  (((QWORD) (a) >> 30) % PAGE_TABLE_SIZE)
 #define _ADDRESS_TO_PT_INDEX(a)  (((QWORD) (a) >> 21) % PAGE_TABLE_SIZE)
 #define _ADDRESS_TO_PE_INDEX(a)  (((QWORD) (a) >> 12) % PAGE_TABLE_SIZE)
+#define _BYTES_TO_PAGES(n)       (((QWORD) (n) + PAGE_SIZE - 1) / PAGE_TABLE_SIZE)
 #define _PAGE_TO_ADDRESS(p)      ((QWORD) (p) << 12)
 #define _ADDRESS_TO_PAGE(a)      ((QWORD) (a) >> 12)
 #define _ALIGN_TO_PAGE(n)        ((n) / PAGE_SIZE * PAGE_SIZE)
@@ -30,8 +31,8 @@
 
 typedef struct
 {
-    WORD  nFlags   : 12;
-    QWORD nAddress : 52;
+    WORD  wFlags    : 12;
+    QWORD qwAddress : 52;
 } __attribute__((packed)) sPageTableEntry;
 
 typedef struct
@@ -42,7 +43,7 @@ typedef struct
 
 typedef struct
 {
-    sPageTable *pPageTable;
+    sPageTable *pPML4;
     sBitmap sPageBitmap;
     QWORD qwMemorySize, qwFreeMemory;
     QWORD qwPageBitmapIndex;
@@ -52,20 +53,21 @@ void ReservePage(PVOID pAddress);
 void ReservePages(PVOID pAddress, QWORD qwPages);
 void ReturnPage(PVOID pAddress);
 void ReturnPages(PVOID pAddress, QWORD qwPages);
-void MapPage(PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags);
-void MapPageRange(PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwPages, WORD wFlags);
-void MapPageToIdentity(PVOID pPage, WORD wFlags);
-void MapPageRangeToIdentity(PVOID pPages, QWORD qwPages, WORD wFlags);
+void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlags);
+void MapPageRange(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwPages, WORD wFlags);
+void MapPageToIdentity(sPageTable *pPML4, PVOID pPage, WORD wFlags);
+void MapPageRangeToIdentity(sPageTable *pPML4, PVOID pPages, QWORD qwPages, WORD wFlags);
 PVOID AllocatePage();
 PVOID AllocateContinousPages(QWORD qwPages);
 void FreeContinousPages(PVOID pAddress, QWORD qwPages);
 void FreePage(PVOID pAddress);
 PVOID GetPhysicalAddress(PVOID pVirtualAddress);
-sPageTable *CloneCurrentPageTable();
-sPageTable *GetCurrentPageTable();
-void LoadPageTable(sPageTable *pTable);
+sPageTable *ClonePML4(sPageTable *pTable);
+sPageTable *GetCurrentPML4();
+void LoadPML4(sPageTable *pTable);
 sPagingData ExportPagingData();
 void ImportPagingData(sPagingData sData);
+void FreePML4(sPageTable *pTable);
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
                 QWORD qwMemoryMapSize, QWORD qwMemoryDescriptorSize,

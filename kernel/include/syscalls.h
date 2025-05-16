@@ -12,7 +12,8 @@ typedef struct
     void (*pCallback)(sCPUState *);
 } sSyscallRegistryEntry;
 
-BOOL RegisterSyscall(QWORD qwCode, BYTE nRing, void (*pCallback)(sCPUState *));
+void ClearSyscall(void (*pCallback)(sCPUState *));
+void RegisterSyscall(QWORD qwCode, BYTE nRing, void (*pCallback)(sCPUState *));
 void InitSyscalls();
 
 #endif // __SYSCALLS_H

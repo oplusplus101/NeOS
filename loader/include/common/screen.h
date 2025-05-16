@@ -21,6 +21,7 @@ void PrintDec(QWORD qw);
 void PrintHex(QWORD qw, BYTE nDigits, BOOL bUppercase);
 void PrintFormat(const PCHAR sFormat, ...);
 void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII);
+void FillRectangle(int x, int y, int w, int h, color_t c);
 
 void ClearScreen();
 void SetCursor(int x, int y);

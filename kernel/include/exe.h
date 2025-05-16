@@ -12,7 +12,7 @@ typedef struct
 
 typedef struct
 {
-    CHAR szName[9];
+    CHAR  szName[9];
     DWORD dwRawSize, dwVirtualSize;
     QWORD qwVirtualAddress;
     PVOID pData; // Just the data extracted from the file (not re-mapped in any way)

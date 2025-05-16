@@ -9,17 +9,11 @@ ESP				= /dev/nbd0p1
 OSDRIVE			= osdrive
 OSPART			= /dev/nbd0p2
 
-CC			= gcc
-LD			= ld
-OBJCOPY		= objcopy
-AS			= nasm
-CC_PARAMS	= -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
-			  -fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wall -Wpedantic -Werror# -Wno-packed-bitfield-compat
 QEMU		= qemu-system-x86_64
 QEMU_PARAMS = -m 1G -cpu qemu64 -monitor stdio \
 			  -drive if=pflash,format=raw,unit=0,file="$(OVMFDIR)/OVMF_CODE.fd",readonly=on \
 			  -drive if=pflash,format=raw,unit=1,file="$(OVMFDIR)/OVMF_VARS.fd" -net none \
-			  -drive id=disk,file=$(IMG),if=none,format=vmdk -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0
+			  -drive id=disk,file=$(IMG),if=none,format=qcow2 -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0
 #			  -drive file=$(IMG),format=raw,if=none,id=nvm -device nvme,serial=cafebabe,drive=nvm
 
 DRIVERS		= drivers/GOP-GFX

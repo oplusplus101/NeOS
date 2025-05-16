@@ -288,6 +288,13 @@ void ClearScreen()
     ZeroMemory(g_pScreen, g_iWidth * g_iHeight * 4);
 }
 
+void FillRectangle(int x, int y, int w, int h, color_t c)
+{
+    for (INT i = 0; i < h; i++)
+        for (INT j = 0; j < w; j++)
+            DrawPixel(x + j, y + i, c);
+}
+
 // If set to true, control characters (i.e. \n, \t, etc.) will work normally, if false, they will just be whitespace
 void SetControlCharState(BOOL bState)
 {
@@ -373,7 +380,11 @@ void PrintChar(CHAR c)
     }
 
     if (g_iCursorY >= g_iTextHeight)
-        ClearScreen();
+    {
+        g_iCursorY = g_iTextHeight - 1;
+        memcpy(g_pScreen, g_pScreen + g_iWidth * g_iFontHeight, g_iWidth * g_iHeight * 4 - g_iWidth * g_iFontHeight * 4);
+        ZeroMemory(g_pScreen + g_iWidth * g_iHeight - g_iWidth * g_iFontHeight, g_iWidth * g_iFontHeight * 4);
+    }
 }
 
 void PrintString(const PCHAR sz)

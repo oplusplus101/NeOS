@@ -18,7 +18,7 @@ void SetupNVMe(BYTE nBus, BYTE nSlot, BYTE nFunction)
     g_nNVMeCapabilityStride = (g_nNVMeBaseAddress >> 12) & 0x0F;
     g_nCompletionHead = g_nSubmissionQueueTail = 0;
 
-    MapPage((PVOID) g_nNVMeBaseAddress, (PVOID) g_nNVMeBaseAddress, PF_WRITEABLE);
+    MapPageToIdentity(NULL, (PVOID) g_nNVMeBaseAddress, PF_WRITEABLE | PF_CACHEDISABLE);
 
     if (!CreateAdminSubmissionQueue(&g_adminSubmissionQueue))
         _KERNEL_PANIC("Failed to create an admin submission queue for NVMe");
@@ -31,14 +31,14 @@ void SetupNVMe(BYTE nBus, BYTE nSlot, BYTE nFunction)
 QWORD qwVMeReadRegister(QWORD qwOffset)
 {
     volatile QWORD *pNVMERegister = (volatile QWORD *)(g_nNVMeBaseAddress + qwOffset);
-    MapPage((PVOID *) pNVMERegister, (PVOID *) pNVMERegister, PF_WRITEABLE);
+    MapPageToIdentity(NULL, (PVOID *) pNVMERegister, PF_WRITEABLE | PF_CACHEDISABLE);
     return *pNVMERegister;
 }
 
 void NVMeWriteRegister(QWORD qwOffset, QWORD qwValue)
 {
     volatile QWORD *pNVMERegister = (volatile QWORD *)(g_nNVMeBaseAddress + qwOffset);
-    MapPage((PVOID *) pNVMERegister, (PVOID *) pNVMERegister, PF_WRITEABLE);
+    MapPageToIdentity(NULL, (PVOID *) pNVMERegister, PF_WRITEABLE | PF_CACHEDISABLE);
     *pNVMERegister = qwValue;
 }
 
@@ -78,7 +78,7 @@ BOOL NVMeSendCommand(BYTE dwOpcode, DWORD dwNamespaceID, PVOID pData, QWORD qwLB
     if (g_nSubmissionQueueTail == QUEUE_SIZE)
         g_nSubmissionQueueTail = 0;
     // You should wait for completion here
-    MapPage(nCompletionQueueEntry, nCompletionQueueEntry, PF_WRITEABLE);
+    MapPageToIdentity(NULL, nCompletionQueueEntry, PF_WRITEABLE | PF_CACHEDISABLE);
     pCompletion = (sNVMeCompletion *) nCompletionQueueEntry;
     g_nCompletionHead++;
     NVMeWriteRegister(0x1000 + 3 * (4 << g_nNVMeCapabilityStride), g_nCompletionHead);

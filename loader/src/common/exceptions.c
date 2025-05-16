@@ -107,27 +107,28 @@ QWORD Exception13(QWORD qwRSP, BYTE nErrorCode)
 
 QWORD Exception14(QWORD qwRSP, BYTE nErrorCode)
 {
+    PrintRegs(qwRSP);
     QWORD nExceptionAddress;
     __asm__ volatile("mov %%cr2, %0" : "=r" (nExceptionAddress));
     
     switch (nErrorCode & 7)
     {
     case 0b000:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b001:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     case 0b010:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write to a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write to a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b011:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     case 0b100:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b101:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     case 0b110:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to write to a non-present page entry\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "User process tried to write to a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b111:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to write a page and caused a protection fault\nAddress: 0x%16X", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, "User process tried to write a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     }
     return qwRSP;
 }

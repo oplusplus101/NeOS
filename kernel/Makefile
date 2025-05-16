@@ -11,6 +11,7 @@ OBJECTS		= obj/kernel.o \
 			  obj/timer.o \
 			  obj/process.o \
 			  obj/syscalls.o \
+			  obj/syscallimpl.o \
 			  obj/common/ini.o \
 			  obj/common/screen.o \
 			  obj/common/exceptions.o \

@@ -31,24 +31,24 @@ typedef enum
     ATA_CMD_WRITE_DMA_EXT = 0x35,
 } eATACommand;
 
-#define AHCI_BASE     0x400000
+#define AHCI_BASE                      0x400000
 
-#define ATA_DEV_BUSY 0x80
-#define ATA_DEV_DRQ 0x08
+#define ATA_DEV_BUSY                   0x80
+#define ATA_DEV_DRQ                    0x08
 
 #define SATA_SIGNATURE_ATA             0x00000101
 #define SATA_SIGNATURE_ATAPI           0xEB140101
 #define SATA_SIGNATURE_SEMB            0xC33C0101
 #define SATA_SIGNATURE_PORT_MULTIPLIER 0x96690101
 
-#define HBA_PORT_IPM_ACTIVE  1
-#define HBA_PORT_DET_PRESENT 3
+#define HBA_PORT_IPM_ACTIVE            1
+#define HBA_PORT_DET_PRESENT           3
 
-#define HBA_PxCMD_ST  0x0001
-#define HBA_PxCMD_FRE 0x0010
-#define HBA_PxCMD_FR  0x4000
-#define HBA_PxCMD_CR  0x8000
-#define HBA_PxIS_TFES 0x40000000
+#define HBA_PxCMD_ST                   0x0001
+#define HBA_PxCMD_FRE                  0x0010
+#define HBA_PxCMD_FR                   0x4000
+#define HBA_PxCMD_CR                   0x8000
+#define HBA_PxIS_TFES                  0x40000000
 
 typedef struct tagFISRegisterHostToDevice
 {

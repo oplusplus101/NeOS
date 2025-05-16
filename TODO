@@ -1,13 +1,14 @@
 Implement process exiting and killing
 Create a basic driver/module file format, based on PE32+
 Add a basic MS-DOS-like shell
-Make a library file for the KNeOS.h and NeOS.h
+Make a library file for NeOS.h
 Rewrite/clean up the UEFI bootloader (Change UNIX types to Microsoft, make PE32+ code more efficient)
 Clean up AHCI code
 Add support for multiple drives (AHCI)
 Redo the build process (e.g. change to cmake, or write a custom script)
 Document the whole codebase with comments
-Implement NVMe (reading and writing)
+Replace all strings with wide char strings
+Implement NVMe reading for the bootloader
 Implement a Windows-like registry
 Make a user system - with a root user and admin, standard, and guest users
 Move NEOSLDR.SYS to the main drive (Make the EFI bootloader directly read the main filesystem)
