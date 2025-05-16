@@ -4,8 +4,8 @@ AS			= nasm
 OBJCOPY     = objcopy
 LD_PARAMS	= -melf_x86_64 -Tlinker.ld
 AS_PARAMS	= -felf64 -O0
-CC_PARAMS	= -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fno-stack-protector \
-			  -fno-stack-check -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wall -Wpedantic -Werror -fshort-wchar
+CC_PARAMS	= -m64 -c -std=c2x -O0 -nostdlib -ffreestanding -fno-builtin -fstack-protector-all \
+			  -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Iinclude -Wall -Wpedantic -Werror -fshort-wchar
 OBJECTS		= obj/kernel.o \
 			  obj/exe.o \
 			  obj/timer.o \

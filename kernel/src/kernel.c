@@ -20,6 +20,11 @@
 
 sList g_lstDrivers, g_lstModules;
 
+void __stack_chk_fail(void)
+{
+	_KERNEL_PANIC("Stack smashing detected");
+}
+
 sList LoadCFG(PWCHAR wszPath, sNEOSKernelHeader *pHeader)
 {
     PVOID pFile = pHeader->GetFile(wszPath);
