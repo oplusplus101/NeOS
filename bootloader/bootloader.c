@@ -1,6 +1,7 @@
 
 #include <uefi.h>
 #include <common/bootstructs.h>
+#include <common/math.h>
 #include <common/exestructs.h>
 
 #define KERNEL_FILENAME ".\\NEOSLDR.SYS"
@@ -84,8 +85,8 @@ int main()
     fread((void *) &peohdr, sizeof(sPE32OptionalHeader), 1, pFile);
     _ASSERT(peohdr.wMagic == 0x020B, "Invalid PE32 optional header.");
 
-    bootData.nLoaderStart = peohdr.dwAddressOfEntrypoint + peohdr.qwImageBase;
-    bootData.nLoaderEnd   = bootData.nLoaderStart + nFilesize;
+    bootData.nLoaderStart = 0xFFFFFFFFFFFFFFFF;
+    bootData.nLoaderEnd   = 0;
 
     fseek(pFile, pehdr.wSizeOfOptionalHeader - sizeof(sPE32OptionalHeader), SEEK_CUR);
 
@@ -105,6 +106,10 @@ int main()
             fseek(pFile, hdr.dwPointerToRawData, SEEK_SET);
             size_t nAddress = hdr.dwVirtualAddress + peohdr.qwImageBase;
             size_t nPages   = (hdr.dwVirtualSize + 0x1000 - 1) / 0x1000;
+
+            bootData.nLoaderStart = _MIN(bootData.nLoaderStart, nAddress);
+            bootData.nLoaderEnd   = _MAX(bootData.nLoaderEnd, nAddress + nPages * 0x1000);
+            
             for (size_t j = 0; j < nPages; j++)
             {
                 size_t nAddressOffset = nAddress + j * 0x1000;

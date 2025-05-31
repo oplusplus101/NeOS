@@ -2,6 +2,8 @@
 #ifndef __NTFS_H
 #define __NTFS_H
 
+#include <common/types.h>
+
 #define MFT_INDEX_$MFT      0
 #define MFT_INDEX_$MFT_MIRR 1
 #define MFT_INDEX_$LOG_FILE 2

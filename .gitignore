@@ -53,5 +53,5 @@ uefi
 .vscode
 OVMF
 obj
-
+build
 run.sh

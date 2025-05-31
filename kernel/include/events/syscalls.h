@@ -3,7 +3,7 @@
 #define __SYSCALLS_H
 
 #include <common/types.h>
-#include <process.h>
+#include <runtime/process.h>
 
 typedef struct
 {

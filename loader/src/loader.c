@@ -21,6 +21,13 @@
 #include <common/ini.h>
 #include <neos.h>
 
+QWORD __stack_chk_guard = 0x595e9fbd94fda766;
+
+void __stack_chk_fail(void)
+{
+	_KERNEL_PANIC("Stack smashing detected");
+}
+
 // The functions below are for the kernel,
 // so the it doesn't have to access the directory entry directly (for compatibility with other file systems)
 QWORD GetFileSize(sFAT32DirectoryEntry *pFile)

@@ -2,7 +2,7 @@
 #ifndef __SYSCALLIMPL_H
 #define __SYSCALLIMPL_H
 
-#include <process.h>
+#include <runtime/process.h>
 
 void Syscall_KNeoPrintString(sCPUState *pCPUState);
 void Syscall_KNeoKernelPanic(sCPUState *pCPUState);

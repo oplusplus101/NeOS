@@ -36,7 +36,7 @@ void ImportPagingData(sPagingData sData)
     g_qwPageBitmapIndex = sData.qwPageBitmapIndex;
 }
 
-// Returns a page of memory cleared filled with zeroes
+// Returns a page of memory filled with zeroes
 PVOID AllocatePage()
 {
     for (; g_qwPageBitmapIndex < g_sPageBitmap.qwLength * 8; g_qwPageBitmapIndex++)
@@ -316,7 +316,7 @@ sPageTable *ClonePML4(sPageTable *pPML4)
                 pPageTableClone->arrEntries[k].qwAddress = _ADDRESS_TO_PAGE(pPageEntryClone);
                 pPageTableClone->arrEntries[k].wFlags    = PF_PRESENT | PF_WRITEABLE;
 
-                // FIXME: remove this code once the cause is found
+                // FIXME: remove this code once the cause of the error is found (i.e. the addresses randomly blowing up to ridiculously high amounts)
                 if ((QWORD) pPageEntry > 0xFFFFFFFF)
                     continue;
 

@@ -1,6 +1,6 @@
 
-#include <syscalls.h>
-#include <process.h>
+#include <events/syscalls.h>
+#include <runtime/process.h>
 #include <neos.h>
 #include <common/screen.h>
 #include <hardware/idt.h>

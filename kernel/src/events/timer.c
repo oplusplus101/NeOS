@@ -1,5 +1,5 @@
 
-#include <timer.h>
+#include <events/timer.h>
 #include <hardware/ports.h>
 
 void SetTimerFrequency(DWORD dwFrequency)

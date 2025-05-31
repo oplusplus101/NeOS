@@ -12,11 +12,11 @@
 #include <hardware/ports.h>
 #include <hardware/idt.h>
 #include <hardware/gdt.h>
-#include <syscallimpl.h>
-#include <syscalls.h>
-#include <process.h>
-#include <timer.h>
-#include <exe.h>
+#include <events/syscallimpl.h>
+#include <events/syscalls.h>
+#include <events/timer.h>
+#include <runtime/process.h>
+#include <runtime/exe.h>
 
 sList g_lstDrivers, g_lstModules;
 

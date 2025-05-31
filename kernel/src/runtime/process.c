@@ -1,17 +1,16 @@
 
-#include <process.h>
-#include <exe.h>
-#include <neos.h>
-#include <memory/heap.h>
+#include <runtime/process.h>
+#include <runtime/exe.h>
 #include <hardware/gdt.h>
 #include <common/screen.h>
 #include <common/memory.h>
 #include <common/string.h>
 #include <common/panic.h>
+#include <memory/heap.h>
+#include <neos.h>
 
 sList g_lstProcesses;
 INT g_iCurrentPID;
-sCPUState *g_pDummyState;
 
 void DummyProcess()
 {

@@ -24,6 +24,8 @@ def BytesToString(n):
     return f'{n}B'
 
 for file in glob.glob(os.getcwd() + '/**', recursive=True):
+    if os.path.islink(os.path.dirname(file)):
+        continue
     if os.path.splitext(file)[1] == '.c':
         nSourceCount += 1
         nSourceSize += os.path.getsize(file)

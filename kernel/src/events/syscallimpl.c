@@ -1,9 +1,9 @@
 
-#include <syscallimpl.h>
+#include <events/syscallimpl.h>
+#include <events/syscalls.h>
 #include <common/screen.h>
 #include <common/panic.h>
 #include <memory/heap.h>
-#include <syscalls.h>
 
 // 0x0000 - 0x000F Print functions
 

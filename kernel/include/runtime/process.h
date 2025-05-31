@@ -6,7 +6,7 @@
 #include <hardware/idt.h>
 #include <common/types.h>
 #include <memory/paging.h>
-#include <exe.h>
+#include <runtime/exe.h>
 
 #define PROC_THREAD 0
 #define PROC_PROCESS 1
