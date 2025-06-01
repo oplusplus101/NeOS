@@ -1,6 +1,6 @@
 
-#ifndef __TYPES_H
-#define __TYPES_H
+#ifndef __COMMON__TYPES_H
+#define __COMMON__TYPES_H
 
 typedef char CHAR;
 typedef unsigned char BYTE;
@@ -66,4 +66,4 @@ typedef struct
     QWORD qwSS;
 } __attribute__((packed)) sCPUState;
 
-#endif // __TYPES_H
+#endif // __COMMON__TYPES_H

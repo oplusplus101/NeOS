@@ -1,6 +1,6 @@
 
-#ifndef __ATAPI_H
-#define __ATAPI_H
+#ifndef __HARDWARE__STORAGE__ATAPI_H
+#define __HARDWARE__STORAGE__ATAPI_H
 
 #include <common/types.h>
 
@@ -17,4 +17,4 @@
 
 BOOL ReadCDROMPIO(WORD nPort, BOOL bSlave, DWORD dwLBA, DWORD dwSectors, WORD *pBuffer);
 
-#endif // __ATAPI_H
+#endif // __HARDWARE__STORAGE__ATAPI_H

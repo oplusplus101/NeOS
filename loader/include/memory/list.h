@@ -1,6 +1,6 @@
 
-#ifndef __LIST_H
-#define __LIST_H
+#ifndef __MEMORY__LIST_H
+#define __MEMORY__LIST_H
 
 #include <common/types.h>
 
@@ -22,4 +22,4 @@ PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData);
 PVOID AddListElement(sList *pList, PVOID pData);
 void RemoveListElement(sList *pList, QWORD qwIndex);
 
-#endif // __LIST_H
+#endif // __MEMORY__LIST_H

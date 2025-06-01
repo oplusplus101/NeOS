@@ -1,6 +1,6 @@
 
-#ifndef __SYSCALLIMPL_H
-#define __SYSCALLIMPL_H
+#ifndef __EVENTS__SYSCALLIMPL_H
+#define __EVENTS__SYSCALLIMPL_H
 
 #include <runtime/process.h>
 
@@ -23,4 +23,4 @@ void Syscall_KNeoFreeHeap(sCPUState *pCPUState);
 void Syscall_KNeoRegisterSyscall(sCPUState *pCPUState);
 void Syscall_KNeoClearSyscall(sCPUState *pCPUState);
 
-#endif // __SYSCALLIMPL_H
+#endif // __EVENTS__SYSCALLIMPL_H

@@ -1,7 +1,7 @@
 
-#ifndef __EXCEPTIONS_H
-#define __EXCEPTIONS_H
+#ifndef __COMMON__EXCEPTIONS_H
+#define __COMMON__EXCEPTIONS_H
 
 void RegisterExceptions();
 
-#endif // __EXCEPTIONS_H
+#endif // __COMMON__EXCEPTIONS_H

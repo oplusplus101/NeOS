@@ -1,6 +1,6 @@
 
-#ifndef __NVME_H
-#define __NVME_H
+#ifndef __HARDWARE__STORAGE__NVME_H
+#define __HARDWARE__STORAGE__NVME_H
 
 #include <common/types.h>
 
@@ -48,4 +48,4 @@ BOOL NVMeSendCommand(BYTE nOpcode, DWORD dwNamespaceID, PVOID pData, QWORD qwLBA
 BOOL NVMeRead(QWORD qwLBA, DWORD dwSectors, PVOID pBuffer);
 BOOL NVMeWrite(QWORD qwLBA, DWORD dwSectors, PVOID pBuffer);
 
-#endif // __NVME_H
+#endif // __HARDWARE__STORAGE__NVME_H

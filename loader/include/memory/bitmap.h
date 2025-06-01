@@ -1,6 +1,6 @@
 
-#ifndef __BITMAP_H
-#define __BITMAP_H
+#ifndef __MEMORY__BITMAP_H
+#define __MEMORY__BITMAP_H
 
 #include <common/types.h>
 
@@ -13,4 +13,4 @@ typedef struct
 BOOL SetBitmap(sBitmap *pBitmap, QWORD qwIndex, BOOL bValue);
 BOOL GetBitmap(sBitmap *pBitmap, QWORD qwIndex);
 
-#endif // __BITMAP_H
+#endif // __MEMORY__BITMAP_H

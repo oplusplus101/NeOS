@@ -1,6 +1,6 @@
 
-#ifndef __HEAP_H
-#define __HEAP_H
+#ifndef __MEMORY__HEAP_H
+#define __MEMORY__HEAP_H
 
 #include <common/types.h>
 
@@ -30,4 +30,4 @@ void  KHeapFree(PVOID pMemory);
 BOOL HeapDefragment(sHeap *pHeap);
 PVOID KHeapReAlloc(PVOID pMemory, QWORD qwLength);
 
-#endif // __HEAP_HH
+#endif // __MEMORY__HEAP_HH

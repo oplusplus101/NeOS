@@ -1,6 +1,6 @@
 
-#ifndef __STRING_H
-#define __STRING_H
+#ifndef __COMMON__STRING_H
+#define __COMMON__STRING_H
 
 #include <common/types.h>
 
@@ -135,4 +135,4 @@ inline static void ToUppercaseW(PWCHAR wsz)
 PCHAR strtok(PCHAR sz, const PCHAR szDelim);
 PWCHAR strtokW(PWCHAR wsz, const PWCHAR wszDelim);
 
-#endif // __STRING_H
+#endif // __COMMON__STRING_H

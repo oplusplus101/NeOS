@@ -1,0 +1,5 @@
+
+#ifndef __RUNTIME__EXCEPTIONS_H
+#define __RUNTIME__EXCEPTIONS_H
+
+#endif // __RUNTIME__EXCEPTIONS_H

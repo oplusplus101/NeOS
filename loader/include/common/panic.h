@@ -1,6 +1,6 @@
 
-#ifndef __PANIC_H
-#define __PANIC_H
+#ifndef __COMMON__PANIC_H
+#define __COMMON__PANIC_H
 
 #include <common/screen.h>
 #include <neos.h>
@@ -18,4 +18,4 @@
 
 #define _ASSERT(c, ...) { if (!(c)) _KERNEL_PANIC(__VA_ARGS__); }
 
-#endif // __PANIC_H
+#endif // __COMMON__PANIC_H

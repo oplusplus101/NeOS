@@ -1,6 +1,6 @@
 
-#ifndef __PROCESS_H
-#define __PROCESS_H
+#ifndef __RUNTIME__PROCESS_H
+#define __RUNTIME__PROCESS_H
 
 #include <memory/list.h>
 #include <hardware/idt.h>
@@ -38,4 +38,4 @@ BOOL DoesProcessExist(INT iPID);
 
 QWORD ScheduleProcesses(QWORD qwRSP);
 
-#endif // __PROCESS_H
+#endif // __RUNTIME__PROCESS_H

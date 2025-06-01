@@ -1,6 +1,6 @@
 
-#ifndef __DRIVER_H
-#define __DRIVER_H
+#ifndef __RUNTIME__DRIVER_H
+#define __RUNTIME__DRIVER_H
 
 #include <memory/list.h>
 
@@ -28,4 +28,4 @@ typedef struct
 sExecutable ParsePE32(PVOID pEXEData);
 void FreeExecutable(sExecutable *pExe);
 
-#endif // __DRIVER_H
+#endif // __RUNTIME__DRIVER_H

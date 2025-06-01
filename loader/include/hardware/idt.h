@@ -1,6 +1,6 @@
 
-#ifndef __IDT_H
-#define __IDT_H
+#ifndef __HARDWARE__IDT_H
+#define __HARDWARE__IDT_H
 
 #include <common/types.h>
 
@@ -43,4 +43,4 @@ static inline void DisableInterrupts()
     __asm__ volatile ("cli");
 }
 
-#endif // __IDT_H
+#endif // __HARDWARE__IDT_H

@@ -1,6 +1,6 @@
 
-#ifndef __PAGING_H
-#define __PAGING_H
+#ifndef __MEMORY__PAGING_H
+#define __MEMORY__PAGING_H
 
 #include <common/types.h>
 #include <common/bootstructs.h>
@@ -73,4 +73,4 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
                 QWORD qwMemoryMapSize, QWORD qwMemoryDescriptorSize,
                 QWORD qwLoaderStart, QWORD qwLoaderEnd);
 
-#endif // __PAGING_H
+#endif // __MEMORY__PAGING_H

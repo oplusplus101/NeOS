@@ -1,6 +1,6 @@
 
-#ifndef __EXEHEADERS_H
-#define __EXEHEADERS_H
+#ifndef __COMMON__EXEHEADERS_H
+#define __COMMON__EXEHEADERS_H
 
 // Code taken from: https://wiki.osdev.org/PE and https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
 
@@ -94,4 +94,4 @@ typedef struct
     DWORD dwCharacteristics;
 } __attribute__((packed)) sPE32SectionHeader;
 
-#endif // __EXEHEADERS_H
+#endif // __COMMON__EXEHEADERS_H

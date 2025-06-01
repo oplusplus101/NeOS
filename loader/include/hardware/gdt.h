@@ -1,6 +1,6 @@
 
-#ifndef __GDT_H
-#define __GDT_H
+#ifndef __HARDWARE__GDT_H
+#define __HARDWARE__GDT_H
 
 #include <common/types.h>
 
@@ -59,4 +59,4 @@ void InitGDT();
 extern void WriteGDT();
 extern void FlushTSS();
 
-#endif // __GDT_H
+#endif // __HARDWARE__GDT_H

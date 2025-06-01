@@ -1,6 +1,6 @@
 
-#ifndef __PORTS_H
-#define __PORTS_H
+#ifndef __HARDWARE__PORTS_H
+#define __HARDWARE__PORTS_H
 
 
 #include <common/types.h>
@@ -55,4 +55,4 @@ static inline void IOWait()
     outb(0x80, 0);
 }
 
-#endif // __PORTS_H
+#endif // __HARDWARE__PORTS_H

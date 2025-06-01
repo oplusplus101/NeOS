@@ -1,6 +1,6 @@
 
-#ifndef __DRIVE_H
-#define __DRIVE_H
+#ifndef __HARDWARE__STORAGE__DRIVE_H
+#define __HARDWARE__STORAGE__DRIVE_H
 
 #include <common/types.h>
 
@@ -18,4 +18,4 @@ BOOL WriteToDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer);
 QWORD GetDriveCapacityInSectors(BYTE nDrive);
 
 
-#endif // __DRIVE_H
+#endif // __HARDWARE__STORAGE__DRIVE_H

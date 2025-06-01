@@ -1,6 +1,6 @@
 
-#ifndef __AHCI_H
-#define __AHCI_H
+#ifndef __HARDWARE__STORAGE__AHCI_H
+#define __HARDWARE__STORAGE__AHCI_H
 
 #include <common/types.h>
 

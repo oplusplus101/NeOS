@@ -1,6 +1,6 @@
 
-#ifndef __BOOTSTRUCTS_H
-#define __BOOTSTRUCTS_H
+#ifndef __COMMON__BOOTSTRUCTS_H
+#define __COMMON__BOOTSTRUCTS_H
 
 #include <common/types.h>
 
@@ -33,4 +33,4 @@ typedef struct
     unsigned long long int nLoaderEnd;
 } __attribute__((packed)) sBootData;
 
-#endif // __BOOTSTRUCTS_H
+#endif // __COMMON__BOOTSTRUCTS_H

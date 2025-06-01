@@ -1,6 +1,6 @@
 
-#ifndef __SCREEN_H
-#define __SCREEN_H
+#ifndef __COMMON__SCREEN_H
+#define __COMMON__SCREEN_H
 
 #include <common/types.h>
 
@@ -30,4 +30,4 @@ int GetCursorY();
 void SetFGColor(color_t c);
 void SetBGColor(color_t c);
 
-#endif // __SCREEN_H
+#endif // __COMMON__SCREEN_H

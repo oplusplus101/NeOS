@@ -1,6 +1,6 @@
 
-#ifndef __NUMBERS_H
-#define __NUMBERS_H
+#ifndef __COMMON__NUMBERS_H
+#define __COMMON__NUMBERS_H
 
 #define _BE2LEDW(n) (((n) & 0x000000FF) << 24 | ((n) & 0x0000FF00) << 8 | ((n) & 0x00FF0000) >> 8 | ((n) & 0xFF000000) >> 24)
 #define _BE2LEW(n) (((n) & 0x00FF) << 8) | (((n) & 0xFF00) >> 8)
@@ -11,4 +11,4 @@
                     (((n) << 24) & 0x00FF00000000) | \
                     (((n) << 40) & 0xFF0000000000)
 
-#endif // __NUMBERS_H
+#endif // __COMMON__NUMBERS_H

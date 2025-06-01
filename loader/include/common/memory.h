@@ -1,6 +1,6 @@
 
-#ifndef __MEMORY_H
-#define __MEMORY_H
+#ifndef __COMMON__MEMORY_H
+#define __COMMON__MEMORY_H
 
 #include <common/types.h>
 
@@ -47,4 +47,4 @@ static inline void ZeroMemory(PVOID pDest, QWORD qwSize)
 #endif
 }
 
-#endif // __MEMORY_H
+#endif // __COMMON__MEMORY_H

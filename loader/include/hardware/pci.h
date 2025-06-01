@@ -1,6 +1,6 @@
 
-#ifndef __PCI_H
-#define __PCI_H
+#ifndef __HARDWARE__PCI_H
+#define __HARDWARE__PCI_H
 
 #include <common/types.h>
 #include <hardware/ports.h>
@@ -43,4 +43,4 @@ sPCIDeviceDescriptor GetDeviceDescriptor(BYTE nBus, BYTE nSlot, BYTE nFunction);
 
 void ScanPCIDevices();
 
-#endif // __PCI_H
+#endif // __HARDWARE__PCI_H

@@ -1,6 +1,6 @@
 
-#ifndef __CPUID_H
-#define __CPUID_H
+#ifndef __COMMON__CPUID_H
+#define __COMMON__CPUID_H
 
 #include <types.h>
 
@@ -76,4 +76,4 @@ static inline void cpuid(DWORD dwCode, DWORD *pEAX, DWORD *pEBX, DWORD *pECX, DW
     __asm__ volatile ("cpuid" : "=a" (*pEAX), "=b" (*pEBX), "=c" (*pECX), "=d" (*pEDX) : "a" (qwCode));
 }
 
-#endif // __CPUID_H
+#endif // __COMMON__CPUID_H

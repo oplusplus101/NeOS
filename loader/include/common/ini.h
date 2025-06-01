@@ -1,6 +1,6 @@
 
-#ifndef __INI_H
-#define __INI_H
+#ifndef __COMMON__INI_H
+#define __COMMON__INI_H
 
 #include <memory/list.h>
 #include <common/types.h>
@@ -14,4 +14,4 @@ typedef struct
 
 sList ParseINIFile(PCHAR szContents);
 
-#endif // __INI_H
+#endif // __COMMON__INI_H
