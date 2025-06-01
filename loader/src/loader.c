@@ -120,8 +120,8 @@ void LoaderMain(sBootData data)
     {
         sPE32SectionHeader *hdr = (sPE32SectionHeader *) ((PBYTE) pPEOHeader + pPEHeader->wSizeOfOptionalHeader + sizeof(sPE32SectionHeader) * i);
         QWORD qwAddress = hdr->dwVirtualAddress + pPEOHeader->qwImageBase;
-        PrintFormat("Loading section: %s at 0x%p\n", hdr->szName, qwAddress);
-        
+        if (hdr->dwCharacteristics & PE32_SCN_MEM_DISCARDABLE) continue;
+        PrintFormat("Loading section: %s at 0x%p c: 0x%08X\n", hdr->szName, qwAddress, hdr->dwCharacteristics);
         memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwPointerToRawData, hdr->dwVirtualSize);
     }
     

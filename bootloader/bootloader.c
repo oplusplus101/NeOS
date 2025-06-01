@@ -95,33 +95,29 @@ int main()
     {
         sPE32SectionHeader hdr;
         fread((void *) &hdr, sizeof(sPE32SectionHeader), 1, pFile);
+        
+        // Skip "useless" sections
+        if (hdr.dwCharacteristics & PE32_SCN_MEM_DISCARDABLE) continue;
 
-        if (!strncmp((char *) hdr.szName, ".text", 8) ||
-            !strncmp((char *) hdr.szName, ".data", 8) ||
-            !strncmp((char *) hdr.szName, ".rdata", 8) ||
-            !strncmp((char *) hdr.szName, ".rodata", 8) ||
-            !strncmp((char *) hdr.szName, ".bss", 8))
+        size_t nPrevPos = ftell(pFile);
+        fseek(pFile, hdr.dwPointerToRawData, SEEK_SET);
+        size_t nAddress = hdr.dwVirtualAddress + peohdr.qwImageBase;
+        size_t nPages   = (hdr.dwVirtualSize + 0x1000 - 1) / 0x1000;
+
+        bootData.nLoaderStart = _MIN(bootData.nLoaderStart, nAddress);
+        bootData.nLoaderEnd   = _MAX(bootData.nLoaderEnd, nAddress + nPages * 0x1000);
+        
+        for (size_t j = 0; j < nPages; j++)
         {
-            size_t nPrevPos = ftell(pFile);
-            fseek(pFile, hdr.dwPointerToRawData, SEEK_SET);
-            size_t nAddress = hdr.dwVirtualAddress + peohdr.qwImageBase;
-            size_t nPages   = (hdr.dwVirtualSize + 0x1000 - 1) / 0x1000;
-
-            bootData.nLoaderStart = _MIN(bootData.nLoaderStart, nAddress);
-            bootData.nLoaderEnd   = _MAX(bootData.nLoaderEnd, nAddress + nPages * 0x1000);
-            
-            for (size_t j = 0; j < nPages; j++)
-            {
-                size_t nAddressOffset = nAddress + j * 0x1000;
-                // FIXME: Error handling
-                efi_status_t s = BS->AllocatePages(AllocateAddress, EfiLoaderData, 1, &nAddressOffset);
-            }
-
-            printf("Address: %16X, Pages: %d, Name: %s\n", nAddress, nPages, hdr.szName);
-            //_ASSERT(!EFI_ERROR(s), "Unable to allocate pages for the %s section.", hdr.szName);
-            fread((void *) nAddress, hdr.dwVirtualSize, 1, pFile);
-            fseek(pFile, nPrevPos, SEEK_SET);
+            size_t nAddressOffset = nAddress + j * 0x1000;
+            // FIXME: Error handling
+            efi_status_t s = BS->AllocatePages(AllocateAddress, EfiLoaderData, 1, &nAddressOffset);
         }
+
+        printf("Address: %16X, Pages: %d, Name: %s\n", nAddress, nPages, hdr.szName);
+        //_ASSERT(!EFI_ERROR(s), "Unable to allocate pages for the %s section.", hdr.szName);
+        fread((void *) nAddress, hdr.dwVirtualSize, 1, pFile);
+        fseek(pFile, nPrevPos, SEEK_SET);
     }
 
     fclose(pFile);
