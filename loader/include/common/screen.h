@@ -23,6 +23,9 @@ void PrintFormat(const PCHAR sFormat, ...);
 void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII);
 void FillRectangle(int x, int y, int w, int h, color_t c);
 
+INT GetScreenWidth();
+INT GetScreenHeight();
+
 void ClearScreen();
 void SetCursor(int x, int y);
 int GetCursorX();

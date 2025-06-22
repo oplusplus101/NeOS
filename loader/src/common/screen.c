@@ -308,6 +308,16 @@ void SetCursor(INT x, INT y)
     g_iCursorY = y;
 }
 
+INT GetScreenWidth()
+{
+    return g_iWidth;
+}
+
+INT GetScreenHeight()
+{
+    return g_iHeight;
+}
+
 INT GetCursorX()
 {
     return g_iCursorX;
@@ -368,7 +378,7 @@ void PrintChar(CHAR c)
             for (INT x = 0; x < g_iFontWidth; x++)
                 DrawPixel(x + g_iCursorX * g_iFontWidth,
                           y + g_iCursorY * g_iFontHeight,
-                          g_8x16_font[(DWORD) c * g_iFontHeight + y] & (0x80 >> x) ? g_fgColor : g_bgColor);
+                          g_8x16_font[(BYTE) c * g_iFontHeight + y] & (0x80 >> x) ? g_fgColor : g_bgColor);
         g_iCursorX++;
         break;
     }
@@ -524,7 +534,7 @@ void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII)
             SetControlCharState(false);
             if (bASCII)
                 for (WORD j = 0; j < wBytesPerLine; j++)
-                    PrintChar(((BYTE *) pBuffer)[i - wBytesPerLine + j + 1]);
+                    PrintChar(((BYTE *) pBuffer)[i + j + 1 - wBytesPerLine]);
             SetControlCharState(true);
             
             PrintChar('\n');

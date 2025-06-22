@@ -1,13 +1,15 @@
 
+#include <NeoPorts.h>
+#include <NeoList.h>
+#include <NeoMemory.h>
 #include "PCI.h"
 
 sList g_lstDevices;
 
 DWORD PCIRead(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset)
 {
-  
     DWORD dwAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
-                     ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
+                      ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
 
     outl(0xCF8, dwAddress);
     return inl(0xCFC) >> ((nOffset & 3) << 3);
@@ -15,9 +17,8 @@ DWORD PCIRead(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset)
 
 void PCIWrite(BYTE nBus, BYTE nSlot, BYTE nFunction, BYTE nOffset, DWORD dwValue)
 {
-  
     DWORD dwAddress = ((DWORD) nBus << 16) | ((DWORD) nSlot << 11) |
-                     ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
+                      ((DWORD) nFunction << 8) | ((DWORD) nOffset & 0xFC) | 0x80000000;
 
     outl(0xCF8, dwAddress);
     outl(0xCFC, dwValue);
@@ -66,7 +67,7 @@ FUNC_EXPORT void NeoReScan()
 // Returns false if the device does not exist
 FUNC_EXPORT BOOL KNeoGetPCIDevice(BYTE nClass, BYTE nSubclass, sPCIDeviceDescriptor *pResult)
 {
-    for (INT i = 0; i < g_lstDevices->qwLength; i++)
+    for (INT i = 0; i < g_lstDevices.qwLength; i++)
     {
         sPCIDeviceDescriptor *pDesc = GetListElement(&g_lstDevices, i);
         if (pDesc->nClass == nClass && pDesc->nSubclass == nSubclass)
@@ -114,7 +115,9 @@ FUNC_EXPORT sBaseAddressRegister KNeoGetBaseAddressRegister(sPCIDeviceDescriptor
     return bar;
 }
 
-void DriverEntry()
+void DriverMain()
 {
     g_lstDevices = CreateEmptyList(sizeof(sPCIDeviceDescriptor));
+
+    KNeoPauseProcess(KNeoGetCurrentPID());
 }

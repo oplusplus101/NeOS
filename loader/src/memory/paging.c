@@ -132,10 +132,10 @@ void ReturnPages(PVOID pAddress, QWORD nPages)
         ReturnPage((PVOID) ((QWORD) pAddress + i));
 }
 
-PVOID GetPhysicalAddress(PVOID pVirtualAddress)
+PVOID GetPhysicalAddress(sPageTable *pPML4, PVOID pVirtualAddress)
 {
     // Page Directory Pointer
-    sPageTableEntry *pEntry = &g_pCurrentPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
+    sPageTableEntry *pEntry = &pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
     if (!(pEntry->wFlags & PF_PRESENT)) return NULL;
     sPageTable *pPageDirectoryPointer = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
 
@@ -233,13 +233,13 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
 {
 
     PVOID pLargestSegment = NULL;
-    QWORD nLargestSegmentSize = 0, nMemorySize = 0;
+    QWORD nLargestSegmentSize = 0, qwMemorySize = 0;
 
     for (sEFIMemoryDescriptor *pEntry = pMemoryDescriptor;
          (BYTE *) pEntry < (BYTE *) pMemoryDescriptor + nMemoryMapSize;
          pEntry = (sEFIMemoryDescriptor *) ((BYTE *) pEntry + nMemoryDescriptorSize))
     {
-        nMemorySize += pEntry->nNumberOfPages * PAGE_SIZE;
+        qwMemorySize += pEntry->nNumberOfPages * PAGE_SIZE;
         if (pEntry->nType == 7 && pEntry->nNumberOfPages * PAGE_SIZE > nLargestSegmentSize)
         {
             pLargestSegment     = (PVOID) pEntry->nPhysicalStart;
@@ -247,11 +247,11 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
         }
     }
 
-    g_qwMemorySize = nMemorySize;
-    g_qwFreeMemory = nMemorySize;
+    g_qwMemorySize         = qwMemorySize;
+    g_qwFreeMemory         = qwMemorySize;
     
-    g_sPageBitmap.pData   = pLargestSegment;
-    g_sPageBitmap.qwLength = nMemorySize / PAGE_SIZE / 8 + 1;
+    g_sPageBitmap.pData    = pLargestSegment;
+    g_sPageBitmap.qwLength = qwMemorySize / PAGE_SIZE / 8 + 1;
     ZeroMemory(g_sPageBitmap.pData, g_sPageBitmap.qwLength);
     
     ReservePages(0, g_qwMemorySize / PAGE_SIZE + 1);
@@ -272,14 +272,26 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
     g_pCurrentPML4 = g_pKernelPML4;
 
     // Identity map the whole memory.
-    MapPageRangeToIdentity(NULL, NULL, nMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
+    MapPageRangeToIdentity(NULL, NULL, qwMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
 
     LoadPML4(g_pCurrentPML4);
+}
+
+sPageTable *GetKernelPML4()
+{
+    return g_pKernelPML4;
 }
 
 sPageTable *GetCurrentPML4()
 {
     return g_pCurrentPML4;
+}
+
+sPageTable *CreateEmptyPML4()
+{
+    sPageTable *pTable = AllocatePage();
+    MapPageRangeToIdentity(pTable, NULL, g_qwMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
+    return pTable;
 }
 
 sPageTable *ClonePML4(sPageTable *pPML4)

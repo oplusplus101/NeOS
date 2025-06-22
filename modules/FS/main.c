@@ -2,7 +2,7 @@
 #include <KNeOS.h>
 
 // This module implements the interface between software and the filesystem driver.
-// To ensure that multiple filesystems are supported, the software interfave is split from the filesystem handler.
+// To ensure that multiple filesystems are supported, the software interface is split from the filesystem driver.
 // For example, if the system used the FAT-32 filesystem, and a USB-stick is plugged in that uses the exFAT filesystem, the same function calls can be used.
 
 enum

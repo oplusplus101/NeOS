@@ -37,9 +37,8 @@ FUNC_EXPORT PVOID KNeoGetFrameBuffer()
 void DriverMain()
 {
     g_pModule = KNeoGetModule("GFX");
-    KNeoAssert(g_pModule != NULL, "Graphics module (GFX.mod) not found");
+    _ASSERT(g_pModule != NULL, "Graphics module (GFX.mod) not found");
     ((void (*)(PCHAR)) KNeoGetModuleFunction(g_pModule, "NeoRegisterScreenDriver"))("GOP-GFX");
 
-    // Ensure the process doesn't exist (Temporary)
-    while (1);
+    KNeoPauseProcess(KNeoGetCurrentPID());
 }

@@ -1,9 +1,9 @@
 
 SRC = $(wildcard *.c)
 OBJ = $(SRC:.c=.o)
-EXEC = GOP-GFX.drv
-CC_PARAMS = -c --std=c23 -Werror -Wall -I../../lib
-LD_PARAMS = -L../../lib -lKNeOS -e DriverMain
+EXEC = HID.mod
+CC_PARAMS = -c --std=c23 -Werror -Wall -I../../lib -fshort-wchar
+LD_PARAMS = -L../../lib -lKNeOS -e ModuleMain
 
 $(EXEC): $(OBJ)
 	ld -o $(EXEC).elf $^ $(LD_PARAMS)

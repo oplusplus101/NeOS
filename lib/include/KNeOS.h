@@ -15,16 +15,40 @@
 
 #define FUNC_EXPORT __attribute__((visibility("default")))
 
+#define _ASSERT(c, m) if (!(c)) KNeoKernelPanic(m);
+
+typedef PVOID sDriver;
+typedef PVOID sModule;
+
 void KNeoPrintString(PCHAR sz);
 void KNeoKernelPanic(PCHAR szMessage);
-// If the condition is false, a kernel panic occur.
-void KNeoAssert(BOOL bCondition, PCHAR szMessage);
 
 PVOID KNeoGetDriver(PCHAR szName);
 PVOID KNeoGetModule(PCHAR szName);
 PVOID KNeoGetDriverFunction(PVOID pDriver, PCHAR szName);
-PVOID KNeoGetModuleFunction(PVOID pModule, PCHAR szName);
+PVOID KNeoGetModuleFunction(PVOID pModule , PCHAR szName);
 
 void KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags);
+void KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, void (*pCallback));
+
+INT KNeoGetCurrentPID();
+// INT KNeoStartProcess();
+void KNeoKillProcess(INT iPID);
+void KNeoPauseProcess(INT iPID);
+
+PVOID KNeoHeapAllocate(QWORD qwSize);
+PVOID KNeoHeapReAllocate(PVOID pOldMemory, QWORD qwNewSize);
+void KNeoHeapFree(PVOID pMemory);
+
+
+inline static void KNeoEnableInterrupts()
+{
+    __asm__ volatile ("sti");
+}
+
+inline static void KNeoDisableInterrupts()
+{
+    __asm__ volatile ("cli");
+}
 
 #endif // __KNEOS_H

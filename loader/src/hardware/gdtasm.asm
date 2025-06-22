@@ -24,7 +24,7 @@ WriteGDT:
     global FlushTSS
 FlushTSS:
     push ax
-    mov ax, 20
+    mov ax, 0x50 ; Task State Segment
     ltr ax
     pop ax
     ret

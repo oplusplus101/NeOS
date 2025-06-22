@@ -1,6 +1,7 @@
 
-    section .text
 
+    section .text
+    
 %macro IRQ 1
     global HandleInterrupt%1
 HandleInterrupt%1:
@@ -71,6 +72,7 @@ Interrupt:
 
     cli ; Disable interrupts so only one can happen at once
     ; Push all registers (pusha doesn't exist in x64)
+
     push rbp
     push rdi
     push rsi
@@ -89,7 +91,7 @@ Interrupt:
     push rbx
     push rax
 
-    ; The compiler uses registers instead of the stack, for some reason.
+    ; The compiler uses registers instead of the stack for passing arguments.
     mov rdx, qword [rsp]         ; nErrorCode
     mov rsi, rsp                 ; qwRSP
     movzx rdi, byte [nInterrupt] ; nInterrupt

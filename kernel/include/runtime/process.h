@@ -8,8 +8,10 @@
 #include <memory/paging.h>
 #include <runtime/exe.h>
 
-#define PROC_THREAD 0
-#define PROC_PROCESS 1
+#define PROC_RUNNING  0
+#define PROC_PAUSED   1
+#define PROC_SLEEPING 2
+#define PROC_KILLED   3
 
 typedef struct
 {
@@ -25,16 +27,18 @@ typedef struct
     sPageTable *pPML4;
 } sProcess;
 
-void InitProcessScheduler();
+void InitProcessScheduler(DWORD dwScheduleIntervalMicroseconds);
 
 // Returns the PID
 INT GetCurrentPID();
-INT StartProcessExecutable(PCHAR szName, BYTE nRing, WORD wOwner, sExecutable *pEXE);
-INT StartProcess(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner);
+INT StartKernelProcess(PCHAR szName, sExecutable *pEXE, BYTE nState);
+INT StartThread(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner);
 void KillProcess(INT iPID, PWCHAR wszReason);
+sProcess *GetCurrentProcess();
 sProcess *GetProcess(INT iPID);
 BOOL StopProcess(INT iPID);
 BOOL DoesProcessExist(INT iPID);
+BOOL SetProcessState(INT iPID, BYTE nState);
 
 QWORD ScheduleProcesses(QWORD qwRSP);
 

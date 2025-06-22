@@ -1,3 +1,4 @@
+
 #include <KNeOS.h>
 
 FUNC_EXPORT void KNeoPrintString(PCHAR sz)
@@ -8,13 +9,6 @@ FUNC_EXPORT void KNeoPrintString(PCHAR sz)
 FUNC_EXPORT void KNeoKernelPanic(PCHAR szMessage)
 {
     __asm__ volatile ("int $0x81" : : "a"(0x01), "b"(szMessage));
-}
-
-// If the condition is false, a kernel panic occur.
-FUNC_EXPORT void KNeoAssert(BOOL bCondition, PCHAR szMessage)
-{
-    if (!bCondition)
-        KNeoKernelPanic(szMessage);
 }
 
 FUNC_EXPORT PVOID KNeoGetDriver(PCHAR szName)
@@ -45,8 +39,53 @@ FUNC_EXPORT PVOID KNeoGetModuleFunction(PVOID pModule, PCHAR szName)
     return pFunction;
 }
 
-
 FUNC_EXPORT void KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags)
 {
     __asm__ volatile ("int $0x81" : : "a"(0x20), "b"(pAddress), "c"(qwPages), "d"(wFlags));
+}
+
+FUNC_EXPORT void KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, void (*pCallback))
+{
+    __asm__ volatile ("int $0x81" : : "a"(0x30), "b"(bInterrupt), "c"(bRing), "d"(pCallback));
+}
+
+FUNC_EXPORT INT KNeoGetCurrentPID()
+{
+    INT iPID;
+    __asm__ volatile ("int $0x81" : "=b"(iPID) : "a"(0x40));
+    return iPID;
+}
+
+FUNC_EXPORT INT KNeoStartProcess()
+{
+    return 0;
+}
+
+FUNC_EXPORT void KNeoKillProcess(INT iPID)
+{
+    __asm__ volatile ("int $0x81" : : "a"(0x42), "b"(iPID));
+}
+
+FUNC_EXPORT void KNeoPauseProcess(INT iPID)
+{
+    __asm__ volatile ("int $0x81" : : "a"(0x34), "b"(iPID));
+}
+
+PVOID KNeoHeapAllocate(QWORD qwSize)
+{
+    PVOID pAddress;
+    __asm__ volatile ("int $0x81" : "=b"(pAddress) : "a"(0x24));
+    return pAddress;
+}
+
+PVOID KNeoHeapReAllocate(PVOID pOldMemory, QWORD qwNewSize)
+{
+    PVOID pAddress;
+    __asm__ volatile ("int $0x81" : "=d"(pAddress) : "a"(0x25), "b"(pOldMemory), "c"(qwNewSize));
+    return pAddress;
+}
+
+void KNeoHeapFree(PVOID pMemory)
+{
+    __asm__ volatile ("int $0x81" : : "a"(0x26), "b"(pMemory));
 }

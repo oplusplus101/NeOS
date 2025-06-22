@@ -2,6 +2,7 @@
 #include <neos.h>
 #include <common/bootstructs.h>
 #include <common/exceptions.h>
+#include <common/memory.h>
 #include <common/screen.h>
 #include <common/string.h>
 #include <common/types.h>
@@ -15,14 +16,22 @@
 #include <events/syscallimpl.h>
 #include <events/syscalls.h>
 #include <events/timer.h>
+#include <runtime/exceptions.h>
 #include <runtime/process.h>
 #include <runtime/exe.h>
 
-sList g_lstDrivers, g_lstModules;
+typedef struct
+{
+    WCHAR wszName[129];
+    INT iPID;
+
+} sKernelTask;
+
+sList g_lstModules, g_lstDrivers;
 
 void __stack_chk_fail(void)
 {
-	_KERNEL_PANIC("Stack smashing detected");
+    _KERNEL_PANIC("Stack smashing detected");
 }
 
 sList LoadCFG(PWCHAR wszPath, sNEOSKernelHeader *pHeader)
@@ -43,10 +52,7 @@ void KernelMain(sNEOSKernelHeader hdr)
 {
     DisableInterrupts();
 
-    sTaskStateSegment sTSS = { 0 };
-    
     InitGDT();
-    SetTSS(&sTSS);
     WriteGDT();
     
     InitIDT();
@@ -86,55 +92,102 @@ void KernelMain(sNEOSKernelHeader hdr)
     RegisterSyscall(0x0030, 0, Syscall_KNeoRegisterSyscall);
     RegisterSyscall(0x0031, 0, Syscall_KNeoClearSyscall);
 
-    InitProcessScheduler();
-    RegisterInterrupt(32, ScheduleProcesses);
+    // Override the previous exception handlers so that when a process crashes it doesn't kill the whole kernel.
+    RegisterKernelExceptions();
+    // 10th of a millisecond per cycle 
+    InitProcessScheduler(100);
     PrintFormat("Process scheduler initialised\n");
 
-    PVOID pFile = hdr.GetFile(L"Programs\\test.exe");
-    PrintFormat("LOC: %p\n", pFile);
-    PrintFormat("File loaded!\n");
-    QWORD qwFileSize = hdr.GetFileSize(pFile);
-    PVOID pData = KHeapAlloc(qwFileSize);
-    _ASSERT(pData, "Could not allocate SZ: %d", qwFileSize);
-    hdr.ReadFile(pFile, pData);
-    PrintFormat("LOC: %p\n", pData);
-    
-    PrintFormat("File read!\n");
-    sExecutable sEXE = ParsePE32(pData);
-    PrintFormat("Starting executable..\n");
-    StartProcessExecutable("TEST", 0, 0, &sEXE);
-    
     PrintFormat("Loading...\n");
-    // sList lstModules = LoadCFG("NeOS\\Modules.cfg", &hdr);
-    // sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg", &hdr);
-    // sList lstConfig  = LoadCFG("NeOS\\NeOS.cfg", &hdr);
+    g_lstModules     = CreateEmptyList(sizeof(sKernelTask));
+    g_lstDrivers     = CreateEmptyList(sizeof(sKernelTask));
+    sList lstModules = LoadCFG(L"NeOS\\Modules.cfg", &hdr);
+    sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg", &hdr);
+    // sList lstConfig  = LoadCFG(L"NeOS\\NeOS.cfg", &hdr);
 
-    
-    // for (QWORD i = 0; i < lstDrivers.qwLength; i++)
-    // {
-    //     sINIEntry *pEntry = GetListElement(&lstDrivers, i);
-    //     if (!strcmp(pEntry->szName, "Enabled") && pEntry->szValue[0] == '1')
-    //     {
-    //         PrintFormat("Found driver: %s\n", pEntry->szName);
-    //         // WCHAR szPath[256];
-    //         // strcpyW(szPath, L"NeOS\\Drivers\\");
-    //         // strcatW(szPath, pEntry->szLabel);
-    //         // strcatW(szPath, L".drv");
-    //         // PrintFormat("AL: %s\n", szPath);
-    //         // PVOID pFile = hdr.GetFile(szPath);
-    //         // _ASSERT(pFile != NULL, "Driver %s not found on filesystem", szPath);
+    for (QWORD i = 0; i < lstModules.qwLength; i++)
+    {
+        sINIEntry *pEntry = GetListElement(&lstModules, i);
+        if (!strcmp(pEntry->szName, "Enabled") && pEntry->szValue[0] == '1')
+        {
+            PrintFormat("Loading module: %s\n", pEntry->szLabel);
+            WCHAR wszModuleName[13];
+            ZeroMemory(wszModuleName, sizeof(wszModuleName));
+            for (int j = 0; pEntry->szLabel[j]; j++)
+                wszModuleName[j] = pEntry->szLabel[j];
+            
+            WCHAR wszPath[256];
+            strcpyW(wszPath, L"NeOS\\Modules\\");
+            strcatW(wszPath, wszModuleName);
+            strcatW(wszPath, L".mod");
+            PVOID pFile = hdr.GetFile(wszPath);
+            _ASSERT(pFile != NULL, "Module %w not found", wszModuleName);
 
-    //         // QWORD qwFileSize = hdr.GetFileSize(pFile);
-    //         // PVOID pData = KHeapAlloc(qwFileSize);
-    //         // hdr.ReadFile(pFile, pData);
-    //         // // /* sExecutable sEXE =  */ParsePE32(pData, qwFileSize);
-    //         // KHeapFree(pFile);
-    //     }
-    // }
+            QWORD qwFileSize = hdr.GetFileSize(pFile);
+            PVOID pData = KHeapAlloc(qwFileSize);
+            hdr.ReadFile(pFile, pData);
+            sExecutable sEXE = ParsePE32(pData);
+            INT iPID = StartKernelProcess(pEntry->szLabel, &sEXE, PROC_PAUSED);
+            sKernelTask sTask =
+            {
+                .iPID = iPID
+            };
+            strcpyW(sTask.wszName, wszModuleName);
+            AddListElement(&g_lstModules, &sTask); 
+            KHeapFree(pFile);
+        }
+    }
+
+    // Load the drivers
+    for (QWORD i = 0; i < lstDrivers.qwLength; i++)
+    {
+        sINIEntry *pEntry = GetListElement(&lstDrivers, i);
+        if (!strcmp(pEntry->szName, "Enabled") && pEntry->szValue[0] == '1')
+        {
+            PrintFormat("Loading driver: %s\n", pEntry->szLabel);
+            WCHAR wszDriverName[13];
+            ZeroMemory(wszDriverName, sizeof(wszDriverName));
+            for (int j = 0; pEntry->szLabel[j]; j++)
+                wszDriverName[j] = pEntry->szLabel[j];
+            
+            WCHAR wszPath[256];
+            strcpyW(wszPath, L"NeOS\\Drivers\\");
+            strcatW(wszPath, wszDriverName);
+            strcatW(wszPath, L".drv");
+            PVOID pFile = hdr.GetFile(wszPath);
+            _ASSERT(pFile != NULL, "Driver %w not found", wszDriverName);
+
+            QWORD qwFileSize = hdr.GetFileSize(pFile);
+            PVOID pData = KHeapAlloc(qwFileSize);
+            hdr.ReadFile(pFile, pData);
+            sExecutable sEXE = ParsePE32(pData);
+            INT iPID = StartKernelProcess(pEntry->szLabel, &sEXE, PROC_PAUSED);
+            sKernelTask sTask =
+            {
+                .iPID = iPID
+            };
+            strcpyW(sTask.wszName, wszDriverName);
+            AddListElement(&g_lstDrivers, &sTask);
+            KHeapFree(pFile);
+        }
+    }
+
+    PrintFormat("Starting modules...\n");
+    for (QWORD i = 0; i < g_lstModules.qwLength; i++)
+    {
+        sKernelTask *pModule = (sKernelTask *) GetListElement(&g_lstModules, i);
+        SetProcessState(pModule->iPID, PROC_RUNNING);
+    }
     
-    // for (;;);
+    PrintFormat("Starting drivers...\n");
+    for (QWORD i = 0; i < g_lstModules.qwLength; i++)
+    {
+        sKernelTask *pDriver = (sKernelTask *) GetListElement(&g_lstDrivers, i);
+        SetProcessState(pDriver->iPID, PROC_RUNNING);
+    }
+    
     EnableInterrupts(); 
 
-    for (;;);
+    for (;;) __asm__ volatile ("hlt"); // Halt so less power is wasted
     __asm__ volatile ("cli\nhlt"); // Ensure the kernel does not exit at all
 }

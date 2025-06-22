@@ -35,6 +35,13 @@ inline static void strcpy(PCHAR szDest, PCHAR szSrc)
     *szDest = 0;
 }
 
+inline static void strcpyW(PWCHAR wszDest, PWCHAR wszSrc)
+{
+    for (QWORD i = 0; *wszSrc; i++)
+        *(wszDest++) = *(wszSrc++);
+    *wszDest = 0;
+}
+
 inline static void strncpy(PCHAR szDest, PCHAR szSrc, QWORD n)
 {
     for (QWORD i = 0; *szSrc && i < n; i++)
@@ -46,6 +53,12 @@ inline static PCHAR strcat(PCHAR szDest, PCHAR sz)
 {
     strcpy(&szDest[strlen(szDest)], sz);
     return szDest;
+}
+
+inline static PWCHAR strcatW(PWCHAR wszDest, PWCHAR wsz)
+{
+    strcpyW(&wszDest[strlenW(wszDest)], wsz);
+    return wszDest;
 }
 
 inline static INT strncmp(PCHAR szA, PCHAR szB, QWORD n)

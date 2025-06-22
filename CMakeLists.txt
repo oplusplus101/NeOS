@@ -15,7 +15,6 @@ set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "-m64 -O0 -nostdlib -ffreestanding -fno-builtin -fstack-protector-all -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Wall -Wpedantic -Werror -fshort-wchar -no-pie")
 
-
 # Load the headers
 include_directories(${LOADER_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/loader/include)
 include_directories(${KERNEL_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/kernel/include)
@@ -30,7 +29,6 @@ add_executable(${KERNEL_EXE} ${KERNEL_SRC})
 set_target_properties(${LOADER_EXE} PROPERTIES LINK_FLAGS "-T ${CMAKE_SOURCE_DIR}/loader/linker.ld")
 set_target_properties(${KERNEL_EXE} PROPERTIES LINK_FLAGS "-T ${CMAKE_SOURCE_DIR}/kernel/linker.ld")
 
-
 # Post build
 add_custom_command(
     TARGET ${LOADER_EXE} POST_BUILD
@@ -44,9 +42,9 @@ add_custom_command(
     COMMENT "Converting ${KERNEL_EXE} to PE-32+"
 )
 
-# Creates partitions: build/efi_part and build/main_part
+# Creates partitions: build/efi_part and build/main_part and image build/NeOS.sys
 add_custom_target(
-    partitions
+    image
     
     # Setup the EFI System Partition (ESP)
     COMMAND mkdir -p ${CMAKE_BINARY_DIR}/efi_part/EFI/BOOT
@@ -57,14 +55,15 @@ add_custom_target(
     COMMAND mkdir -p ${CMAKE_BINARY_DIR}/main_part
     COMMAND cp -r ${CMAKE_SOURCE_DIR}/main_template/* ${CMAKE_BINARY_DIR}/main_part
     COMMAND cp ${CMAKE_BINARY_DIR}/${KERNEL_EXE} ${CMAKE_BINARY_DIR}/main_part/NeOS/NeOS.sys
+    COMMAND cp ${CMAKE_SOURCE_DIR}/drivers/*/*.drv ${CMAKE_BINARY_DIR}/main_part/NeOS/Drivers
+    COMMAND cp ${CMAKE_SOURCE_DIR}/modules/*/*.mod ${CMAKE_BINARY_DIR}/main_part/NeOS/Modules || true
     
     # Assemble the image
     COMMAND ${TERMINAL_EXE} ${CMAKE_SOURCE_DIR}/assemble_qcow.sh ${CMAKE_SOURCE_DIR}
     
-    COMMENT "Creating partititons..."
+    COMMENT "Creating image..."
     DEPENDS ${KERNEL_EXE} ${LOADER_EXE}
 )
-
 
 # For some reason, this breaks in vscode
 add_custom_target(run COMMAND ${TERMINAL_EXE} ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH})

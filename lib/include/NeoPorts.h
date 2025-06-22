@@ -2,7 +2,7 @@
 #ifndef __HARDWARE__PORTS_H
 #define __HARDWARE__PORTS_H
 
-#include <common/types.h>
+#include <NeoTypes.h>
 
 static inline BYTE inb(WORD wPort)
 {

@@ -4,6 +4,7 @@
 
 #include <common/types.h>
 
-void SetTimerFrequency(DWORD dwFrequency);
+void SetPITFrequency(DWORD dwFrequency);
+void SetPITInterval(DWORD dwIntervalMicroseconds);
 
 #endif // __EVENTS__TIMER_H

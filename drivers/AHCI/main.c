@@ -78,8 +78,9 @@ typedef struct _tagHBACommandHeader
     DWORD arrReserved1[4];
 } __attribute__((packed)) sHBACommandHeader;
 
+sHBAPort *g_arrHBAPorts[32];
 sHBAMemory *g_pHBAMemory;
-sList g_lstDevices;
+// sList g_lstDevices;
 
 // Start command engine
 void StartCommand(sHBAPort *pPort)
@@ -115,17 +116,17 @@ void RebasePort(sHBAPort *pPort, int nPort)
 {
     StopCommand(pPort);
     pPort->qwCommandListBaseAddress = AHCI_BASE + (nPort << 10);
-    ZeroMemory((PVOID) pPort->qwCommandListBaseAddress, 1024);
+    // ZeroMemory((PVOID) pPort->qwCommandListBaseAddress, 1024);
 
     pPort->qwFISBaseAddress = AHCI_BASE + (nPort << 8) + 0x8000;
-    ZeroMemory((PVOID) pPort->qwFISBaseAddress, 256);
+    // ZeroMemory((PVOID) pPort->qwFISBaseAddress, 256);
 
     sHBACommandHeader *pCommandHeader = (sHBACommandHeader *) pPort->qwCommandListBaseAddress;
     for (BYTE i = 0; i < 32; i++)
     {
         pCommandHeader[i].wPhysicalRegionDescriptorTable = 8;
         pCommandHeader[i].qwCommandTableDescriptorBaseAddress = AHCI_BASE + (nPort << 13) + (i << 8) + 0xA000;
-        ZeroMemory((PVOID) pCommandHeader[i].qwCommandTableDescriptorBaseAddress, 256);
+        // ZeroMemory((PVOID) pCommandHeader[i].qwCommandTableDescriptorBaseAddress, 256);
     }
 
     StartCommand(pPort);
@@ -138,18 +139,20 @@ void NeoScanPorts()
     {
         if (dwPortImplemented & 0x01)
         {
-            RebasePort(&pMemory->arrPorts[i], i);
-            g_arrHBAPorts[i] = &pMemory->arrPorts[i];
+            RebasePort(&g_pHBAMemory->arrPorts[i], i);
+            g_arrHBAPorts[i] = &g_pHBAMemory->arrPorts[i];
         }
     }
 }
 
-void DriverEntry()
+void DriverMain()
 {
     PVOID pPCIDriver = KNeoGetDriver("PCI");
     sPCIDeviceDescriptor sDesc;
     ((BOOL (*)(BYTE, BYTE, sPCIDeviceDescriptor *pDesc)) KNeoGetDriverFunction(pPCIDriver, "KNeoGetPCIDevice"))(0x01, 0x06, &sDesc);
     sBaseAddressRegister sBAR5 = ((sBaseAddressRegister (*)(sPCIDeviceDescriptor, BYTE)) KNeoGetDriverFunction(pPCIDriver, "KNeoGetBaseAddressRegister"))(sDesc, 5);
-    KNeoMapPagesToIdentity(sBAR5.qwAddress, 1, PAGE_WRITEABLE | PAGE_CACHEDISABLE);
+    KNeoMapPagesToIdentity((PVOID) sBAR5.qwAddress, 1, PAGE_WRITEABLE | PAGE_CACHEDISABLE);
     g_pHBAMemory = (sHBAMemory *) sBAR5.qwAddress;    
+
+    KNeoPauseProcess(KNeoGetCurrentPID());
 }

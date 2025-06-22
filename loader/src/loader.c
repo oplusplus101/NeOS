@@ -75,7 +75,7 @@ void LoaderMain(sBootData data)
     PrintString("Paging initialised!\n");
 
     // Set up the heap
-    sHeap sKernelHeap = CreateHeap(NEOS_HEAP_SIZE / PAGE_SIZE, false);
+    sHeap sKernelHeap = CreateHeap(NEOS_HEAP_SIZE / PAGE_SIZE, false, true, NULL);
     SetKernelHeap(&sKernelHeap);
     PrintString("Heap initialised!\n");
 

@@ -6,18 +6,35 @@
 
 sHeap *g_pKernelHeap;
 
-sHeap CreateHeap(QWORD qwSizeInPages, BOOL bUser)
+sHeap CreateHeap(QWORD qwSizeInPages, BOOL bUser, BOOL bIdentityMapped, PVOID pStart)
 {
     sHeap h;
-    h.qwStart                 = (QWORD) AllocateContinousPages(qwSizeInPages);
+
+    if (bIdentityMapped)
+    {
+        h.qwStart    = (QWORD) AllocateContinousPages(qwSizeInPages);
+        h.bResizable = false;
+        MapPageRangeToIdentity(NULL, (PVOID) h.qwStart, qwSizeInPages, PF_WRITEABLE | (bUser ? PF_USER : 0));
+    }
+    else
+    {
+        h.qwStart = (QWORD) pStart;
+        h.bResizable = true;
+        for (QWORD i = 0; i < qwSizeInPages; i++)
+        {
+            PVOID pPage = AllocatePage();
+            _ASSERT(pPage, "Could not allocate page for heap");
+            MapPage(NULL, (PVOID) ((QWORD) pStart + i * PAGE_SIZE), pPage, PF_WRITEABLE | (bUser ? PF_USER : 0));
+        }
+    }
+    
     h.qwSize                  = qwSizeInPages * PAGE_SIZE;
     h.pFirstChunk             = (sMemoryChunk *) h.qwStart;
     h.pFirstChunk->bAllocated = false;
     h.pFirstChunk->pPrevious  = NULL;
     h.pFirstChunk->pNext      = NULL;
-    h.pFirstChunk->qwLength   = qwSizeInPages * PAGE_SIZE - sizeof(sMemoryChunk);
-    h.qwFreeMemory            = h.pFirstChunk->qwLength;
-    MapPageRangeToIdentity(NULL, (PVOID) h.qwStart, qwSizeInPages, PF_WRITEABLE | (bUser ? PF_USER : 0));
+    h.pFirstChunk->qwSize     = qwSizeInPages * PAGE_SIZE - sizeof(sMemoryChunk);
+    h.qwFreeMemory            = h.pFirstChunk->qwSize;
     return h;
 }
 
@@ -31,10 +48,15 @@ void SetKernelHeap(sHeap *pHeap)
     g_pKernelHeap = pHeap;
 }
 
-PVOID KHeapAlloc(QWORD qwLength)
+sHeap *GetKernelHeap()
+{
+    return g_pKernelHeap;
+}
+
+PVOID KHeapAlloc(QWORD qwSize)
 {
     _ASSERT(g_pKernelHeap, "Kernel heap not set");
-    return HeapAlloc(g_pKernelHeap, qwLength);
+    return HeapAlloc(g_pKernelHeap, qwSize);
 }
 
 void KHeapFree(PVOID pMemory)
@@ -43,73 +65,105 @@ void KHeapFree(PVOID pMemory)
     HeapFree(g_pKernelHeap, pMemory);
 }
 
-PVOID KHeapReAlloc(PVOID pMemory, QWORD qwLength)
+PVOID KHeapReAlloc(PVOID pMemory, QWORD qwSize)
 {
     _ASSERT(g_pKernelHeap, "Kernel heap not set");
-    return HeapReAlloc(g_pKernelHeap, pMemory, qwLength);
+    return HeapReAlloc(g_pKernelHeap, pMemory, qwSize);
 }
 
-void MergeChunks(sMemoryChunk *pFirstChunk, sMemoryChunk *pSecondChunk)
-{
-    if (pFirstChunk == NULL || pSecondChunk == NULL || pSecondChunk->pNext == NULL) return;
+// void MergeChunks(sMemoryChunk *pFirstChunk, sMemoryChunk *pSecondChunk)
+// {
+//     PrintFormat("Merging chunk %p and %p with sizes %d and %d\n ", pFirstChunk, pSecondChunk, pFirstChunk->qwSize, pSecondChunk->qwSize);
+//     if (pFirstChunk == NULL || pSecondChunk == NULL || pSecondChunk->pNext == NULL) return;
+//     pFirstChunk->pNext              = pSecondChunk->pNext;
+//     pSecondChunk->pNext->pPrevious  = pFirstChunk;
+//     pFirstChunk->qwSize            += sizeof(sMemoryChunk) + pSecondChunk->qwSize;
+//     pSecondChunk->bAllocated        = false; // For saftey
+// }
 
-}
+// // Returns the second chunk
+// sMemoryChunk *SplitChunk(sMemoryChunk *pChunk, QWORD qwFirstChunkSize)
+// {
+//     _ASSERT(qwFirstChunkSize < pChunk->qwSize, "Tried to split a chunk out of bounds, size: %d chunk size: %d", qwFirstChunkSize, pChunk->qwSize);
+//     sMemoryChunk *pSecondChunk     = (sMemoryChunk *) ((PBYTE) (pChunk + 1) + qwFirstChunkSize);
+//     pSecondChunk->bAllocated       = false;
+//     pSecondChunk->pNext            = pChunk->pNext;
+//     pSecondChunk->pPrevious        = pChunk;
+//     pSecondChunk->qwSize           = pChunk->qwSize - qwFirstChunkSize - sizeof(sMemoryChunk);
+//     pSecondChunk->pNext->pPrevious = pSecondChunk;
+//     pChunk->pNext                  = pSecondChunk;
+//     pChunk->qwSize                 = qwFirstChunkSize;
+//     return pSecondChunk;
+// }
 
-// Returns the second chunk
-sMemoryChunk *SplitChunk(sMemoryChunk *pChunk, QWORD qwLength)
+PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
 {
-    sMemoryChunk *pSecondChunk = (sMemoryChunk *) ((QWORD) pChunk + qwLength + sizeof(sMemoryChunk));
-    pSecondChunk->bAllocated   = false;
-    pSecondChunk->pNext        = pChunk->pNext;
-    pSecondChunk->pPrevious    = pChunk;
-    pSecondChunk->qwLength     = pChunk->qwLength - qwLength;
-    pChunk->pNext              = pSecondChunk;
-    pChunk->qwLength           = qwLength;
-    return pSecondChunk;
-}
-
-PVOID HeapAlloc(sHeap *pHeap, QWORD qwLength)
-{
-    if (qwLength == 0) return NULL;
     sMemoryChunk *pResult = NULL;
-    for (sMemoryChunk *pChunk = pHeap->pFirstChunk; pChunk != NULL && pResult == NULL; pChunk = pChunk->pNext)
-    {
-        if (pChunk->qwLength >= qwLength && !pChunk->bAllocated)
+
+    for (sMemoryChunk *pChunk = pHeap->pFirstChunk; pChunk != 0 && pResult == 0; pChunk = pChunk->pNext)
+        if (pChunk->qwSize > qwSize && !pChunk->bAllocated)
+        {
             pResult = pChunk;
+            break;
+        }
+        
+    if (pResult == 0)
+        return NULL;
+    
+    if (pResult->qwSize >= qwSize + sizeof(sMemoryChunk) + 1)
+    {
+        sMemoryChunk *pTemp = (sMemoryChunk *) ((QWORD) pResult + sizeof(sMemoryChunk) + qwSize);
+        
+        pTemp->bAllocated = false;
+        pTemp->qwSize = pResult->qwSize - qwSize - sizeof(sMemoryChunk);
+        pTemp->pPrevious = pResult;
+        pTemp->pNext = pResult->pNext;
+
+        if(pTemp->pNext != NULL)
+            pTemp->pNext->pPrevious = pTemp;
+
+        pResult->qwSize = qwSize;
+        pResult->pNext = pTemp;
     }
 
-    if (pResult == NULL) return NULL;
-
-    if (pResult->qwLength >= qwLength + sizeof(sMemoryChunk) + 1)
-        SplitChunk(pResult, qwLength);
-
-    pResult->bAllocated  = true;
-    pHeap->qwFreeMemory -= qwLength + sizeof(sMemoryChunk);
-
-    return (sMemoryChunk *) pResult + 1;
+    pResult->bAllocated = true;
+    return (PVOID) ((QWORD) pResult + sizeof(sMemoryChunk));
 }
 
 void HeapFree(sHeap *pHeap, PVOID pMemory)
 {
-    _ASSERT(pMemory != NULL, "Tried to free a NULL address");
-    sMemoryChunk *pChunk = (sMemoryChunk *) pMemory - 1;
-    _ASSERT(pChunk->bAllocated, "Tried to free a non allocated chunk");
+    sMemoryChunk *pChunk = (sMemoryChunk *) ((QWORD) pMemory - sizeof(sMemoryChunk));
     
-    return;
+    pHeap->qwFreeMemory += sizeof(sMemoryChunk) + pChunk->qwSize;
     pChunk->bAllocated   = false;
-    pHeap->qwFreeMemory += pChunk->qwLength + sizeof(sMemoryChunk);
-
-    if (!pChunk->pPrevious->bAllocated) MergeChunks(pChunk->pPrevious, pChunk);
-    if (!pChunk->pNext->bAllocated)     MergeChunks(pChunk, pChunk->pNext);
+    
+    if(pChunk->pPrevious != 0 && !pChunk->pPrevious->bAllocated)
+    {
+        pChunk->pPrevious->pNext   = pChunk->pNext;
+        pChunk->pPrevious->qwSize += pChunk->qwSize + sizeof(sMemoryChunk);
+        if(pChunk->pNext != 0)
+            pChunk->pNext->pPrevious = pChunk->pPrevious;
+        
+        pChunk = pChunk->pPrevious;
+    }
+    
+    if(pChunk->pNext != 0 && !pChunk->pNext->bAllocated)
+    {
+        pChunk->qwSize += pChunk->pNext->qwSize + sizeof(sMemoryChunk);
+        pChunk->pNext = pChunk->pNext->pNext;
+        if(pChunk->pNext != 0)
+            pChunk->pNext->pPrevious = pChunk;
+    }
 }
 
-PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewLength)
+PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewSize)
 {
-    if (pMemory == NULL) return HeapAlloc(pHeap, qwNewLength);
+    if (pMemory == NULL) return HeapAlloc(pHeap, qwNewSize);
     sMemoryChunk *pChunk = (sMemoryChunk *) ((QWORD) pMemory - sizeof(sMemoryChunk));
-    QWORD qwPreviousSize = pChunk->qwLength;
-    PVOID pNewMemory = HeapAlloc(pHeap, qwNewLength);
-    memcpy(pNewMemory, pMemory, qwNewLength >= qwPreviousSize ? qwPreviousSize : qwNewLength);
+    QWORD qwPreviousSize = pChunk->qwSize;
+    PVOID pNewMemory = HeapAlloc(pHeap, qwNewSize);
+    if (pNewMemory == NULL) return NULL;
+    memcpy(pNewMemory, pMemory, qwNewSize >= qwPreviousSize ? qwPreviousSize : qwNewSize);
     HeapFree(pHeap, pMemory);
     return pNewMemory;
 }

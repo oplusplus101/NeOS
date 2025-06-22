@@ -18,7 +18,7 @@ void Syscall_KNeoPrintString(sCPUState *pCPUState)
 // RBX is the address of a zero-terminated string
 void Syscall_KNeoKernelPanic(sCPUState *pCPUState)
 {
-    _KERNEL_PANIC((PCHAR) pCPUState->qwRBX);
+    _KERNEL_PANIC("Process \"%s\" triggered a kernel panic\nProcess Message: %s\n", GetCurrentProcess()->szName, (PCHAR) pCPUState->qwRBX);
 }
 
 // Code: 0x0002
@@ -59,7 +59,7 @@ void Syscall_KNeoGetDriver(sCPUState *pCPUState)
 // RCX will then be the memory address of the allocated module
 void Syscall_KNeoGetModule(sCPUState *pCPUState)
 {
-    
+    pCPUState
 }
 
 // Code: 0x0012
@@ -158,4 +158,32 @@ void Syscall_KNeoRegisterSyscall(sCPUState *pCPUState)
 void Syscall_KNeoClearSyscall(sCPUState *pCPUState)
 {
     ClearSyscall((void (*)(sCPUState *)) pCPUState->qwRDX);
+}
+
+// 0x40 - 0x4F Process stuff
+
+// Code: 0x0040
+// RBX is the PID
+void Syscall_KNeoGetCurrentPID(sCPUState *pCPUState)
+{
+    pCPUState->qwRBX = GetCurrentPID();
+}
+
+void Syscall_KNeoStartProcess(sCPUState *pCPUState)
+{
+}
+
+// Code: 0x0042
+// RBX is the PID
+void Syscall_KNeoKillProcess(sCPUState *pCPUState)
+{
+    StopProcess(pCPUState->qwRBX);
+}
+
+// Code: 0x0043
+// RBX is the PID
+void Syscall_KNeoPauseProcess(sCPUState *pCPUState)
+{
+    if (DoesProcessExist(pCPUState->qwRBX))
+        SetProcessState(pCPUState->qwRBX, PROC_PAUSED);
 }

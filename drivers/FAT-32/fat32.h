@@ -2,9 +2,6 @@
 #ifndef __FAT32_H
 #define __FAT32_H
 
-#include <filesystem/gpt.h>
-
-
 #define FAT32_ATTR_READ_ONLY 0x01
 #define FAT32_ATTR_HIDDEN    0x02
 #define FAT32_ATTR_SYSTEM    0x04

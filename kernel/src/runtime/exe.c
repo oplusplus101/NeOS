@@ -21,31 +21,25 @@ sExecutable ParsePE32(PVOID pEXEData)
         .lstExportedFunctions = CreateEmptyList(sizeof(sExecutableFunction)),
         .lstSections = CreateEmptyList(sizeof(sExecutableSection))
     };
-
-    PrintFormat("Image Base  : %p\n", pOptionalHeader->qwImageBase);
-    PrintFormat("Entry Point : %p\n", pOptionalHeader->dwAddressOfEntrypoint);
     
     for (WORD i = 0; i < pHeader->wNumberOfSections; i++)
     {
         sPE32SectionHeader *pSection = (sPE32SectionHeader *) ((PBYTE) pOptionalHeader + pHeader->wSizeOfOptionalHeader) + i;
+        if (pSection->dwCharacteristics & PE32_SCN_MEM_DISCARDABLE) continue;
         
         sExecutableSection sSection;
         strncpy(sSection.szName, (PCHAR) pSection->szName, 8);
         sSection.dwRawSize        = pSection->dwSizeOfRawData;
         sSection.dwVirtualSize    = pSection->dwVirtualSize;
         sSection.qwVirtualAddress = pOptionalHeader->qwImageBase + pSection->dwVirtualAddress;
-        PrintFormat("Name            : %s\n", sSection.szName);
-        PrintFormat("Virtual Size    : %u\n", sSection.dwVirtualSize);
-        PrintFormat("Raw Size        : %u\n", sSection.dwRawSize);
-        PrintFormat("Virtual Address : %p\n", sSection.qwVirtualAddress);
 
         if (pSection->dwSizeOfRawData > 0)
         {
             sSection.pData = AllocateContinousPages(_BYTES_TO_PAGES(pSection->dwVirtualSize));
-            memcpy((PBYTE) sSection.pData + (pSection->dwVirtualAddress % PAGE_SIZE), (PBYTE) pEXEData + pSection->dwPointerToRawData, sizeof(pSection->dwSizeOfRawData));
+            memcpy((PBYTE) sSection.pData + (pSection->dwVirtualAddress % PAGE_SIZE), (PBYTE) pEXEData + pSection->dwPointerToRawData, pSection->dwSizeOfRawData);
         }
         else
-            sSection.pData = NULL;
+            continue;
         
         AddListElement(&sEXE.lstSections, &sSection);
     }

@@ -7,10 +7,10 @@ int g_nSystemDrive;
 bool (*KNeoReadDiskSectors)(int nDrive, QWORD qwLBA, QWORD qwSectors, PVOID pBuffer);
 int (*KNeoGetSystemDrive)();
 
-void EnableDriver()
+void DriverMain()
 {
-    g_pDiskModule = KNeoLoadModule("storage");
-    KNeoAssert(g_pDiskModule, "Storage module (storage.mod) either not loaded or doesn't exist");
+    g_pDiskModule = KNeoGetModule("storage");
+    _ASSERT(g_pDiskModule, "Storage module (storage.mod) either not loaded or doesn't exist");
     KNeoReadDiskSectors = KNeoGetModuleFunction(g_pDiskModule, "KNeoReadDiskSectors");
     KNeoGetSystemDrive = KNeoGetModuleFunction(g_pDiskModule, "KNeoGetSystemDrive");
     g_nSystemDrive = KNeoGetSystemDrive();

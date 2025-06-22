@@ -9,7 +9,7 @@ typedef struct _tagMemoryChunk
 {
     struct _tagMemoryChunk *pNext, *pPrevious;
     BOOL bAllocated;
-    QWORD qwLength;
+    QWORD qwSize;
 } __attribute__((packed)) sMemoryChunk;
 
 typedef struct
@@ -17,17 +17,19 @@ typedef struct
     sMemoryChunk *pFirstChunk;
     QWORD qwStart, qwSize;
     QWORD qwFreeMemory;
+    BOOL  bResizable;
 } sHeap;
 
 void  SetKernelHeap(sHeap *pHeap);
-sHeap CreateHeap(QWORD qwSizeInPages, BOOL bUser);
+sHeap *GetKernelHeap();
+sHeap CreateHeap(QWORD qwSizeInPages, BOOL bUser, BOOL bIdentityMapped, PVOID pStart);
 void  DestroyHeap(sHeap *pHeap);
-PVOID HeapAlloc(sHeap *pHeap, QWORD qwLength);
+PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize);
 void  HeapFree(sHeap *pHeap, PVOID pMemory);
-PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewLength);
-PVOID KHeapAlloc(QWORD qwLength);
+PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewSize);
+PVOID KHeapAlloc(QWORD qwSize);
 void  KHeapFree(PVOID pMemory);
 BOOL HeapDefragment(sHeap *pHeap);
-PVOID KHeapReAlloc(PVOID pMemory, QWORD qwLength);
+PVOID KHeapReAlloc(PVOID pMemory, QWORD qwSize);
 
 #endif // __MEMORY__HEAP_HH

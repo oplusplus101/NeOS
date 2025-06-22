@@ -2,7 +2,7 @@
 #ifndef __MEMORY__LIST_H
 #define __MEMORY__LIST_H
 
-#include <common/types.h>
+#include <NeoTypes.h>
 
 typedef struct
 {

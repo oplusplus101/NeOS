@@ -65,7 +65,8 @@ void InitIDT()
     for (int i = 0; i < 256; i++)
     {
         SetIDTEntry(i, IgnoreInterrupt, 0x8E);
-        g_ISRs[i] = 0;
+        if (i < 32) g_ESRs[i]      = 0;
+        else        g_ISRs[i - 32] = 0;
     }
     
     SetIDTEntry(0x00, HandleException0x00, 0x8E);

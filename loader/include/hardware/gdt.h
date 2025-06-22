@@ -54,7 +54,7 @@ typedef struct
 
 void MakeSegmentDescriptor(QWORD qwBase, DWORD nLimit, BYTE nAccessByte, BYTE nFlags, sSegmentDescriptor *pSegment);
 
-void SetTSS(sTaskStateSegment *pTSS);
+sTaskStateSegment *GetTSS();
 void InitGDT();
 extern void WriteGDT();
 extern void FlushTSS();

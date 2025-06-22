@@ -13,7 +13,7 @@
 #define _ADDRESS_TO_PD_INDEX(a)  (((QWORD) (a) >> 30) % PAGE_TABLE_SIZE)
 #define _ADDRESS_TO_PT_INDEX(a)  (((QWORD) (a) >> 21) % PAGE_TABLE_SIZE)
 #define _ADDRESS_TO_PE_INDEX(a)  (((QWORD) (a) >> 12) % PAGE_TABLE_SIZE)
-#define _BYTES_TO_PAGES(n)       (((QWORD) (n) + PAGE_SIZE - 1) / PAGE_TABLE_SIZE)
+#define _BYTES_TO_PAGES(n)       (((QWORD) (n) + PAGE_SIZE - 1) / PAGE_SIZE)
 #define _PAGE_TO_ADDRESS(p)      ((QWORD) (p) << 12)
 #define _ADDRESS_TO_PAGE(a)      ((QWORD) (a) >> 12)
 #define _ALIGN_TO_PAGE(n)        ((n) / PAGE_SIZE * PAGE_SIZE)
@@ -61,9 +61,11 @@ PVOID AllocatePage();
 PVOID AllocateContinousPages(QWORD qwPages);
 void FreeContinousPages(PVOID pAddress, QWORD qwPages);
 void FreePage(PVOID pAddress);
-PVOID GetPhysicalAddress(PVOID pVirtualAddress);
+PVOID GetPhysicalAddress(sPageTable *pPML4, PVOID pVirtualAddress);
 sPageTable *ClonePML4(sPageTable *pTable);
+sPageTable *GetKernelPML4();
 sPageTable *GetCurrentPML4();
+sPageTable *CreateEmptyPML4();
 void LoadPML4(sPageTable *pTable);
 sPagingData ExportPagingData();
 void ImportPagingData(sPagingData sData);

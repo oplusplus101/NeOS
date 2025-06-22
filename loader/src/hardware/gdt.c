@@ -2,6 +2,7 @@
 #include <hardware/gdt.h>
 
 sGlobalDescriptorTable g_gdt;
+sTaskStateSegment g_TSS;
 
 void MakeSegmentDescriptor(QWORD qwBase, DWORD nLimit, BYTE nAccessByte, BYTE nFlags, sSegmentDescriptor *pSegment)
 {
@@ -11,12 +12,12 @@ void MakeSegmentDescriptor(QWORD qwBase, DWORD nLimit, BYTE nAccessByte, BYTE nF
     pSegment->nLimitHigh  = nLimit >> 16;
     pSegment->nAccessByte = nAccessByte;
     pSegment->nFlags      = nFlags;
-    pSegment->dwReserved   = 0;
+    pSegment->dwReserved  = 0;
 }
 
-void SetTSS(sTaskStateSegment *pTSS)
+sTaskStateSegment *GetTSS()
 {
-    MakeSegmentDescriptor((QWORD) pTSS, sizeof(sTaskStateSegment), 0x89, 0x00, &g_gdt.tssSegment);
+    return &g_TSS;
 }
 
 void InitGDT()
@@ -26,5 +27,6 @@ void InitGDT()
     MakeSegmentDescriptor(0, 0xFFFFFF, 0x92, 0x0C, &g_gdt.kernelDataSegment);
     MakeSegmentDescriptor(0, 0xFFFFFF, 0xFA, 0x0A, &g_gdt.userCodeSegment);
     MakeSegmentDescriptor(0, 0xFFFFFF, 0xF2, 0x0C, &g_gdt.userDataSegment);
-    MakeSegmentDescriptor(0, 0, 0, 0, &g_gdt.tssSegment);
+    MakeSegmentDescriptor((QWORD) &g_TSS, sizeof(sTaskStateSegment), 0x89, 0x00, &g_gdt.tssSegment);
+    // FlushTSS();
 }
