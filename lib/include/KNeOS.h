@@ -21,7 +21,10 @@ typedef PVOID sDriver;
 typedef PVOID sModule;
 
 void KNeoPrintString(PCHAR sz);
-void KNeoKernelPanic(PCHAR szMessage);
+void KNeoGetCursor(INT *x, INT *y);
+void KNeoGetCursor(INT *x, INT *y);
+void KNeoClearScreen();
+void KNeoGetScreenSize(INT *pWidth, INT *pHeight);
 
 PVOID KNeoGetDriver(PCHAR szName);
 PVOID KNeoGetModule(PCHAR szName);

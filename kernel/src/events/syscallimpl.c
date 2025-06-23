@@ -37,6 +37,14 @@ void Syscall_KNeoClearScreen(sCPUState *pCPUState)
     ClearScreen();
 }
 
+// Code: 0x0004
+// RBX is the width
+// RCX is the height
+void Syscall_KNeoGetScreenSize(sCPUState *pCPUState)
+{
+    pCPUState->qwRBX = GetScreenWidth();
+    pCPUState->qwRCX = GetScreenHeight();
+}
 // 0x0010 - 0x001F Driver and Module functions
 
 // Code: 0x0010
@@ -186,6 +194,7 @@ void RegisterSyscalls()
     RegisterSyscall(0x0001, 0, Syscall_KNeoGetCursorPosition);
     RegisterSyscall(0x0002, 0, Syscall_KNeoSetCursorPosition);
     RegisterSyscall(0x0003, 0, Syscall_KNeoClearScreen);
+    RegisterSyscall(0x0004, 0, Syscall_KNeoGetScreenSize);
     
     RegisterSyscall(0x0010, 0, Syscall_KNeoGetDriver);
     RegisterSyscall(0x0011, 0, Syscall_KNeoGetModule);

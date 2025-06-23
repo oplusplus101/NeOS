@@ -6,6 +6,26 @@ FUNC_EXPORT void KNeoPrintString(PCHAR sz)
     __asm__ volatile ("int $0x81" : : "a"(0x00), "b"(sz));
 }
 
+FUNC_EXPORT void KNeoGetCursor(INT *x, INT *y)
+{
+    __asm__ volatile ("int $0x81" : "=b"(*x), "=c"(*y) : "a"(0x01));
+}
+
+FUNC_EXPORT void KNeoGetCursor(INT *x, INT *y)
+{
+    __asm__ volatile ("int $0x81" : : "a"(0x02), "b"(x), "c"(y));
+}
+
+FUNC_EXPORT void KNeoClearScreen()
+{
+    __asm__ volatile ("int $0x81" : : "a"(0x03));
+}
+
+FUNC_EXPORT void KNeoGetScreenSize(INT *pWidth, INT *pHeight)
+{
+    __asm__ volatile ("int $0x81" : "b"(*pWidth), "c"(*pHeight) : "a"(0x04));
+}
+
 FUNC_EXPORT PVOID KNeoGetDriver(PCHAR szName)
 {
     PVOID pDriver;
