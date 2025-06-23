@@ -27,7 +27,7 @@ FUNC_EXPORT BOOL NeoDoesDriveExist(CHAR c)
 
 FUNC_EXPORT BOOL KNeoRegisterStorageDriver()
 {
-
+    return false;
 }
 
 FUNC_EXPORT BOOL KNeoReadSectors(CHAR cDrive, QWORD qwStart, QWORD qwSize, PVOID pBuffer)
@@ -47,10 +47,10 @@ FUNC_EXPORT BOOL KNeoWriteSectors(CHAR cDrive, QWORD qwStart, QWORD qwSize, PVOI
 
 FUNC_EXPORT BOOL NeoReScanDrives()
 {
-
+    return false;
 }
 
-void ModuleEntry()
+void DriverMain()
 {
     
 }

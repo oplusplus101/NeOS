@@ -4,7 +4,7 @@
 
 DWORD g_dwWidth, g_dwHeight;
 QWORD g_qwFramebufferSize;
-PVOID g_pFramebuffer, g_pModule;
+PVOID g_pFramebuffer, g_pDriver;
 
 FUNC_EXPORT void KNeoSetGOPData(PVOID pFramebuffer, QWORD qwFramebufferSize, DWORD dwWidth, DWORD dwHeight)
 {
@@ -36,9 +36,9 @@ FUNC_EXPORT PVOID KNeoGetFrameBuffer()
 
 void DriverMain()
 {
-    g_pModule = KNeoGetModule("GFX");
-    _ASSERT(g_pModule != NULL, "Graphics module (GFX.mod) not found");
-    ((void (*)(PCHAR)) KNeoGetModuleFunction(g_pModule, "NeoRegisterScreenDriver"))("GOP-GFX");
+    g_pDriver = KNeoGetDriver("GFX");
+    _ASSERT(g_pDriver != NULL, "Graphics Driver (GFX.mod) not found");
+    // ((void (*)(PCHAR)) KNeoGetDriverFunction(g_pDriver, "NeoRegisterScreenDriver"))("GOP-GFX");
 
     KNeoPauseProcess(KNeoGetCurrentPID());
 }

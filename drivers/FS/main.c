@@ -1,7 +1,7 @@
 
 #include <KNeOS.h>
 
-// This module implements the interface between software and the filesystem driver.
+// This driver implements the interface between software and the filesystem driver.
 // To ensure that multiple filesystems are supported, the software interface is split from the filesystem driver.
 // For example, if the system used the FAT-32 filesystem, and a USB-stick is plugged in that uses the exFAT filesystem, the same function calls can be used.
 
@@ -22,15 +22,16 @@ typedef struct
 
 sDriver *g_pDriver;
 
-// Can either be a drive letter (A-Z) or a mount point, if the filesystem containing the supports it
+// Can either be a drive letter (A-Z) or a mount point, if the filesystem containing the supports it.
 INT NeoGetFilesystemType(PCHAR szDrivePath)
 {
-
+    return 0;
 }
 
 sFile *NeoOpenFile(PCHAR szFilename, BYTE nMode)
 {
-    sFile sFile = NeoHeapAlloc();
+    // sFile sFile = KNeoHeapAllocate();
+    return NULL;
 }
 
 void NeoCloseFile(sFile *pFile)
@@ -54,12 +55,7 @@ void NeoWriteFile(sFile *pFile, PVOID pBuffer, QWORD qwSize)
     
 }
 
-void ModuleEnable()
+void DriverMain()
 {
-    g_pDriver = KNeoLoadDriver(KNeoGetRegistry("NEOS/DEFAULTS/FILESYSTEM_DRIVER"));
-}
-
-void ModuleDisable()
-{
-    
+    // g_pDriver = KNeoGetDriver(KNeoGetRegistry("NEOS/DEFAULTS/FILESYSTEM_DRIVER"));
 }

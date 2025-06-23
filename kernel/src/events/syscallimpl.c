@@ -45,7 +45,7 @@ void Syscall_KNeoGetScreenSize(sCPUState *pCPUState)
     pCPUState->qwRBX = GetScreenWidth();
     pCPUState->qwRCX = GetScreenHeight();
 }
-// 0x0010 - 0x001F Driver and Module functions
+// 0x0010 - 0x001F Driver functions
 
 // Code: 0x0010
 // RBX is the address of the driver name
@@ -56,26 +56,10 @@ void Syscall_KNeoGetDriver(sCPUState *pCPUState)
 }
 
 // Code: 0x0011
-// RBX is the address of the module name
-// RCX will then be the memory address of the allocated module
-void Syscall_KNeoGetModule(sCPUState *pCPUState)
-{
-}
-
-// Code: 0x0012
 // RBX is the pointer to the driver
 // RCX is the pointer to the function's name
 // RDX will then contain the function
 void Syscall_KNeoGetDriverFunction(sCPUState *pCPUState)
-{
-    
-}
-
-// Code: 0x0013
-// RBX is the pointer to the module
-// RCX is the pointer to the function's name
-// RDX will then contain the function
-void Syscall_KNeoGetModuleFunction(sCPUState *pCPUState)
 {
     
 }
@@ -169,6 +153,7 @@ void Syscall_KNeoGetCurrentPID(sCPUState *pCPUState)
     pCPUState->qwRBX = GetCurrentPID();
 }
 
+// Code: 0x0041
 void Syscall_KNeoStartProcess(sCPUState *pCPUState)
 {
 }
@@ -197,9 +182,7 @@ void RegisterSyscalls()
     RegisterSyscall(0x0004, 0, Syscall_KNeoGetScreenSize);
     
     RegisterSyscall(0x0010, 0, Syscall_KNeoGetDriver);
-    RegisterSyscall(0x0011, 0, Syscall_KNeoGetModule);
-    RegisterSyscall(0x0012, 0, Syscall_KNeoGetDriverFunction);
-    RegisterSyscall(0x0013, 0, Syscall_KNeoGetModuleFunction);
+    RegisterSyscall(0x0011, 0, Syscall_KNeoGetDriverFunction);
     
     RegisterSyscall(0x0020, 0, Syscall_KNeoMapPagesToIdentity);
     RegisterSyscall(0x0021, 0, Syscall_KNeoMapPages);
@@ -211,4 +194,9 @@ void RegisterSyscalls()
 
     RegisterSyscall(0x0030, 0, Syscall_KNeoRegisterSyscall);
     RegisterSyscall(0x0031, 0, Syscall_KNeoClearSyscall);
+
+    RegisterSyscall(0x0040, 0, Syscall_KNeoGetCurrentPID);
+    RegisterSyscall(0x0041, 0, Syscall_KNeoStartProcess);
+    RegisterSyscall(0x0042, 0, Syscall_KNeoKillProcess);
+    RegisterSyscall(0x0043, 0, Syscall_KNeoPauseProcess);
 }

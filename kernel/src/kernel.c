@@ -27,7 +27,19 @@ typedef struct
 
 } sKernelTask;
 
-sList g_lstModules, g_lstDrivers;
+sList g_lstDrivers;
+
+sKernelTask *GetDriver(PWCHAR wszName)
+{
+    for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
+    {
+        sKernelTask *pTask = GetListElement(&g_lstDrivers, i);
+        if (!strcmpW(pTask->wszName, wszName))
+            return pTask;
+    }
+
+    return NULL;
+}
 
 void __stack_chk_fail(void)
 {
@@ -79,44 +91,9 @@ void KernelMain(sNEOSKernelHeader hdr)
     PrintFormat("Process scheduler initialised\n");
 
     PrintFormat("Loading...\n");
-    g_lstModules     = CreateEmptyList(sizeof(sKernelTask));
     g_lstDrivers     = CreateEmptyList(sizeof(sKernelTask));
-    sList lstModules = LoadCFG(L"NeOS\\Modules.cfg", &hdr);
     sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg", &hdr);
     // sList lstConfig  = LoadCFG(L"NeOS\\NeOS.cfg", &hdr);
-
-    for (QWORD i = 0; i < lstModules.qwLength; i++)
-    {
-        sINIEntry *pEntry = GetListElement(&lstModules, i);
-        if (!strcmp(pEntry->szName, "Enabled") && pEntry->szValue[0] == '1')
-        {
-            PrintFormat("Loading module: %s\n", pEntry->szLabel);
-            WCHAR wszModuleName[13];
-            ZeroMemory(wszModuleName, sizeof(wszModuleName));
-            for (int j = 0; pEntry->szLabel[j]; j++)
-                wszModuleName[j] = pEntry->szLabel[j];
-            
-            WCHAR wszPath[256];
-            strcpyW(wszPath, L"NeOS\\Modules\\");
-            strcatW(wszPath, wszModuleName);
-            strcatW(wszPath, L".mod");
-            PVOID pFile = hdr.GetFile(wszPath);
-            _ASSERT(pFile != NULL, "Module %w not found", wszModuleName);
-
-            QWORD qwFileSize = hdr.GetFileSize(pFile);
-            PVOID pData = KHeapAlloc(qwFileSize);
-            hdr.ReadFile(pFile, pData);
-            sExecutable sEXE = ParsePE32(pData);
-            INT iPID = StartKernelProcess(pEntry->szLabel, &sEXE, PROC_PAUSED);
-            sKernelTask sTask =
-            {
-                .iPID = iPID
-            };
-            strcpyW(sTask.wszName, wszModuleName);
-            AddListElement(&g_lstModules, &sTask); 
-            KHeapFree(pFile);
-        }
-    }
 
     // Load the drivers
     for (QWORD i = 0; i < lstDrivers.qwLength; i++)
@@ -151,16 +128,9 @@ void KernelMain(sNEOSKernelHeader hdr)
             KHeapFree(pFile);
         }
     }
-
-    PrintFormat("Starting modules...\n");
-    for (QWORD i = 0; i < g_lstModules.qwLength; i++)
-    {
-        sKernelTask *pModule = (sKernelTask *) GetListElement(&g_lstModules, i);
-        SetProcessState(pModule->iPID, PROC_RUNNING);
-    }
-    
+        
     PrintFormat("Starting drivers...\n");
-    for (QWORD i = 0; i < g_lstModules.qwLength; i++)
+    for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
     {
         sKernelTask *pDriver = (sKernelTask *) GetListElement(&g_lstDrivers, i);
         SetProcessState(pDriver->iPID, PROC_RUNNING);

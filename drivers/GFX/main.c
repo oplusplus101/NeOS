@@ -46,7 +46,7 @@ FUNC_EXPORT BOOL IsPointInsideScreens(INT x, INT y)
 
 // }
 
-void ModuleMain()
+void DriverMain()
 {
     // g_lstScreenDrivers = CreateEmptyList(sizeof(sDriver *));
 

@@ -1,7 +1,7 @@
 
 #include <KNeOS.h>
 #include "fat32.h"
-sModule *g_pDiskModule;
+sDriver *g_pDiskDriver;
 sFAT32BootSector g_sBootSector;
 int g_nSystemDrive;
 bool (*KNeoReadDiskSectors)(int nDrive, QWORD qwLBA, QWORD qwSectors, PVOID pBuffer);
@@ -9,10 +9,10 @@ int (*KNeoGetSystemDrive)();
 
 void DriverMain()
 {
-    g_pDiskModule = KNeoGetModule("storage");
-    _ASSERT(g_pDiskModule, "Storage module (storage.mod) either not loaded or doesn't exist");
-    KNeoReadDiskSectors = KNeoGetModuleFunction(g_pDiskModule, "KNeoReadDiskSectors");
-    KNeoGetSystemDrive = KNeoGetModuleFunction(g_pDiskModule, "KNeoGetSystemDrive");
+    g_pDiskDriver = KNeoGetDriver("storage");
+    _ASSERT(g_pDiskDriver, "Storage Driver (storage.mod) either not loaded or doesn't exist");
+    KNeoReadDiskSectors = KNeoGetDriverFunction(g_pDiskDriver, "KNeoReadDiskSectors");
+    KNeoGetSystemDrive = KNeoGetDriverFunction(g_pDiskDriver, "KNeoGetSystemDrive");
     g_nSystemDrive = KNeoGetSystemDrive();
 
     // Read the boot sector

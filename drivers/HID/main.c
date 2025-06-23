@@ -44,7 +44,7 @@ FUNC_EXPORT WCHAR NeoGetKeyChar(BYTE bKey)
     return g_arrDefaultCharmap[bKey];
 }
 
-void ModuleEntry()
+void DriverEntry()
 {
     
     KNeoPauseProcess(KNeoGetCurrentPID());

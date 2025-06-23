@@ -33,24 +33,10 @@ FUNC_EXPORT PVOID KNeoGetDriver(PCHAR szName)
     return pDriver;
 }
 
-FUNC_EXPORT PVOID KNeoGetModule(PCHAR szName)
-{
-    PVOID pModule;
-    __asm__ volatile ("int $0x81" : "=c"(pModule) : "a"(0x11), "b"(szName));
-    return pModule;
-}
-
 FUNC_EXPORT PVOID KNeoGetDriverFunction(PVOID pDriver, PCHAR szName)
 {
     PVOID pFunction;
-    __asm__ volatile ("int $0x81" : "=d"(pFunction) : "a"(0x12), "b"(pDriver), "c"(szName));
-    return pFunction;
-}
-
-FUNC_EXPORT PVOID KNeoGetModuleFunction(PVOID pModule, PCHAR szName)
-{
-    PVOID pFunction;
-    __asm__ volatile ("int $0x81" : "=d"(pFunction) : "a"(0x13), "b"(pModule), "c"(szName));
+    __asm__ volatile ("int $0x81" : "=d"(pFunction) : "a"(0x11), "b"(pDriver), "c"(szName));
     return pFunction;
 }
 

@@ -1,28 +1,26 @@
 Create a basic 64-bit OS with the following features:
 - UEFI bootloader
-- A kernel that handles: users, the filesystem, memory, and loading drivers and modules
+- A kernel that handles: users, the filesystem, memory, and loading drivers
 - A GUI like DWM or Windows XP
 - An NTFS filesystem, and/or a custom filesystem
 - Use the PE32+ format for executables
 - A bash-like shell and/or an MS-DOS-like shell.
 - A BASIC-like scripting language
 Drivers:
-A driver handles communication between modules and the hardware.
-Modules:
-A module is a generic interface between drivers and user-mode programs. Modules can also be used as kernel extensions.
+A driver is a kernel level process.
 
 The boot process:
 - The bootloader will load the loader located at: \NEOSLDR.SYS in the ESP
 - The loader will load the config file at: C:\NeOS\NeOS.cfg
 - The loader will then load the kernel at: C:\NeOS\NeOS.sys and execute it
-- The kernel will setup syscalls and processes then load the filesystem modules, whose location is specified in the config file.
-- The kernel will then load the files C:\NeOS\Drivers.cfg and C:\NeOS\Modules.cfg and load each enabled driver/module listed.
+- The kernel will setup syscalls and processes then load the filesystem driver, whose location is specified in the config file.
+- The kernel will then load C:\NeOS\Drivers.cfg and load each enabled driver listed.
 - The kernel will then load the each subsystem at C:\NeOS\Subsystems
 - The kernel will finally run the autoexec file specified in the config file.
 
 
 Subsystem:
-- Applications will run under a so-called subsystem, which is basically just a module that interfaces between kernel functions and a more user-friendly API (e.g. POSIX, WIN-32)
+- Applications will run under a so-called subsystem, which is basically just a driver that interfaces between kernel functions and a more user-friendly API (e.g. POSIX, WIN-32). This will also allow for running Windows and Linux apps side-by-side.
 - The subsystem will be a kernel-level process (basically a kernel inside a kernel)
 
 Paths:

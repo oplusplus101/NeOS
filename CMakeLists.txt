@@ -55,8 +55,9 @@ add_custom_target(
     COMMAND mkdir -p ${CMAKE_BINARY_DIR}/main_part
     COMMAND cp -r ${CMAKE_SOURCE_DIR}/main_template/* ${CMAKE_BINARY_DIR}/main_part
     COMMAND cp ${CMAKE_BINARY_DIR}/${KERNEL_EXE} ${CMAKE_BINARY_DIR}/main_part/NeOS/NeOS.sys
+    # Build the drivers
+    COMMAND cd ${CMAKE_SOURCE_DIR}/drivers && ./build.sh
     COMMAND cp ${CMAKE_SOURCE_DIR}/drivers/*/*.drv ${CMAKE_BINARY_DIR}/main_part/NeOS/Drivers
-    COMMAND cp ${CMAKE_SOURCE_DIR}/modules/*/*.mod ${CMAKE_BINARY_DIR}/main_part/NeOS/Modules || true
     
     # Assemble the image
     COMMAND ${TERMINAL_EXE} ${CMAKE_SOURCE_DIR}/assemble_qcow.sh ${CMAKE_SOURCE_DIR}

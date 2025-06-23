@@ -15,10 +15,9 @@
 
 #define FUNC_EXPORT __attribute__((visibility("default")))
 
-#define _ASSERT(c, m) if (!(c)) KNeoKernelPanic(m);
+#define _ASSERT(c, m) if (!(c)) KNeoPrintString(m);
 
 typedef PVOID sDriver;
-typedef PVOID sModule;
 
 void KNeoPrintString(PCHAR sz);
 void KNeoGetCursor(INT *x, INT *y);
@@ -27,9 +26,7 @@ void KNeoClearScreen();
 void KNeoGetScreenSize(INT *pWidth, INT *pHeight);
 
 PVOID KNeoGetDriver(PCHAR szName);
-PVOID KNeoGetModule(PCHAR szName);
 PVOID KNeoGetDriverFunction(PVOID pDriver, PCHAR szName);
-PVOID KNeoGetModuleFunction(PVOID pModule , PCHAR szName);
 
 void KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags);
 void KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, void (*pCallback));

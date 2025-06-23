@@ -5,7 +5,7 @@
 #define COMMAND_PORT 0x64
 #define DATA_PORT    0x60
 
-sModule *g_pHIDModule;
+sDriver *g_pHIDDriver;
 void (*g_funcKeyPressed)(BYTE);
 void (*g_funcKeyReleased)(BYTE);
 void (*g_funcUpdateKeyboardState)(BYTE);
@@ -21,9 +21,9 @@ void KeyboardInterrupt()
 
 void DriverMain()
 {
-    g_pHIDModule = KNeoGetModule("HID");
-    g_funcKeyPressed = KNeoGetModuleFunction(g_pHIDModule, "_KeyPressed");
-    g_funcKeyReleased = KNeoGetModuleFunction(g_pHIDModule, "_KeyReleased");
+    g_pHIDDriver = KNeoGetDriver("HID");
+    g_funcKeyPressed = KNeoGetDriverFunction(g_pHIDDriver, "_KeyPressed");
+    g_funcKeyReleased = KNeoGetDriverFunction(g_pHIDDriver, "_KeyReleased");
     
     // Disable interrupts so that the keyboard controller setup doesn't get messed up.
     KNeoDisableInterrupts();
