@@ -70,27 +70,7 @@ void KernelMain(sNEOSKernelHeader hdr)
     
     InitSyscalls();
     PrintFormat("Syscalls initialised to interrput 0x%02X\n", NEOS_SYSCALL_IRQ);
-    RegisterSyscall(0x0000, 0, Syscall_KNeoPrintString);
-    RegisterSyscall(0x0001, 0, Syscall_KNeoKernelPanic);
-    RegisterSyscall(0x0002, 0, Syscall_KNeoGetCursorPosition);
-    RegisterSyscall(0x0003, 0, Syscall_KNeoSetCursorPosition);
-    RegisterSyscall(0x0004, 0, Syscall_KNeoClearScreen);
-    
-    RegisterSyscall(0x0010, 0, Syscall_KNeoGetDriver);
-    RegisterSyscall(0x0011, 0, Syscall_KNeoGetModule);
-    RegisterSyscall(0x0012, 0, Syscall_KNeoGetDriverFunction);
-    RegisterSyscall(0x0013, 0, Syscall_KNeoGetModuleFunction);
-    
-    RegisterSyscall(0x0020, 0, Syscall_KNeoMapPagesToIdentity);
-    RegisterSyscall(0x0021, 0, Syscall_KNeoMapPages);
-    RegisterSyscall(0x0022, 0, Syscall_KNeoAllocatePages);
-    RegisterSyscall(0x0023, 0, Syscall_KNeoFreePages);
-    RegisterSyscall(0x0024, 0, Syscall_KNeoAllocateHeap);
-    RegisterSyscall(0x0025, 0, Syscall_KNeoReAllocateHeap);
-    RegisterSyscall(0x0026, 0, Syscall_KNeoFreeHeap);
-
-    RegisterSyscall(0x0030, 0, Syscall_KNeoRegisterSyscall);
-    RegisterSyscall(0x0031, 0, Syscall_KNeoClearSyscall);
+    RegisterSyscalls();
 
     // Override the previous exception handlers so that when a process crashes it doesn't kill the whole kernel.
     RegisterKernelExceptions();

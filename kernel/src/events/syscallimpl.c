@@ -15,13 +15,6 @@ void Syscall_KNeoPrintString(sCPUState *pCPUState)
 }
 
 // Code: 0x0001
-// RBX is the address of a zero-terminated string
-void Syscall_KNeoKernelPanic(sCPUState *pCPUState)
-{
-    _KERNEL_PANIC("Process \"%s\" triggered a kernel panic\nProcess Message: %s\n", GetCurrentProcess()->szName, (PCHAR) pCPUState->qwRBX);
-}
-
-// Code: 0x0002
 // RBX is the x position
 // RCX is the y position
 void Syscall_KNeoGetCursorPosition(sCPUState *pCPUState)
@@ -30,7 +23,7 @@ void Syscall_KNeoGetCursorPosition(sCPUState *pCPUState)
     pCPUState->qwRCX = GetCursorY();
 }
 
-// Code: 0x0003
+// Code: 0x0002
 // RBX is the x position
 // RCX is the y position
 void Syscall_KNeoSetCursorPosition(sCPUState *pCPUState)
@@ -38,7 +31,7 @@ void Syscall_KNeoSetCursorPosition(sCPUState *pCPUState)
     SetCursor(pCPUState->qwRBX, pCPUState->qwRCX);
 }
 
-// Code: 0x0004
+// Code: 0x0003
 void Syscall_KNeoClearScreen(sCPUState *pCPUState)
 {
     ClearScreen();
@@ -59,7 +52,6 @@ void Syscall_KNeoGetDriver(sCPUState *pCPUState)
 // RCX will then be the memory address of the allocated module
 void Syscall_KNeoGetModule(sCPUState *pCPUState)
 {
-    pCPUState
 }
 
 // Code: 0x0012
@@ -186,4 +178,28 @@ void Syscall_KNeoPauseProcess(sCPUState *pCPUState)
 {
     if (DoesProcessExist(pCPUState->qwRBX))
         SetProcessState(pCPUState->qwRBX, PROC_PAUSED);
+}
+
+void RegisterSyscalls()
+{
+    RegisterSyscall(0x0000, 0, Syscall_KNeoPrintString);
+    RegisterSyscall(0x0001, 0, Syscall_KNeoGetCursorPosition);
+    RegisterSyscall(0x0002, 0, Syscall_KNeoSetCursorPosition);
+    RegisterSyscall(0x0003, 0, Syscall_KNeoClearScreen);
+    
+    RegisterSyscall(0x0010, 0, Syscall_KNeoGetDriver);
+    RegisterSyscall(0x0011, 0, Syscall_KNeoGetModule);
+    RegisterSyscall(0x0012, 0, Syscall_KNeoGetDriverFunction);
+    RegisterSyscall(0x0013, 0, Syscall_KNeoGetModuleFunction);
+    
+    RegisterSyscall(0x0020, 0, Syscall_KNeoMapPagesToIdentity);
+    RegisterSyscall(0x0021, 0, Syscall_KNeoMapPages);
+    RegisterSyscall(0x0022, 0, Syscall_KNeoAllocatePages);
+    RegisterSyscall(0x0023, 0, Syscall_KNeoFreePages);
+    RegisterSyscall(0x0024, 0, Syscall_KNeoAllocateHeap);
+    RegisterSyscall(0x0025, 0, Syscall_KNeoReAllocateHeap);
+    RegisterSyscall(0x0026, 0, Syscall_KNeoFreeHeap);
+
+    RegisterSyscall(0x0030, 0, Syscall_KNeoRegisterSyscall);
+    RegisterSyscall(0x0031, 0, Syscall_KNeoClearSyscall);
 }

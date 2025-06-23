@@ -6,11 +6,6 @@ FUNC_EXPORT void KNeoPrintString(PCHAR sz)
     __asm__ volatile ("int $0x81" : : "a"(0x00), "b"(sz));
 }
 
-FUNC_EXPORT void KNeoKernelPanic(PCHAR szMessage)
-{
-    __asm__ volatile ("int $0x81" : : "a"(0x01), "b"(szMessage));
-}
-
 FUNC_EXPORT PVOID KNeoGetDriver(PCHAR szName)
 {
     PVOID pDriver;
