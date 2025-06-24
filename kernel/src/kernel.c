@@ -18,28 +18,9 @@
 #include <events/timer.h>
 #include <runtime/exceptions.h>
 #include <runtime/process.h>
+#include <runtime/driver.h>
 #include <runtime/exe.h>
 
-typedef struct
-{
-    WCHAR wszName[129];
-    INT iPID;
-
-} sKernelTask;
-
-sList g_lstDrivers;
-
-sKernelTask *GetDriver(PWCHAR wszName)
-{
-    for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
-    {
-        sKernelTask *pTask = GetListElement(&g_lstDrivers, i);
-        if (!strcmpW(pTask->wszName, wszName))
-            return pTask;
-    }
-
-    return NULL;
-}
 
 void __stack_chk_fail(void)
 {
@@ -91,7 +72,6 @@ void KernelMain(sNEOSKernelHeader hdr)
     PrintFormat("Process scheduler initialised\n");
 
     PrintFormat("Loading...\n");
-    g_lstDrivers     = CreateEmptyList(sizeof(sKernelTask));
     sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg", &hdr);
     // sList lstConfig  = LoadCFG(L"NeOS\\NeOS.cfg", &hdr);
 
@@ -119,22 +99,22 @@ void KernelMain(sNEOSKernelHeader hdr)
             hdr.ReadFile(pFile, pData);
             sExecutable sEXE = ParsePE32(pData);
             INT iPID = StartKernelProcess(pEntry->szLabel, &sEXE, PROC_PAUSED);
-            sKernelTask sTask =
+            sDriver sTask =
             {
                 .iPID = iPID
             };
             strcpyW(sTask.wszName, wszDriverName);
-            AddListElement(&g_lstDrivers, &sTask);
+            // AddListElement(&g_lstDrivers, &sTask);
             KHeapFree(pFile);
         }
     }
         
-    PrintFormat("Starting drivers...\n");
-    for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
-    {
-        sKernelTask *pDriver = (sKernelTask *) GetListElement(&g_lstDrivers, i);
-        SetProcessState(pDriver->iPID, PROC_RUNNING);
-    }
+    // PrintFormat("Starting drivers...\n");
+    // for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
+    // {
+    //     sKernelTask *pDriver = (sKernelTask *) GetListElement(&g_lstDrivers, i);
+    //     SetProcessState(pDriver->iPID, PROC_RUNNING);
+    // }
     
     EnableInterrupts(); 
 

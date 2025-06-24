@@ -40,20 +40,21 @@ INT StartKernelProcess(PCHAR szName, sExecutable *pEXE, BYTE nState)
         *sProc.szName = 0;
     else
         strncpy(sProc.szName, szName, 128);
-    sProc.nRing           = 0;
-    sProc.wOwner          = 0;
-    sProc.iPID            = g_lstProcesses.qwLength;
-    sProc.qwStackSize     = qwStackSize;
-    sProc.nState          = nState;
-    sProc.qwSleepTimeMS   = 0;
+    sProc.nRing              = 0;
+    sProc.nType              = 1;
+    sProc.wOwner             = 0;
+    sProc.iPID               = g_lstProcesses.qwLength;
+    sProc.qwStackSize        = qwStackSize;
+    sProc.nState             = nState;
+    sProc.qwSleepTimeMS      = 0;
 
     // Keep an unaligned copy of the stack so it can be freed
-    sProc.pStackUnaligned = KHeapAlloc(qwStackSize + 16);
+    sProc.pStackUnaligned    = KHeapAlloc(qwStackSize + 16);
     _ASSERT(sProc.pStackUnaligned != NULL, "Could not allocate memory for executable: %s", szName);
-    QWORD qwAlignOffset   = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
+    QWORD qwAlignOffset      = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
     // Align the stack
-    sProc.pStack          = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
-    sProc.pCPUState       = (sCPUState *) ((QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState));
+    sProc.pStack             = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
+    sProc.pCPUState          = (sCPUState *) ((QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState));
 
     // Setup the CPU State
     sProc.pCPUState->qwRAX   = 0;
@@ -102,6 +103,7 @@ INT StartThread(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRi
         strncpy(sProc.szName, szName, 128);
 
     sProc.nRing       = nRing;
+    sProc.nType       = 0;
     sProc.wOwner      = wOwner;
     sProc.iPID        = g_lstProcesses.qwLength;
     sProc.qwStackSize = qwStackSize;

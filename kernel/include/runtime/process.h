@@ -16,6 +16,7 @@
 typedef struct
 {
     CHAR  szName[129]; // One extra byte for the null terminator
+    BYTE  nType;  // 0 is a thread, 1 is a process
     BYTE  nState; // 0 is running, 1 is sleeping, 2 is paused
     BYTE  nRing;
     WORD  wOwner; // 0 is the kernel
@@ -25,6 +26,7 @@ typedef struct
     PVOID pStackUnaligned, pStack;
     sCPUState *pCPUState;
     sPageTable *pPML4;
+    sExecutable pEXE;
 } sProcess;
 
 void InitProcessScheduler(DWORD dwScheduleIntervalMicroseconds);

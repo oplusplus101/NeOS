@@ -8,10 +8,10 @@ FUNC_EXPORT void KNeoPrintString(PCHAR sz)
 
 FUNC_EXPORT void KNeoGetCursor(INT *x, INT *y)
 {
-    __asm__ volatile ("int $0x81" : "=b"(*x), "=c"(*y) : "a"(0x01));
+    __asm__ volatile ("int $0x81" : "=b"(x), "=c"(y) : "a"(0x01));
 }
 
-FUNC_EXPORT void KNeoGetCursor(INT *x, INT *y)
+FUNC_EXPORT void KNeoSetCursor(INT x, INT y)
 {
     __asm__ volatile ("int $0x81" : : "a"(0x02), "b"(x), "c"(y));
 }
