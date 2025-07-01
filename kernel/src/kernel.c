@@ -13,11 +13,12 @@
 #include <hardware/ports.h>
 #include <hardware/idt.h>
 #include <hardware/gdt.h>
-#include <events/syscallimpl.h>
-#include <events/syscalls.h>
-#include <events/timer.h>
+#include <io/syscallimpl.h>
+#include <io/syscalls.h>
+#include <io/timer.h>
 #include <runtime/exceptions.h>
 #include <runtime/process.h>
+#include <runtime/objects.h>
 #include <runtime/driver.h>
 #include <runtime/exe.h>
 
@@ -71,6 +72,9 @@ void KernelMain(sNEOSKernelHeader hdr)
     InitProcessScheduler(100);
     PrintFormat("Process scheduler initialised\n");
 
+    InitObjectManager();
+
+    for (;;);
     PrintFormat("Loading...\n");
     sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg", &hdr);
     // sList lstConfig  = LoadCFG(L"NeOS\\NeOS.cfg", &hdr);
@@ -109,6 +113,7 @@ void KernelMain(sNEOSKernelHeader hdr)
         }
     }
         
+
     // PrintFormat("Starting drivers...\n");
     // for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
     // {

@@ -105,7 +105,7 @@ void LoaderMain(sBootData data)
     sMZHeader *pMZHeader = (sMZHeader *) pKernelData;
     _ASSERT(pMZHeader->wMagic == 0x5A4D, "Invalid DOS stub.");
 
-    sPE32Header *pPEHeader = (sPE32Header *) (pKernelData + 128); // FIXME: Replate the 128 with the proper size of the MZ header
+    sPE32Header *pPEHeader = (sPE32Header *) (pKernelData + 128); // FIXME: Replace the 128 with the proper size of the MZ header
     _ASSERT(pPEHeader->dwMagic == 0x4550, "Invalid PE32 header.");
     _ASSERT(pPEHeader->wMachine == 0x8664, "Kernel executable must be 64-bit.");
     _ASSERT(pPEHeader->wSizeOfOptionalHeader != 0, "Missing PE32 optional header.");

@@ -9,6 +9,13 @@ typedef struct _tagStackFrame
     QWORD qwRIP;
 } __attribute__((packed)) sStackFrame;
 
+void PrintRegs(QWORD qwRSP);
+
+#define _PRINT_FAULT(qwRSP, ...) \
+    PrintRegs(qwRSP); \
+    _KERNEL_PANIC(__VA_ARGS__);
+
+
 void TraceStack(DWORD dwMaxFrames)
 {
     sStackFrame *pStack = NULL;
@@ -30,7 +37,7 @@ void KillCurrentProcess(PWCHAR wszReason)
 QWORD KException0(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Division by zero");
+        _PRINT_FAULT(qwRSP, "Division by zero");
         
     KillCurrentProcess(L"Division by zero");
     return qwRSP;
@@ -40,7 +47,7 @@ QWORD KException0(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException1(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Debug");
+        _PRINT_FAULT(qwRSP, "Debug");
         
     KillCurrentProcess(L"Debug");
     return qwRSP;
@@ -50,7 +57,7 @@ QWORD KException1(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException2(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Non-maskable interrupt");
+        _PRINT_FAULT(qwRSP, "Non-maskable interrupt");
         
     KillCurrentProcess(L"Non-maskable interrupt");
     return qwRSP;
@@ -60,7 +67,7 @@ QWORD KException2(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException3(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Breakpoint");
+        _PRINT_FAULT(qwRSP, "Breakpoint");
         
     KillCurrentProcess(L"Breakpoint");
     return qwRSP;
@@ -70,7 +77,7 @@ QWORD KException3(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException4(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Overflow");
+        _PRINT_FAULT(qwRSP, "Overflow");
         
     KillCurrentProcess(L"Overflow");
     return qwRSP;
@@ -80,7 +87,7 @@ QWORD KException4(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException5(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Bound range error");
+        _PRINT_FAULT(qwRSP, "Bound range error");
         
     KillCurrentProcess(L"Bound range error");
     return qwRSP;
@@ -92,7 +99,7 @@ QWORD KException6(QWORD qwRSP, BYTE nErrorCode)
     TraceStack(10);
     PrintFormat("RIP: %p\n", ((sCPUState *) qwRSP)->qwRIP);
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Invalid opcode");
+        _PRINT_FAULT(qwRSP, "Invalid opcode");
     
     KillCurrentProcess(L"Invalid opcode");
     return qwRSP;
@@ -102,7 +109,7 @@ QWORD KException6(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException7(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Device not available");
+        _PRINT_FAULT(qwRSP, "Device not available");
         
     KillCurrentProcess(L"Device not available");
     return qwRSP;
@@ -112,7 +119,7 @@ QWORD KException7(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException8(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Double fault");
+        _PRINT_FAULT(qwRSP, "Double fault");
         
     KillCurrentProcess(L"Double fault");
     return qwRSP;
@@ -122,7 +129,7 @@ QWORD KException8(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException10(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Invalid TSS");
+        _PRINT_FAULT(qwRSP, "Invalid TSS");
         
     KillCurrentProcess(L"Invalid TSS");
     return qwRSP;
@@ -132,7 +139,7 @@ QWORD KException10(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException11(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Segment not present");
+        _PRINT_FAULT(qwRSP, "Segment not present");
         
     KillCurrentProcess(L"Segment not present");
     return qwRSP;
@@ -142,7 +149,7 @@ QWORD KException11(QWORD qwRSP, BYTE nErrorCode)
 QWORD KException12(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("Stack segment fault");
+        _PRINT_FAULT(qwRSP, "Stack segment fault");
         
     KillCurrentProcess(L"Stack segment fault");
     return qwRSP;
@@ -151,8 +158,11 @@ QWORD KException12(QWORD qwRSP, BYTE nErrorCode)
 
 QWORD KException13(QWORD qwRSP, BYTE nErrorCode)
 {
+    QWORD qwExceptionAddress;
+    __asm__ volatile("mov %%cr2, %0" : "=r" (qwExceptionAddress));
+    PrintFormat("Address: %p\n", qwExceptionAddress);
     if (GetCurrentPID() == -1)
-        _KERNEL_PANIC("General protection fault");
+        _PRINT_FAULT(qwRSP, "General protection fault");
         
     KillCurrentProcess(L"General protection fault");
     return qwRSP;
@@ -168,21 +178,21 @@ QWORD KException14(QWORD qwRSP, BYTE nErrorCode)
         switch (nErrorCode & 7)
         {
         case 0b000:
-            _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a non-present page entry\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "Supervisory process tried to read a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         case 0b001:
-            _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         case 0b010:
-            _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write to a non-present page entry\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "Supervisory process tried to write to a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         case 0b011:
-            _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         case 0b100:
-            _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a non-present page entry\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "User process tried to read a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         case 0b101:
-            _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a page and caused a protection fault\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "User process tried to read a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         case 0b110:
-            _KERNEL_PANIC_EC(nErrorCode, "User process tried to write to a non-present page entry\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "User process tried to write to a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         case 0b111:
-            _KERNEL_PANIC_EC(nErrorCode, "User process tried to write a page and caused a protection fault\nAddress: 0x%p", qwExceptionAddress);
+            _PRINT_FAULT(qwRSP, "User process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         }
 
     SetFGColor(NEOS_ERROR_COLOR);

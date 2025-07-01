@@ -1,6 +1,7 @@
 
 #include <runtime/driver.h>
 #include <runtime/process.h>
+#include <common/string.h>
 
 sList g_lstDrivers;
 

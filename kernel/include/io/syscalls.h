@@ -1,6 +1,6 @@
 
-#ifndef __EVENTS__SYSCALLS_H
-#define __EVENTS__SYSCALLS_H
+#ifndef __IO__SYSCALLS_H
+#define __IO__SYSCALLS_H
 
 #include <common/types.h>
 #include <runtime/process.h>
@@ -16,4 +16,4 @@ void ClearSyscall(void (*pCallback)(sCPUState *));
 void RegisterSyscall(QWORD qwCode, BYTE nRing, void (*pCallback)(sCPUState *));
 void InitSyscalls();
 
-#endif // __EVENTS__SYSCALLS_H
+#endif // __IO__SYSCALLS_H

@@ -3,6 +3,7 @@
 #define __COMMON__STRING_H
 
 #include <common/types.h>
+#include <memory/heap.h>
 
 inline static QWORD strlen(PCHAR sz)
 {
@@ -49,6 +50,13 @@ inline static void strncpy(PCHAR szDest, PCHAR szSrc, QWORD n)
     *szDest = 0;
 }
 
+inline static void strncpyW(PWCHAR wszDest, PWCHAR wszSrc, QWORD n)
+{
+    for (QWORD i = 0; *wszSrc && i < n; i++)
+        *(wszDest++) = *(wszSrc++);
+    *wszDest = 0;
+}
+
 inline static PCHAR strcat(PCHAR szDest, PCHAR sz)
 {
     strcpy(&szDest[strlen(szDest)], sz);
@@ -63,7 +71,7 @@ inline static PWCHAR strcatW(PWCHAR wszDest, PWCHAR wsz)
 
 inline static INT strncmp(PCHAR szA, PCHAR szB, QWORD n)
 {
-    for (QWORD i = 0; szA[i] && szB[i] && i < n; i++)
+    for (QWORD i = 0; (szA[i] || szB[i]) && i < n; i++)
         if (szA[i] != szB[i]) return 1;
 
     return 0;
@@ -71,7 +79,7 @@ inline static INT strncmp(PCHAR szA, PCHAR szB, QWORD n)
 
 inline static INT strncmpW(PWCHAR wszA, PWCHAR wszB, QWORD n)
 {
-    for (QWORD i = 0; wszA[i] && wszB[i] && i < n; i++)
+    for (QWORD i = 0; (wszA[i] || wszB[i]) && i < n; i++)
         if (wszA[i] != wszB[i]) return 1;
 
     return 0;
@@ -79,9 +87,7 @@ inline static INT strncmpW(PWCHAR wszA, PWCHAR wszB, QWORD n)
 
 inline static INT strcmpW(PWCHAR szA, PWCHAR szB)
 {
-    if (strlenW(szA) != strlenW(szB)) return 1;
-
-    for (QWORD i = 0; szA[i] && szB[i]; i++)
+    for (QWORD i = 0; szA[i] || szB[i]; i++)
         if (szA[i] != szB[i]) return 1;
 
     return 0;
@@ -114,6 +120,20 @@ inline static BOOL isalpha(CHAR c)
 inline static BOOL isalnum(CHAR c)
 {
     return isdigit(c) || isalpha(c);
+}
+
+inline static PCHAR strdup(PCHAR sz)
+{
+    PCHAR szNew = KHeapAlloc(strlen(sz) + 1); // add 1 for the null terminator
+    strcpy(szNew, sz);
+    return szNew;
+}
+
+inline static PWCHAR strdupW(PWCHAR sz)
+{
+    PWCHAR szNew = KHeapAlloc((strlenW(sz) + 1) * sizeof(WCHAR)); // add 1 for the null terminator
+    strcpyW(szNew, sz);
+    return szNew;
 }
 
 inline static PCHAR StripString(PCHAR sz)

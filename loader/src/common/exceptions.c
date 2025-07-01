@@ -12,13 +12,15 @@ void PrintStack(QWORD qwRSP)
 void PrintRegs(QWORD qwRSP)
 {
     sCPUState *pState = (sCPUState *) qwRSP; 
-    PrintFormat("RAX=%p RBX=%p RCX=%p RDX=%p RSI=%p RDI=%p\n", pState->qwRAX, pState->qwRBX, pState->qwRCX, pState->qwRDX, pState->qwRSI, pState->qwRDI);
-    PrintFormat("RIP=%p RSP=%p RBP=%p\n", pState->qwRIP, pState->qwRSP, pState->qwRBP);
+    PrintFormat("RAX=%p RBX=%p RCX=%p RDX=%p\n", pState->qwRAX, pState->qwRBX, pState->qwRCX, pState->qwRDX, pState->qwRSI, pState->qwRDI);
+    PrintFormat("RSI=%p RDI=%p RBP=%p RSP=%p\n", pState->qwRSI, pState->qwRDI, pState->qwRBP, pState->qwRSP);
+    PrintFormat("R8 =%p R9 =%p R10=%p R11=%p\n", pState->qwR8 , pState->qwR9 , pState->qwR10, pState->qwR11); 
+    PrintFormat("R12=%p R13=%p R14=%p R15=%p\n", pState->qwR12, pState->qwR13, pState->qwR14, pState->qwR15); 
     PrintFormat("CS=%p SS=%p\n", pState->qwCS, pState->qwSS);
-    PrintFormat("Flags=%08X [", pState->qwFlags);
+    PrintFormat("RFLAGS=%08X [", pState->qwFlags);
     PCHAR sFlagLetters = "C-P-A-ZSTIDOINMR";
 
-    for (BYTE i = 0; i < 16; i++)
+    for (SHORT i = 15; i >= 0; i--)
     {
         if (i == 1 || i == 3 || i == 5) continue;
         PrintChar(pState->qwFlags & (1 << i) ? sFlagLetters[i] : '-');

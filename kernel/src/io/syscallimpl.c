@@ -1,6 +1,6 @@
 
-#include <events/syscallimpl.h>
-#include <events/syscalls.h>
+#include <io/syscallimpl.h>
+#include <io/syscalls.h>
 #include <common/screen.h>
 #include <common/panic.h>
 #include <memory/heap.h>

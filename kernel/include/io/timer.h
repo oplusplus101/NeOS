@@ -1,10 +1,10 @@
 
-#ifndef __EVENTS__TIMER_H
-#define __EVENTS__TIMER_H
+#ifndef __IO__TIMER_H
+#define __IO__TIMER_H
 
 #include <common/types.h>
 
 void SetPITFrequency(DWORD dwFrequency);
 void SetPITInterval(DWORD dwIntervalMicroseconds);
 
-#endif // __EVENTS__TIMER_H
+#endif // __IO__TIMER_H

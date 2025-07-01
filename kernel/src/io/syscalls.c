@@ -1,5 +1,5 @@
 
-#include <events/syscalls.h>
+#include <io/syscalls.h>
 #include <runtime/process.h>
 #include <neos.h>
 #include <common/screen.h>

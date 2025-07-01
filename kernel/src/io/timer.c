@@ -1,5 +1,5 @@
 
-#include <events/timer.h>
+#include <io/timer.h>
 #include <hardware/ports.h>
 
 void SetPITFrequency(DWORD dwFrequency)

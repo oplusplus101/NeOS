@@ -7,7 +7,7 @@
 #include <common/string.h>
 #include <common/panic.h>
 #include <memory/heap.h>
-#include <events/timer.h>
+#include <io/timer.h>
 #include <neos.h>
 
 sList g_lstProcesses;
