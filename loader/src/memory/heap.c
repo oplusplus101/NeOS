@@ -98,6 +98,9 @@ PVOID KHeapReAlloc(PVOID pMemory, QWORD qwSize)
 
 PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
 {
+    if (pHeap->qwFreeMemory < qwSize + sizeof(sMemoryChunk))
+        return NULL;
+    
     sMemoryChunk *pResult = NULL;
 
     for (sMemoryChunk *pChunk = pHeap->pFirstChunk; pChunk != 0 && pResult == 0; pChunk = pChunk->pNext)
@@ -127,6 +130,7 @@ PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
     }
 
     pResult->bAllocated = true;
+    pHeap->qwFreeMemory -= sizeof(sMemoryChunk) + qwSize;
     return (PVOID) ((QWORD) pResult + sizeof(sMemoryChunk));
 }
 
@@ -158,7 +162,12 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
 
 PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewSize)
 {
-    if (pMemory == NULL) return HeapAlloc(pHeap, qwNewSize);
+    if (pMemory == NULL)
+    {
+        PVOID pData = HeapAlloc(pHeap, qwNewSize);
+        memcpy(pData, pMemory, qwNewSize);
+        return pData;
+    }
     sMemoryChunk *pChunk = (sMemoryChunk *) ((QWORD) pMemory - sizeof(sMemoryChunk));
     QWORD qwPreviousSize = pChunk->qwSize;
     PVOID pNewMemory = HeapAlloc(pHeap, qwNewSize);

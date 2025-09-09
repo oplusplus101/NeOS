@@ -12,11 +12,6 @@ typedef struct
     void (*pDestroyCallback)(PVOID);
 } sObjectType;
 
-typedef struct
-{
-    sList lstChildren;
-} sObjectDirectory;
-
 typedef struct _tagObject
 {
     WCHAR wszName[257];
@@ -34,14 +29,19 @@ typedef struct
 
 typedef struct
 {
-    INT iHandle;
+    HANDLE hHandle;
     sObject *pObject;
 } sHandleEntry;
+
+typedef struct
+{
+    sList lstChildren;
+} sObjectDirectory;
 
 void         DestroyDirectoryCallback(sObject *pObject);
 BOOL         AddObjectToDirectory(sObject *pDirectory, sObject *pObject);
 sObject     *FindObjectInDirectory(sObjectDirectory *pDirectory, PWCHAR wszName);
-sObject     *LookupObject(PWCHAR wszPath);
+sObject     *LookupObject(PWCHAR wszPath, sObject *pParent);
 sObject     *CreateObjectDirectory(PWCHAR wszPath);
 sObjectType *CreateType(PWCHAR wszName, QWORD qwBodySize, void (*pDestroyCallback)(sObject *));
 void         DestroyType(sObjectType *pType);
@@ -53,8 +53,8 @@ void         DereferenceObject(sObject *pObject);
 sHandleTable CreateHandleTable();
 void         DestroyHandleTable(sHandleTable *pTable);
 INT          AllocateHandle(sHandleTable *pTable, sObject *pObject);
-sObject     *GetObjectFromHandle(sHandleTable *pTable, INT iHandle);
-void         FreeHandle(sHandleTable *pTable, INT iHandle);
+sObject     *GetObjectFromHandle(sHandleTable *pTable, HANDLE hHandle);
+void         FreeHandle(sHandleTable *pTable, HANDLE hHandle);
 void         PrintObjectTree(sObject *pObject, DWORD dwCurrentDepth);
 
 void InitObjectManager();

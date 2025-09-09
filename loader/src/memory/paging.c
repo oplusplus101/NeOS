@@ -134,6 +134,11 @@ void ReturnPages(PVOID pAddress, QWORD nPages)
 
 PVOID GetPhysicalAddress(sPageTable *pPML4, PVOID pVirtualAddress)
 {
+    if (pPML4 == NULL)
+        pPML4 = GetCurrentPML4();
+    
+    QWORD qwOffset = (QWORD) pVirtualAddress % PAGE_SIZE;
+    
     // Page Directory Pointer
     sPageTableEntry *pEntry = &pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
     if (!(pEntry->wFlags & PF_PRESENT)) return NULL;
@@ -151,7 +156,7 @@ PVOID GetPhysicalAddress(sPageTable *pPML4, PVOID pVirtualAddress)
 
     // Page Entry
     pEntry = &pPageTable->arrEntries[_ADDRESS_TO_PE_INDEX(pVirtualAddress)];
-    return (pEntry->wFlags & PF_PRESENT) ? (PVOID) _PAGE_TO_ADDRESS(pEntry->qwAddress) : NULL;
+    return (pEntry->wFlags & PF_PRESENT) ? (PVOID) (_PAGE_TO_ADDRESS(pEntry->qwAddress) + qwOffset) : NULL;
 }
 
 // If pPML4 is null, the current PML4 will be used

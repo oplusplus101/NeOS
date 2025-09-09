@@ -16,6 +16,7 @@
 #include <io/syscallimpl.h>
 #include <io/syscalls.h>
 #include <io/timer.h>
+#include <io/io.h>
 #include <runtime/exceptions.h>
 #include <runtime/process.h>
 #include <runtime/objects.h>
@@ -31,16 +32,21 @@ void __stack_chk_fail(void)
 sList LoadCFG(PWCHAR wszPath, sNEOSKernelHeader *pHeader)
 {
     PVOID pFile = pHeader->GetFile(wszPath);
-    _ASSERT(pFile, "File \"C:\\%s\" not found", wszPath);
+    _ASSERT(pFile, "File \"C:\\%w\" not found", wszPath);
     QWORD qwFileSize = pHeader->GetFileSize(pFile);
     PVOID szText = KHeapAlloc(qwFileSize + 1);
+    _ASSERT(szText, "Could not allocate memory for CFG file \"C:\\%w\"", wszPath);
     pHeader->ReadFile(pFile, szText);
     ((PBYTE) szText)[qwFileSize] = 0;
+
     sList lst = ParseINIFile(szText);
     KHeapFree(pFile);
     KHeapFree(szText);
     return lst;
 }
+
+extern sObject *g_pRootDirectoryObject;
+
 
 void KernelMain(sNEOSKernelHeader hdr)
 {
@@ -63,7 +69,7 @@ void KernelMain(sNEOSKernelHeader hdr)
     SetKernelHeap(hdr.pKernelHeap);
     
     InitSyscalls();
-    PrintFormat("Syscalls initialised to interrput 0x%02X\n", NEOS_SYSCALL_IRQ);
+    PrintFormat("Syscalls initialised to interrupt 0x%02X\n", NEOS_SYSCALL_IRQ);
     RegisterSyscalls();
 
     // Override the previous exception handlers so that when a process crashes it doesn't kill the whole kernel.
@@ -71,11 +77,18 @@ void KernelMain(sNEOSKernelHeader hdr)
     // 10th of a millisecond per cycle 
     InitProcessScheduler(100);
     PrintFormat("Process scheduler initialised\n");
-
+    
+    InitDriverManager();
+    PrintFormat("Driver manager initialised\n");
     InitObjectManager();
+    CreateObjectDirectory(L"Devices");
+    PrintFormat("Object manager initialised\n");
 
-    for (;;);
-    PrintFormat("Loading...\n");
+    InitIOManager();
+    PrintFormat("I/O manager initialised\n");
+
+    
+    PrintFormat("Loading drivers...\n");
     sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg", &hdr);
     // sList lstConfig  = LoadCFG(L"NeOS\\NeOS.cfg", &hdr);
 
@@ -86,7 +99,7 @@ void KernelMain(sNEOSKernelHeader hdr)
         if (!strcmp(pEntry->szName, "Enabled") && pEntry->szValue[0] == '1')
         {
             PrintFormat("Loading driver: %s\n", pEntry->szLabel);
-            WCHAR wszDriverName[13];
+            WCHAR wszDriverName[256];
             ZeroMemory(wszDriverName, sizeof(wszDriverName));
             for (int j = 0; pEntry->szLabel[j]; j++)
                 wszDriverName[j] = pEntry->szLabel[j];
@@ -102,27 +115,14 @@ void KernelMain(sNEOSKernelHeader hdr)
             PVOID pData = KHeapAlloc(qwFileSize);
             hdr.ReadFile(pFile, pData);
             sExecutable sEXE = ParsePE32(pData);
-            INT iPID = StartKernelProcess(pEntry->szLabel, &sEXE, PROC_PAUSED);
-            sDriver sTask =
-            {
-                .iPID = iPID
-            };
-            strcpyW(sTask.wszName, wszDriverName);
-            // AddListElement(&g_lstDrivers, &sTask);
+            /* INT iStatus = */ LoadDriver(&sEXE, wszDriverName);
             KHeapFree(pFile);
         }
     }
-        
 
-    // PrintFormat("Starting drivers...\n");
-    // for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
-    // {
-    //     sKernelTask *pDriver = (sKernelTask *) GetListElement(&g_lstDrivers, i);
-    //     SetProcessState(pDriver->iPID, PROC_RUNNING);
-    // }
-    
+    PrintFormat("Drivers loaded!\nEnabling interrupts...\n");
     EnableInterrupts(); 
-
+    
     for (;;) __asm__ volatile ("hlt"); // Halt so less power is wasted
     __asm__ volatile ("cli\nhlt"); // Ensure the kernel does not exit at all
 }

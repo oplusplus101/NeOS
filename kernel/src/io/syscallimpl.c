@@ -1,12 +1,16 @@
 
 #include <io/syscallimpl.h>
 #include <io/syscalls.h>
+#include <io/io.h>
+#include <runtime/objects.h>
 #include <common/screen.h>
 #include <common/panic.h>
 #include <memory/heap.h>
 
-// 0x0000 - 0x000F Print functions
+// TEMPORARY
+sHandleTable g_sKernelHandleTable;
 
+// 0x0000 - 0x000F Print functions
 // Code: 0x0000
 // RBX is the address of a zero-terminated string
 void Syscall_KNeoPrintString(sCPUState *pCPUState)
@@ -45,6 +49,15 @@ void Syscall_KNeoGetScreenSize(sCPUState *pCPUState)
     pCPUState->qwRBX = GetScreenWidth();
     pCPUState->qwRCX = GetScreenHeight();
 }
+
+// Code: 0x0005
+// RBX is the character (UNICODE)
+void Syscall_KNeoPrintChar(sCPUState *pCPUState)
+{
+    PrintChar(pCPUState->qwRBX);
+}
+
+
 // 0x0010 - 0x001F Driver functions
 
 // Code: 0x0010
@@ -56,10 +69,10 @@ void Syscall_KNeoGetDriver(sCPUState *pCPUState)
 }
 
 // Code: 0x0011
-// RBX is the pointer to the driver
-// RCX is the pointer to the function's name
-// RDX will then contain the function
-void Syscall_KNeoGetDriverFunction(sCPUState *pCPUState)
+// RBX is a pointer to the DriverObject
+// RCX is a pointer to an IRP
+// RDX will return the status of the call
+void Syscall_KNeoCallDriver(sCPUState *pCPUState)
 {
     
 }
@@ -126,6 +139,14 @@ void Syscall_KNeoFreeHeap(sCPUState *pCPUState)
     KHeapFree((PVOID) pCPUState->qwRBX);
 }
 
+// Code: 0x0027
+// RBX is the virtual address
+// RCX will contain the physical address
+void Syscall_KNeoGetPhysicalAddress(sCPUState *pCPUState)
+{
+    pCPUState->qwRCX = (QWORD) GetPhysicalAddress(NULL, (PVOID) pCPUState->qwRBX);
+}
+
 // 0x30 - 0x3F Other
 
 // Code: 0x0030
@@ -144,6 +165,17 @@ void Syscall_KNeoClearSyscall(sCPUState *pCPUState)
     ClearSyscall((void (*)(sCPUState *)) pCPUState->qwRDX);
 }
 
+// Code: 0x0032
+// RBX is interrupt number
+// RDX is the ISR
+void Syscall_KNeoRegisterInterrupt(sCPUState *pCPUState)
+{
+    if (pCPUState->qwRBX < 32)
+        RegisterException(pCPUState->qwRBX, (ESR) pCPUState->qwRDX);
+    else
+        RegisterInterrupt(pCPUState->qwRBX, (ISR) pCPUState->qwRDX);
+}
+
 // 0x40 - 0x4F Process stuff
 
 // Code: 0x0040
@@ -154,8 +186,13 @@ void Syscall_KNeoGetCurrentPID(sCPUState *pCPUState)
 }
 
 // Code: 0x0041
+// RBX is a pointer to the entry point
+// RCX is the stack size
+// RDX will contain the PID
 void Syscall_KNeoStartProcess(sCPUState *pCPUState)
 {
+    if (pCPUState->qwRBX != 0 && pCPUState->qwRCX != 0)
+        pCPUState->qwRDX = StartThread(L"Thread", (void (*)()) pCPUState->qwRBX, pCPUState->qwRCX, 0, 0, PROC_RUNNING);
 }
 
 // Code: 0x0042
@@ -173,16 +210,45 @@ void Syscall_KNeoPauseProcess(sCPUState *pCPUState)
         SetProcessState(pCPUState->qwRBX, PROC_PAUSED);
 }
 
+// 0x50 - 0x5F File/Device stuff
+void Syscall_KNeoCreateDevice(sCPUState *pCPUState)
+{
+    pCPUState->qwRDX = CreateDevice((sDriverObject *) pCPUState->qwRBX, (PWCHAR) pCPUState->qwRCX, pCPUState->qwRDX, (sDeviceObject **) pCPUState->qwRAX);
+}
+
+// Code: 0x0051
+// RBX contains the pointer to the device object
+void Syscall_KNeoDestroyDevice(sCPUState *pCPUState)
+{
+    DestroyDevice((sDeviceObject *) pCPUState->qwRBX);
+}
+
+extern sObject *g_pRootDirectoryObject;
+
+// Code: 0x0052
+// RAX will contain the file handle
+// RDX will contain the status
+void Syscall_KNeoCreateFile(sCPUState *pCPUState)
+{
+    HANDLE h;
+    pCPUState->qwRDX = CreateFile(&g_sKernelHandleTable, &h, (PWCHAR) pCPUState->qwRBX, pCPUState->qwRCX,
+                                  0, 0, 0, 0);
+    pCPUState->qwRAX = h;
+}
+
 void RegisterSyscalls()
 {
+    g_sKernelHandleTable = CreateHandleTable();
+
     RegisterSyscall(0x0000, 0, Syscall_KNeoPrintString);
     RegisterSyscall(0x0001, 0, Syscall_KNeoGetCursorPosition);
     RegisterSyscall(0x0002, 0, Syscall_KNeoSetCursorPosition);
     RegisterSyscall(0x0003, 0, Syscall_KNeoClearScreen);
     RegisterSyscall(0x0004, 0, Syscall_KNeoGetScreenSize);
+    RegisterSyscall(0x0005, 0, Syscall_KNeoPrintChar);
     
     RegisterSyscall(0x0010, 0, Syscall_KNeoGetDriver);
-    RegisterSyscall(0x0011, 0, Syscall_KNeoGetDriverFunction);
+    RegisterSyscall(0x0011, 0, Syscall_KNeoCallDriver);
     
     RegisterSyscall(0x0020, 0, Syscall_KNeoMapPagesToIdentity);
     RegisterSyscall(0x0021, 0, Syscall_KNeoMapPages);
@@ -191,12 +257,17 @@ void RegisterSyscalls()
     RegisterSyscall(0x0024, 0, Syscall_KNeoAllocateHeap);
     RegisterSyscall(0x0025, 0, Syscall_KNeoReAllocateHeap);
     RegisterSyscall(0x0026, 0, Syscall_KNeoFreeHeap);
+    RegisterSyscall(0x0027, 0, Syscall_KNeoGetPhysicalAddress);
 
     RegisterSyscall(0x0030, 0, Syscall_KNeoRegisterSyscall);
     RegisterSyscall(0x0031, 0, Syscall_KNeoClearSyscall);
+    RegisterSyscall(0x0032, 0, Syscall_KNeoRegisterInterrupt);
 
     RegisterSyscall(0x0040, 0, Syscall_KNeoGetCurrentPID);
     RegisterSyscall(0x0041, 0, Syscall_KNeoStartProcess);
     RegisterSyscall(0x0042, 0, Syscall_KNeoKillProcess);
     RegisterSyscall(0x0043, 0, Syscall_KNeoPauseProcess);
+
+    RegisterSyscall(0x0050, 0, Syscall_KNeoCreateDevice);
+    RegisterSyscall(0x0052, 0, Syscall_KNeoCreateFile);
 }

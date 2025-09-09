@@ -72,6 +72,17 @@ PVOID AddListElement(sList *pList, PVOID pData)
     return SetListElement(pList, pList->qwLength - 1, pData);
 }
 
+
+void InsertListElement(sList *pList, QWORD qwIndex, PVOID pData)
+{
+    _ASSERT(pList != NULL, "Tried to instert an element into a NULL list");
+    _ASSERT(qwIndex >= pList->qwLength, "Tried to instert an element outside the list, index: %u, length: %u", qwIndex, pList->qwLength);
+    pList->pData = KHeapReAlloc(pList->pData, (++pList->qwLength) * pList->qwElementSize);
+    memcpy((PBYTE) pList->pData + (qwIndex + 1) * pList->qwElementSize, (PBYTE) pList->pData + qwIndex * pList->qwElementSize,  pList->qwLength * pList->qwElementSize - 1);
+    memcpy((PBYTE) pList->pData + qwIndex * pList->qwElementSize, pData, pList->qwElementSize);
+}
+
+
 void RemoveListElement(sList *pList, QWORD qwIndex)
 {
     _ASSERT(pList != NULL, "Tried to remove an element from a NULL list");

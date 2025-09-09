@@ -538,6 +538,7 @@ void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII)
             SetControlCharState(true);
             
             PrintChar('\n');
+            for (INT j = 0; j < 100000000; j++) __asm__ volatile ("nop\nnop");
         }
     }
 }

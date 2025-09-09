@@ -31,6 +31,8 @@ typedef VOID *PVOID;
 typedef unsigned short WCHAR;
 typedef WCHAR *PWCHAR;
 
+typedef INT HANDLE;
+
 #define true 1
 #define false 0
 #define TRUE 1

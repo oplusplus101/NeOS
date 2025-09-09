@@ -1,4 +1,9 @@
+Fix process killing in the scheduler
+Add proper error logging
+Clean up the driver syscalls
 Rewrite/clean up the UEFI bootloader (Change UNIX types to Microsoft, make PE32+ code more efficient)
+Add a neater way of making driver syscalls
+Implement Dynamic Linked Libraries (DLLs) 
 Add a basic MS-DOS-like shell
 Clean up AHCI code
 Add support for multiple drives (AHCI)
@@ -10,3 +15,4 @@ Implement a Windows-like registry
 Make a user system - with a root user and admin, standard, and guest users
 Move NEOSLDR.SYS to the main drive (Make the EFI bootloader directly read the main filesystem)
 Make an installer (a program that sets up the file system, copies in all important files, and creates a default user)
+Add support for multiple languages in the kernel

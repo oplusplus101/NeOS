@@ -18,7 +18,8 @@ sList ParseINIFile(PCHAR szContents)
             i++;
             break;
         case ';': case '#':
-            while (szContents[i++] == '\n');
+            while (szContents[++i] != '\n');
+            i++; // Skip the line feed character
             break;
 
         case '[':

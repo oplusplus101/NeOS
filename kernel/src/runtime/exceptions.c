@@ -12,8 +12,8 @@ typedef struct _tagStackFrame
 void PrintRegs(QWORD qwRSP);
 
 #define _PRINT_FAULT(qwRSP, ...) \
-    PrintRegs(qwRSP); \
-    _KERNEL_PANIC(__VA_ARGS__);
+    { PrintRegs(qwRSP); \
+    _KERNEL_PANIC(__VA_ARGS__); }
 
 
 void TraceStack(DWORD dwMaxFrames)
@@ -31,7 +31,6 @@ void TraceStack(DWORD dwMaxFrames)
 void KillCurrentProcess(PWCHAR wszReason)
 {
     KillProcess(GetCurrentPID(), wszReason);
-    __asm__ volatile ("cli\nhlt");
 }
 
 QWORD KException0(QWORD qwRSP, BYTE nErrorCode)
@@ -40,8 +39,8 @@ QWORD KException0(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Division by zero");
         
     KillCurrentProcess(L"Division by zero");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException1(QWORD qwRSP, BYTE nErrorCode)
@@ -50,8 +49,8 @@ QWORD KException1(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Debug");
         
     KillCurrentProcess(L"Debug");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException2(QWORD qwRSP, BYTE nErrorCode)
@@ -60,8 +59,8 @@ QWORD KException2(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Non-maskable interrupt");
         
     KillCurrentProcess(L"Non-maskable interrupt");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException3(QWORD qwRSP, BYTE nErrorCode)
@@ -70,8 +69,8 @@ QWORD KException3(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Breakpoint");
         
     KillCurrentProcess(L"Breakpoint");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException4(QWORD qwRSP, BYTE nErrorCode)
@@ -80,8 +79,8 @@ QWORD KException4(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Overflow");
         
     KillCurrentProcess(L"Overflow");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException5(QWORD qwRSP, BYTE nErrorCode)
@@ -90,20 +89,18 @@ QWORD KException5(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Bound range error");
         
     KillCurrentProcess(L"Bound range error");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException6(QWORD qwRSP, BYTE nErrorCode)
 {
-    TraceStack(10);
-    PrintFormat("RIP: %p\n", ((sCPUState *) qwRSP)->qwRIP);
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, "Invalid opcode");
     
     KillCurrentProcess(L"Invalid opcode");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException7(QWORD qwRSP, BYTE nErrorCode)
@@ -112,8 +109,8 @@ QWORD KException7(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Device not available");
         
     KillCurrentProcess(L"Device not available");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException8(QWORD qwRSP, BYTE nErrorCode)
@@ -122,8 +119,8 @@ QWORD KException8(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Double fault");
         
     KillCurrentProcess(L"Double fault");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException10(QWORD qwRSP, BYTE nErrorCode)
@@ -132,8 +129,8 @@ QWORD KException10(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Invalid TSS");
         
     KillCurrentProcess(L"Invalid TSS");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException11(QWORD qwRSP, BYTE nErrorCode)
@@ -142,8 +139,8 @@ QWORD KException11(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Segment not present");
         
     KillCurrentProcess(L"Segment not present");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException12(QWORD qwRSP, BYTE nErrorCode)
@@ -152,21 +149,21 @@ QWORD KException12(QWORD qwRSP, BYTE nErrorCode)
         _PRINT_FAULT(qwRSP, "Stack segment fault");
         
     KillCurrentProcess(L"Stack segment fault");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException13(QWORD qwRSP, BYTE nErrorCode)
 {
     QWORD qwExceptionAddress;
     __asm__ volatile("mov %%cr2, %0" : "=r" (qwExceptionAddress));
-    PrintFormat("Address: %p\n", qwExceptionAddress);
+    PrintFormat("Address: 0x%p\n", qwExceptionAddress);
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, "General protection fault");
         
     KillCurrentProcess(L"General protection fault");
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 QWORD KException14(QWORD qwRSP, BYTE nErrorCode)
@@ -218,8 +215,8 @@ QWORD KException14(QWORD qwRSP, BYTE nErrorCode)
     case 0b111:
         KillCurrentProcess(L"User process tried to write a page and caused a protection fault");
     }
-    return qwRSP;
-    // return ScheduleProcesses(qwRSP);
+
+    return ScheduleProcesses(qwRSP);
 }
 
 

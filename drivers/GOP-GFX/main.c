@@ -34,11 +34,10 @@ FUNC_EXPORT PVOID KNeoGetFrameBuffer()
     return g_pFramebuffer;
 }
 
-void DriverMain()
+INT DriverMain(sDriverObject *pObject)
 {
-    g_pDriver = KNeoGetDriver("GFX");
-    _ASSERT(g_pDriver != NULL, "Graphics Driver (GFX.mod) not found");
+    // g_pDriver = KNeoGetDriver("GFX");
+    // _ASSERT(g_pDriver != NULL, "Graphics Driver (GFX.mod) not found");
     // ((void (*)(PCHAR)) KNeoGetDriverFunction(g_pDriver, "NeoRegisterScreenDriver"))("GOP-GFX");
-
-    KNeoPauseProcess(KNeoGetCurrentPID());
+    return 0;
 }

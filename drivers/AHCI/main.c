@@ -147,12 +147,12 @@ void NeoScanPorts()
 
 void DriverMain()
 {
-    PVOID pPCIDriver = KNeoGetDriver("PCI");
-    sPCIDeviceDescriptor sDesc;
-    ((BOOL (*)(BYTE, BYTE, sPCIDeviceDescriptor *pDesc)) KNeoGetDriverFunction(pPCIDriver, "KNeoGetPCIDevice"))(0x01, 0x06, &sDesc);
-    sBaseAddressRegister sBAR5 = ((sBaseAddressRegister (*)(sPCIDeviceDescriptor, BYTE)) KNeoGetDriverFunction(pPCIDriver, "KNeoGetBaseAddressRegister"))(sDesc, 5);
-    KNeoMapPagesToIdentity((PVOID) sBAR5.qwAddress, 1, PAGE_WRITEABLE | PAGE_CACHEDISABLE);
-    g_pHBAMemory = (sHBAMemory *) sBAR5.qwAddress;    
+    // PVOID pPCIDriver = KNeoGetDriverObject("PCI");
+    // sPCIDeviceDescriptor sDesc;
+    // ((BOOL (*)(BYTE, BYTE, sPCIDeviceDescriptor *pDesc)) KNeoGetDriverFunction(pPCIDriver, "KNeoGetPCIDevice"))(0x01, 0x06, &sDesc);
+    // sBaseAddressRegister sBAR5 = ((sBaseAddressRegister (*)(sPCIDeviceDescriptor, BYTE)) KNeoGetDriverFunction(pPCIDriver, "KNeoGetBaseAddressRegister"))(sDesc, 5);
+    // KNeoMapPagesToIdentity((PVOID) sBAR5.qwAddress, 1, PAGE_WRITEABLE | PAGE_CACHEDISABLE);
+    // g_pHBAMemory = (sHBAMemory *) sBAR5.qwAddress;    
 
     KNeoPauseProcess(KNeoGetCurrentPID());
 }

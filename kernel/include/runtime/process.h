@@ -15,7 +15,7 @@
 
 typedef struct
 {
-    CHAR  szName[129]; // One extra byte for the null terminator
+    WCHAR  wszName[129]; // One extra byte for the null terminator
     BYTE  nType;  // 0 is a thread, 1 is a process
     BYTE  nState; // 0 is running, 1 is sleeping, 2 is paused
     BYTE  nRing;
@@ -33,10 +33,11 @@ void InitProcessScheduler(DWORD dwScheduleIntervalMicroseconds);
 
 // Returns the PID
 INT GetCurrentPID();
-INT StartKernelProcess(PCHAR szName, sExecutable *pEXE, BYTE nState);
-INT StartThread(PCHAR szName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner);
+INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pParams, QWORD qwParamSizeBytes);
+INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner, BYTE nState);
 void KillProcess(INT iPID, PWCHAR wszReason);
 sProcess *GetCurrentProcess();
+INT GetNumberOfOProcesses();
 sProcess *GetProcess(INT iPID);
 BOOL StopProcess(INT iPID);
 BOOL DoesProcessExist(INT iPID);

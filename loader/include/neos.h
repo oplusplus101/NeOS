@@ -9,6 +9,12 @@
 #include <memory/list.h>
 #include <memory/heap.h>
 
+#define NEOS_SUCCESS 0
+#define NEOS_FAILURE 1
+
+#define _NEOS_SUCCESS(x) ((x) == 0)
+
+
 #define NEOS_BACKGROUND_COLOR _RGB(0, 0, 0)
 #define NEOS_FOREGROUND_COLOR _RGB(168, 168, 168)
 #define NEOS_ERROR_COLOR      _RGB(255, 0, 0)

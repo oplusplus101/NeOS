@@ -45,10 +45,18 @@ void DestroyDirectoryCallback(sObject *pObject)
     
 }
 
+////////////////////////////////
+//       Implementation       //
+////////////////////////////////
+
 BOOL AddObjectToDirectory(sObject *pDirectory, sObject *pObject)
 {
     if (pDirectory->pType != g_pDirectoryType) return false;
-    AddListElement(&((sObjectDirectory *) pDirectory->pBody)->lstChildren, pObject);
+
+    sObjectDirectory *pDirBody = (sObjectDirectory *) pDirectory->pBody;
+    if (pDirBody == NULL) return false;
+
+    AddListElement(&pDirBody->lstChildren, pObject);
     return true;
 }
 
@@ -65,61 +73,10 @@ sObject *FindObjectInDirectory(sObjectDirectory *pDirectory, PWCHAR wszName)
     return NULL;
 }
 
-sObject *LookupObject(PWCHAR wszPath)
-{
-    PWCHAR wszPathDup = strdupW(wszPath);
-    PWCHAR wsz = strtokW(wszPathDup, L"\\/");
-    sObject *pCurrentDirectoryObject = g_pRootDirectoryObject;
-    
-    while (wsz != NULL)
-    {
-        sObject *pObject = FindObjectInDirectory(pCurrentDirectoryObject->pBody, wsz);
-        if (pObject == NULL)
-        {
-            KHeapFree(wszPathDup);
-            return NULL;
-        }
-        
-        wsz = strtokW(NULL, L"\\/");
-        
-        if (wsz == NULL)
-        {
-            KHeapFree(wszPathDup);
-            return pObject;
-        }
-        if (pObject->pType == g_pDirectoryType)
-            pCurrentDirectoryObject = pObject;
-    }
-    
-    KHeapFree(wszPathDup);
-    return NULL;
-}
-
-sObject *CreateObjectDirectory(PWCHAR wszPath)
-{
-    sObjectDirectory *pDirectory = KHeapAlloc(sizeof(sObjectDirectory));
-    pDirectory->lstChildren      = CreateEmptyList(sizeof(sObject *));
-    
-    return CreateObject(wszPath, g_pDirectoryType, pDirectory);
-}
-
-sObjectType *CreateType(PWCHAR wszName, QWORD qwBodySize, void (*pDestroyCallback)(sObject *))
-{
-    sObjectType *pObjectType      = KHeapAlloc(sizeof(sObjectType));
-    pObjectType->pDestroyCallback = (void (*)(PVOID)) pDestroyCallback;
-    pObjectType->qwBodySize       = qwBodySize;
-    strncpyW(pObjectType->wszName, wszName, 256);
-    return pObjectType;
-}
-
-void DestroyType(sObjectType *pType)
-{
-    KHeapFree(pType);
-}
 
 sObject *CreateObject(PWCHAR wszPath, sObjectType *pType, PVOID pBody)
 {
-    if (LookupObject(wszPath) != NULL) return NULL;
+    if (LookupObject(wszPath, NULL) != NULL) return NULL;
         
     PWCHAR wszPathDup         = strdupW(wszPath);
     sObject *pDirectoryObject = g_pRootDirectoryObject;
@@ -150,10 +107,66 @@ sObject *CreateObject(PWCHAR wszPath, sObjectType *pType, PVOID pBody)
     pObject->pParent          = pDirectoryObject;
     strncpyW(pObject->wszName, wszCurrentName, 256);
 
-    AddListElement(&((sObjectDirectory *) pDirectoryObject->pBody)->lstChildren, &pObject);
+    sObjectDirectory *pDirBody = (sObjectDirectory *) pDirectoryObject->pBody;
+    if (pDirBody == NULL) return NULL;
+
+    AddListElement(&pDirBody->lstChildren, &pObject);
     KHeapFree(wszPathDup);
     return pObject;
 }
+
+sObject *LookupObject(PWCHAR wszPath, sObject *pParent)
+{
+    if (pParent == NULL)
+        pParent = g_pRootDirectoryObject;
+    PWCHAR wszPathDup = strdupW(wszPath);
+    PWCHAR wsz = strtokW(wszPathDup, L"\\/");
+    
+    while (wsz != NULL)
+    {
+        sObject *pObject = FindObjectInDirectory(pParent->pBody, wsz);
+        if (pObject == NULL)
+            break;
+        
+        wsz = strtokW(NULL, L"\\/");
+        
+        if (wsz == NULL)
+        {
+            KHeapFree(wszPathDup);
+            return pObject;
+        }
+        if (pObject->pType == g_pDirectoryType)
+            pParent = pObject;
+    }
+    
+    KHeapFree(wszPathDup);
+    return NULL;
+}
+
+sObject *CreateObjectDirectory(PWCHAR wszPath)
+{
+    sObjectDirectory *pDirectory = KHeapAlloc(sizeof(sObjectDirectory));
+    pDirectory->lstChildren      = CreateEmptyList(sizeof(sObject *));
+    
+    PrintFormat("Creating directory: %w\n", wszPath);
+    
+    return CreateObject(wszPath, g_pDirectoryType, pDirectory);
+}
+
+sObjectType *CreateType(PWCHAR wszName, QWORD qwBodySize, void (*pDestroyCallback)(sObject *))
+{
+    sObjectType *pObjectType      = KHeapAlloc(sizeof(sObjectType));
+    pObjectType->pDestroyCallback = (void (*)(PVOID)) pDestroyCallback;
+    pObjectType->qwBodySize       = qwBodySize;
+    strncpyW(pObjectType->wszName, wszName, 256);
+    return pObjectType;
+}
+
+void DestroyType(sObjectType *pType)
+{
+    KHeapFree(pType);
+}
+
 
 void DestroyObjectByReference(sObject *pObject)
 {
@@ -177,7 +190,7 @@ void DestroyObjectByReference(sObject *pObject)
 
 void DestroyObject(PWCHAR wszPath)
 {
-    DestroyObjectByReference(LookupObject(wszPath));
+    DestroyObjectByReference(LookupObject(wszPath, NULL));
 }
 
 void ReferenceObject(sObject *pObject)
@@ -212,34 +225,34 @@ void DestroyHandleTable(sHandleTable *pTable)
     DestroyList(&pTable->lstHandles);
 }
 
-INT AllocateHandle(sHandleTable *pTable, sObject *pObject)
+HANDLE AllocateHandle(sHandleTable *pTable, sObject *pObject)
 {
     sHandleEntry sEntry;
     sEntry.pObject = pObject;
-    sEntry.iHandle = pTable->qwCurrentHandleNumber++;
+    sEntry.hHandle = pTable->qwCurrentHandleNumber++;
     AddListElement(&pTable->lstHandles, &sEntry);
-    return sEntry.iHandle;
+    return sEntry.hHandle;
 }
 
-sObject *GetObjectFromHandle(sHandleTable *pTable, INT iHandle)
+sObject *GetObjectFromHandle(sHandleTable *pTable, HANDLE hHandle)
 {
     for (QWORD i = 0; i < pTable->lstHandles.qwLength; i++)
     {
         sHandleEntry *pEntry = GetListElement(&pTable->lstHandles, i);
-        if (pEntry->iHandle == iHandle)
+        if (pEntry->hHandle == hHandle)
             return pEntry->pObject;
     }
     
     return NULL;
 }
 
-void FreeHandle(sHandleTable *pTable, INT iHandle)
+void FreeHandle(sHandleTable *pTable, HANDLE hHandle)
 {
     for (QWORD i = 0; i < pTable->lstHandles.qwLength; i++)
     {
         sHandleEntry *pEntry = GetListElement(&pTable->lstHandles, i);
 
-        if (pEntry->iHandle != iHandle)
+        if (pEntry->hHandle != hHandle)
             continue;
         
         RemoveListElement(&pTable->lstHandles, i);
@@ -251,6 +264,8 @@ void FreeHandle(sHandleTable *pTable, INT iHandle)
 
 void PrintObjectTree(sObject *pObject, DWORD dwCurrentDepth)
 {
+    if (pObject == NULL && dwCurrentDepth == 0)
+        pObject = g_pRootDirectoryObject;
     if (dwCurrentDepth == 0)
         PrintFormat("%w\n", pObject->wszName);
     
@@ -292,5 +307,4 @@ void InitObjectManager()
     // Initialise the root directory
     sObjectDirectory *pRootDirectory         = g_pRootDirectoryObject->pBody;
     pRootDirectory->lstChildren              = CreateEmptyList(sizeof(sObject *));
-    
 }

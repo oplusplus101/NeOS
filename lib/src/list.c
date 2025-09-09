@@ -74,6 +74,7 @@ PVOID AddListElement(sList *pList, PVOID pData)
     _ASSERT(pList != NULL, "Tried to add an element to a NULL list");
     _ASSERT(pList->pData != NULL, "Tried to add an element from a list without data");
     pList->pData = KNeoHeapReAllocate(pList->pData, (++pList->qwLength) * pList->qwElementSize);
+    _ASSERT(pList->pData != NULL, "Failed to allocate memory for an add list operation");
     return SetListElement(pList, pList->qwLength - 1, pData);
 }
 
