@@ -37,8 +37,8 @@ void ClearList(sList *pList)
 
 void SwapListElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index)
 {
-    _ASSERT(pList != NULL, "Tried to swap elements from a NULL list");
-    _ASSERT(pList->pData != NULL, "Tried to swap elements from a list without data");
+    _ASSERT(pList != NULL, "Tried to swap elements in a NULL list");
+    _ASSERT(pList->pData != NULL, "Tried to swap elements in a list without data");
     // TODO: Add a print format function so that these values below can be printed.
     _ASSERT(qwElement1Index < pList->qwLength, "Tried to move element outside the list, index: %d, list length: %d");//, qwElement1Index, pList->qwLength);
     _ASSERT(qwElement2Index < pList->qwLength, "Tried to move element outside the list, index: %d, list length: %d");//, qwElement2Index, pList->qwLength);
@@ -59,8 +59,8 @@ PVOID GetListElement(sList *pList, QWORD qwIndex)
 
 PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
 {
-    _ASSERT(pList != NULL, "Tried to set an element from a NULL list");
-    _ASSERT(pList->pData != NULL, "Tried to set an element from a list without data");
+    _ASSERT(pList != NULL, "Tried to set an element in a NULL list");
+    _ASSERT(pList->pData != NULL, "Tried to set an element in a list without data");
     _ASSERT(qwIndex < pList->qwLength, "Tried to set element outside list, index: %d, list length: %d");//, qwIndex, pList->qwLength);
     if (pData == NULL)
         ZeroMemory((PVOID) ((QWORD) pList->pData + qwIndex * pList->qwElementSize), pList->qwElementSize);
@@ -72,7 +72,7 @@ PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
 PVOID AddListElement(sList *pList, PVOID pData)
 {
     _ASSERT(pList != NULL, "Tried to add an element to a NULL list");
-    _ASSERT(pList->pData != NULL, "Tried to add an element from a list without data");
+    _ASSERT(pList->pData != NULL, "Tried to add an element to a list without data");
     pList->pData = KNeoHeapReAllocate(pList->pData, (++pList->qwLength) * pList->qwElementSize);
     _ASSERT(pList->pData != NULL, "Failed to allocate memory for an add list operation");
     return SetListElement(pList, pList->qwLength - 1, pData);
