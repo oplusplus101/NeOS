@@ -60,7 +60,6 @@ void WriteConfig(BYTE b)
 QWORD KeyboardInterrupt(QWORD qwRSP)
 {
     BYTE bKey = ReadData();
-    __asm__ volatile ("int $0x81" :: "a"(0x60));
     // __asm__ volatile ("int $0x81" :: "a"(0x60));
     CHAR test[2] = " ";
     test[0] = bKey;
@@ -150,7 +149,7 @@ INT DriverMain(sDriverObject *pObject)
     
     
     // Finally register the interrupt
-    // KNeoRegisterInterrupt(0x21, 0, KNeoGetPhysicalAddress(KeyboardInterrupt));
+    KNeoRegisterInterrupt(0x21, 0, KNeoGetPhysicalAddress(KeyboardInterrupt));
     
     return 0;
 }
