@@ -9,6 +9,7 @@
 #include <common/panic.h>
 #include <common/math.h>
 #include <common/ini.h>
+#include <common/log.h>
 #include <memory/heap.h>
 #include <hardware/ports.h>
 #include <hardware/idt.h>
@@ -26,16 +27,16 @@
 
 void __stack_chk_fail(void)
 {
-    _KERNEL_PANIC("Stack smashing detected");
+    _KERNEL_PANIC(L"Stack smashing detected");
 }
 
 sList LoadCFG(PWCHAR wszPath, sNEOSKernelHeader *pHeader)
 {
     PVOID pFile = pHeader->GetFile(wszPath);
-    _ASSERT(pFile, "File \"C:\\%w\" not found", wszPath);
+    _ASSERT(pFile, L"File \"C:\\%w\" not found", wszPath);
     QWORD qwFileSize = pHeader->GetFileSize(pFile);
     PVOID szText = KHeapAlloc(qwFileSize + 1);
-    _ASSERT(szText, "Could not allocate memory for CFG file \"C:\\%w\"", wszPath);
+    _ASSERT(szText, L"Could not allocate memory for CFG file \"C:\\%w\"", wszPath);
     pHeader->ReadFile(pFile, szText);
     ((PBYTE) szText)[qwFileSize] = 0;
 
@@ -44,9 +45,6 @@ sList LoadCFG(PWCHAR wszPath, sNEOSKernelHeader *pHeader)
     KHeapFree(szText);
     return lst;
 }
-
-extern sObject *g_pRootDirectoryObject;
-
 
 void KernelMain(sNEOSKernelHeader hdr)
 {
@@ -62,33 +60,33 @@ void KernelMain(sNEOSKernelHeader hdr)
     SetFGColor(NEOS_FOREGROUND_COLOR);
     SetBGColor(NEOS_BACKGROUND_COLOR);
     ClearScreen();
-    PrintString("Kernel loaded!\n");
+    Log(LOG_LOG, L"Kernel loaded!");
 
     ImportPagingData(hdr.sPaging);
-    PrintFormat("Paging initialised (%u bytes free)\n", hdr.sPaging.qwFreeMemory);
+    Log(LOG_LOG, L"Paging initialised (%u bytes free)", hdr.sPaging.qwFreeMemory);
     SetKernelHeap(hdr.pKernelHeap);
     
     InitSyscalls();
-    PrintFormat("Syscalls initialised to interrupt 0x%02X\n", NEOS_SYSCALL_IRQ);
+    Log(LOG_LOG, L"Syscalls initialised to interrupt 0x%02X", NEOS_SYSCALL_IRQ);
     RegisterSyscalls();
 
     // Override the previous exception handlers so that when a process crashes it doesn't kill the whole kernel.
     RegisterKernelExceptions();
     // 10th of a millisecond per cycle 
     InitProcessScheduler(100);
-    PrintFormat("Process scheduler initialised\n");
+    Log(LOG_LOG, L"Process scheduler initialised");
     
     InitDriverManager();
-    PrintFormat("Driver manager initialised\n");
+    Log(LOG_LOG, L"Driver manager initialised");
     InitObjectManager();
     CreateObjectDirectory(L"Devices");
-    PrintFormat("Object manager initialised\n");
+    Log(LOG_LOG, L"Object manager initialised");
 
     InitIOManager();
-    PrintFormat("I/O manager initialised\n");
+    Log(LOG_LOG, L"I/O manager initialised");
 
     
-    PrintFormat("Loading drivers...\n");
+    Log(LOG_LOG, L"Loading drivers...");
     sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg", &hdr);
     // sList lstConfig  = LoadCFG(L"NeOS\\NeOS.cfg", &hdr);
 
@@ -98,7 +96,7 @@ void KernelMain(sNEOSKernelHeader hdr)
         sINIEntry *pEntry = GetListElement(&lstDrivers, i);
         if (!strcmp(pEntry->szName, "Enabled") && pEntry->szValue[0] == '1')
         {
-            PrintFormat("Loading driver: %s\n", pEntry->szLabel);
+            Log(LOG_LOG, L"Loading driver: %s", pEntry->szLabel);
             WCHAR wszDriverName[256];
             ZeroMemory(wszDriverName, sizeof(wszDriverName));
             for (int j = 0; pEntry->szLabel[j]; j++)
@@ -109,7 +107,7 @@ void KernelMain(sNEOSKernelHeader hdr)
             strcatW(wszPath, wszDriverName);
             strcatW(wszPath, L".drv");
             PVOID pFile = hdr.GetFile(wszPath);
-            _ASSERT(pFile != NULL, "Driver %w not found", wszDriverName);
+            _ASSERT(pFile != NULL, L"Driver %w not found", wszDriverName);
 
             QWORD qwFileSize = hdr.GetFileSize(pFile);
             PVOID pData = KHeapAlloc(qwFileSize);
@@ -120,7 +118,9 @@ void KernelMain(sNEOSKernelHeader hdr)
         }
     }
 
-    PrintFormat("Drivers loaded!\nEnabling interrupts...\n");
+    Log(LOG_LOG, L"Drivers loaded!");
+    Log(LOG_LOG, L"Enabling interrupts...");
+
     EnableInterrupts(); 
     
     for (;;) __asm__ volatile ("hlt"); // Halt so less power is wasted

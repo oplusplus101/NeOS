@@ -23,7 +23,7 @@ sHeap CreateHeap(QWORD qwSizeInPages, BOOL bUser, BOOL bIdentityMapped, PVOID pS
         for (QWORD i = 0; i < qwSizeInPages; i++)
         {
             PVOID pPage = AllocatePage();
-            _ASSERT(pPage, "Could not allocate page for heap");
+            _ASSERT(pPage, L"Could not allocate page for heap");
             MapPage(NULL, (PVOID) ((QWORD) pStart + i * PAGE_SIZE), pPage, PF_WRITEABLE | (bUser ? PF_USER : 0));
         }
     }
@@ -55,19 +55,19 @@ sHeap *GetKernelHeap()
 
 PVOID KHeapAlloc(QWORD qwSize)
 {
-    _ASSERT(g_pKernelHeap, "Kernel heap not set");
+    _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     return HeapAlloc(g_pKernelHeap, qwSize);
 }
 
 void KHeapFree(PVOID pMemory)
 {
-    _ASSERT(g_pKernelHeap, "Kernel heap not set");
+    _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     HeapFree(g_pKernelHeap, pMemory);
 }
 
 PVOID KHeapReAlloc(PVOID pMemory, QWORD qwSize)
 {
-    _ASSERT(g_pKernelHeap, "Kernel heap not set");
+    _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     return HeapReAlloc(g_pKernelHeap, pMemory, qwSize);
 }
 

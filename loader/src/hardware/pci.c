@@ -108,8 +108,8 @@ void ScanPCIDevices()
                     break;
                 }
 
-                PrintFormat("Bus: %d, Slot: %d, Func: %d\n", nBus, nSlot, nFunction);
-                PrintFormat("Interface: %d, Class: %d, Subclass: %d\n", desc.nInterface, desc.nClass, desc.nSubclass);
+                PrintFormat(L"Bus: %d, Slot: %d, Func: %d\n", nBus, nSlot, nFunction);
+                PrintFormat(L"Interface: %d, Class: %d, Subclass: %d\n", desc.nInterface, desc.nClass, desc.nSubclass);
             }
         }
     

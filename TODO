@@ -1,8 +1,9 @@
+Add a neater way of making driver syscalls (Completely redo the kernel-driver interface)
+Make exceptions inside a driver not crash the entire kernel
 Fix process killing in the scheduler
 Add proper error logging
-Clean up the driver syscalls
 Rewrite/clean up the UEFI bootloader (Change UNIX types to Microsoft, make PE32+ code more efficient)
-Add a neater way of making driver syscalls
+Move all screen drawing routines to the kernel boot header
 Implement Dynamic Linked Libraries (DLLs) 
 Add a basic MS-DOS-like shell
 Clean up AHCI code

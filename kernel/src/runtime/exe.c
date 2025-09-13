@@ -10,11 +10,11 @@
 sExecutable ParsePE32(PVOID pEXEData)
 {
     sMZHeader *pMZHeader = (sMZHeader *) pEXEData;
-    _ASSERT(pMZHeader->wMagic == 0x5A4D, "Invalid MZ header magic number: %04X", pMZHeader->wMagic);
+    _ASSERT(pMZHeader->wMagic == 0x5A4D, L"Invalid MZ header magic number: %04X", pMZHeader->wMagic);
     sPE32Header *pHeader = (sPE32Header *) ((PBYTE) pEXEData + 128);
-    _ASSERT(pHeader->dwMagic == 0x4550, "Invalid PE header magic number: %08X", pHeader->dwMagic);
+    _ASSERT(pHeader->dwMagic == 0x4550, L"Invalid PE header magic number: %08X", pHeader->dwMagic);
     sPE32OptionalHeader *pOptionalHeader = (sPE32OptionalHeader *) ((PBYTE) pEXEData + sizeof(sPE32Header) + 128);
-    _ASSERT(pOptionalHeader->wMagic == 0x020B, "Invalid PE optional header magic number: %04X", pHeader->dwMagic);
+    _ASSERT(pOptionalHeader->wMagic == 0x020B, L"Invalid PE optional header magic number: %04X", pHeader->dwMagic);
     sExecutable sEXE =
     {
         .pEntryPoint = (PVOID) (pOptionalHeader->qwImageBase + pOptionalHeader->dwAddressOfEntrypoint),

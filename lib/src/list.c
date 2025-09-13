@@ -37,11 +37,11 @@ void ClearList(sList *pList)
 
 void SwapListElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index)
 {
-    _ASSERT(pList != NULL, "Tried to swap elements in a NULL list");
-    _ASSERT(pList->pData != NULL, "Tried to swap elements in a list without data");
+    _ASSERT(pList != NULL, L"Tried to swap elements in a NULL list");
+    _ASSERT(pList->pData != NULL, L"Tried to swap elements in a list without data");
     // TODO: Add a print format function so that these values below can be printed.
-    _ASSERT(qwElement1Index < pList->qwLength, "Tried to move element outside the list, index: %d, list length: %d");//, qwElement1Index, pList->qwLength);
-    _ASSERT(qwElement2Index < pList->qwLength, "Tried to move element outside the list, index: %d, list length: %d");//, qwElement2Index, pList->qwLength);
+    _ASSERT(qwElement1Index < pList->qwLength, L"Tried to move element outside the list, index: %d, list length: %d");//, qwElement1Index, pList->qwLength);
+    _ASSERT(qwElement2Index < pList->qwLength, L"Tried to move element outside the list, index: %d, list length: %d");//, qwElement2Index, pList->qwLength);
     PVOID pTemp = KNeoHeapAllocate(pList->qwElementSize);
     memcpy(pTemp, GetListElement(pList, qwElement1Index), pList->qwElementSize); // Backup the first element.
     SetListElement(pList, qwElement1Index, GetListElement(pList, qwElement2Index)); // Move element 2 to element 1.
@@ -51,17 +51,17 @@ void SwapListElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index
 
 PVOID GetListElement(sList *pList, QWORD qwIndex)
 {
-    _ASSERT(pList != NULL, "Tried to get an element from a NULL list");
-    _ASSERT(pList->pData != NULL, "Tried to get an element from a list without data");
-    _ASSERT(qwIndex < pList->qwLength, "Tried to access element outside list, index: %d, list length: %d");//, qwIndex, pList->qwLength);
+    _ASSERT(pList != NULL, L"Tried to get an element from a NULL list");
+    _ASSERT(pList->pData != NULL, L"Tried to get an element from a list without data");
+    _ASSERT(qwIndex < pList->qwLength, L"Tried to access element outside list, index: %d, list length: %d");//, qwIndex, pList->qwLength);
     return (PVOID) ((QWORD) pList->pData + qwIndex * pList->qwElementSize);
 }
 
 PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
 {
-    _ASSERT(pList != NULL, "Tried to set an element in a NULL list");
-    _ASSERT(pList->pData != NULL, "Tried to set an element in a list without data");
-    _ASSERT(qwIndex < pList->qwLength, "Tried to set element outside list, index: %d, list length: %d");//, qwIndex, pList->qwLength);
+    _ASSERT(pList != NULL, L"Tried to set an element in a NULL list");
+    _ASSERT(pList->pData != NULL, L"Tried to set an element in a list without data");
+    _ASSERT(qwIndex < pList->qwLength, L"Tried to set element outside list, index: %d, list length: %d");//, qwIndex, pList->qwLength);
     if (pData == NULL)
         ZeroMemory((PVOID) ((QWORD) pList->pData + qwIndex * pList->qwElementSize), pList->qwElementSize);
     else
@@ -71,18 +71,18 @@ PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
 
 PVOID AddListElement(sList *pList, PVOID pData)
 {
-    _ASSERT(pList != NULL, "Tried to add an element to a NULL list");
-    _ASSERT(pList->pData != NULL, "Tried to add an element to a list without data");
+    _ASSERT(pList != NULL, L"Tried to add an element to a NULL list");
+    _ASSERT(pList->pData != NULL, L"Tried to add an element to a list without data");
     pList->pData = KNeoHeapReAllocate(pList->pData, (++pList->qwLength) * pList->qwElementSize);
-    _ASSERT(pList->pData != NULL, "Failed to allocate memory for an add list operation");
+    _ASSERT(pList->pData != NULL, L"Failed to allocate memory for an add list operation");
     return SetListElement(pList, pList->qwLength - 1, pData);
 }
 
 void RemoveListElement(sList *pList, QWORD qwIndex)
 {
-    // _ASSERT(pList != NULL, "Tried to remove an element from a NULL list");
-    // _ASSERT(pList->pData != NULL, "Tried to remove an element from a list without data");
-    // _ASSERT(qwIndex < pList->qwLength, "Tried to remove list element outside list, index: %d, list length %d");//, qwIndex, pList->qwLength);
+    // _ASSERT(pList != NULL, L"Tried to remove an element from a NULL list");
+    // _ASSERT(pList->pData != NULL, L"Tried to remove an element from a list without data");
+    // _ASSERT(qwIndex < pList->qwLength, L"Tried to remove list element outside list, index: %d, list length %d");//, qwIndex, pList->qwLength);
     // memcpy((PBYTE) pList->pData + qwIndex * pList->qwElementSize, (PBYTE) pList->pData + (qwIndex + 1) * pList->qwElementSize, (pList->qwLength-- - qwIndex) * pList->qwElementSize);
     // pList->pData = KNeoHeapReAllocate(pList->pData, _MAX(1, pList->qwLength) * pList->qwElementSize);
 }

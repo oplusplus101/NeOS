@@ -50,7 +50,7 @@ PVOID AllocatePage()
         return (PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex);
     }
 
-    _KERNEL_PANIC("Out of pages");
+    _KERNEL_PANIC(L"Out of pages");
     
     return NULL;
 }
@@ -79,7 +79,7 @@ PVOID AllocateContinousPages(QWORD qwPages)
     }
 
     
-    _KERNEL_PANIC("Out of pages");
+    _KERNEL_PANIC(L"Out of pages");
     return NULL;
 }
 

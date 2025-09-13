@@ -25,7 +25,7 @@ QWORD __stack_chk_guard = 0x595e9fbd94fda766;
 
 void __stack_chk_fail(void)
 {
-	_KERNEL_PANIC("Stack smashing detected");
+	_KERNEL_PANIC(L"Stack smashing detected");
 }
 
 // The functions below are for the kernel,
@@ -91,28 +91,28 @@ void LoaderMain(sBootData data)
     sGPTPartitionEntry sKernelPartition = GetKernelPartition();
     LoadFAT32(DRIVE_TYPE_AHCI_SATA, sKernelPartition);
 
-    PrintFormat("Loading kernel...\n");
+    PrintFormat(L"Loading kernel...\n");
 
     sFAT32DirectoryEntry sKernelEntry;
-    _ASSERT(GetEntryFromPath(L"NeOS\\NeOS.sys", &sKernelEntry), "Kernel not found at C:\\NeOS\\NeOS.sys");
+    _ASSERT(GetEntryFromPath(L"NeOS\\NeOS.sys", &sKernelEntry), L"Kernel not found at C:\\NeOS\\NeOS.sys");
 
     // Read the kernel
     PBYTE pKernelData = KHeapAlloc(sKernelEntry.dwFileSize);
     ReadDirectoryEntry(&sKernelEntry, pKernelData);
     
     // Parse the file (PE32+)
-    PrintFormat("Loading PE headers...\n");
+    PrintFormat(L"Loading PE headers...\n");
     sMZHeader *pMZHeader = (sMZHeader *) pKernelData;
-    _ASSERT(pMZHeader->wMagic == 0x5A4D, "Invalid DOS stub.");
+    _ASSERT(pMZHeader->wMagic == 0x5A4D, L"Invalid DOS stub.");
 
     sPE32Header *pPEHeader = (sPE32Header *) (pKernelData + 128); // FIXME: Replace the 128 with the proper size of the MZ header
-    _ASSERT(pPEHeader->dwMagic == 0x4550, "Invalid PE32 header.");
-    _ASSERT(pPEHeader->wMachine == 0x8664, "Kernel executable must be 64-bit.");
-    _ASSERT(pPEHeader->wSizeOfOptionalHeader != 0, "Missing PE32 optional header.");
+    _ASSERT(pPEHeader->dwMagic == 0x4550, L"Invalid PE32 header.");
+    _ASSERT(pPEHeader->wMachine == 0x8664, L"Kernel executable must be 64-bit.");
+    _ASSERT(pPEHeader->wSizeOfOptionalHeader != 0, L"Missing PE32 optional header.");
     
     sPE32OptionalHeader *pPEOHeader = (sPE32OptionalHeader *) (pPEHeader + 1);
-    _ASSERT(pPEOHeader->wMagic == 0x020B, "Invalid PE32 optional header.");
-    PrintFormat("Loading sections...\n");
+    _ASSERT(pPEOHeader->wMagic == 0x020B, L"Invalid PE32 optional header.");
+    PrintFormat(L"Loading sections...\n");
 
     // TODO: Add saftey checks to ensure that the entrypoint inside the file matches the expected value (NEOS_KERNEL_LOCATION).
     DisableInterrupts(); // To ensure that everything is loaded in the right order
@@ -121,7 +121,7 @@ void LoaderMain(sBootData data)
         sPE32SectionHeader *hdr = (sPE32SectionHeader *) ((PBYTE) pPEOHeader + pPEHeader->wSizeOfOptionalHeader + sizeof(sPE32SectionHeader) * i);
         QWORD qwAddress = hdr->dwVirtualAddress + pPEOHeader->qwImageBase;
         if (hdr->dwCharacteristics & PE32_SCN_MEM_DISCARDABLE) continue;
-        PrintFormat("Loading section: %s at 0x%p c: 0x%08X\n", hdr->szName, qwAddress, hdr->dwCharacteristics);
+        PrintFormat(L"Loading section: %s at 0x%p c: 0x%08X\n", hdr->szName, qwAddress, hdr->dwCharacteristics);
         memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwPointerToRawData, hdr->dwVirtualSize);
     }
     
@@ -139,10 +139,10 @@ void LoaderMain(sBootData data)
     sHeader.GetFile     = (PVOID (*)(PWCHAR)) GetFile;
     sHeader.ReadFile    = (void (*)(PVOID, PVOID)) ReadDirectoryEntry;
 
-    PrintFormat("Executing C:\\NeOS\\NeOS.sys at 0x%p\n", pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint);
+    PrintFormat(L"Executing C:\\NeOS\\NeOS.sys at 0x%p\n", pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint);
     SetCursor(0, 0);
     ((void (*)(sNEOSKernelHeader)) (pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint))(sHeader);
 
     // Somthing went very wrong
-    _KERNEL_PANIC("The kernel has crashed :/");
+    _KERNEL_PANIC(L"The kernel has crashed :/");
 }

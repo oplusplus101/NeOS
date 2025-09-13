@@ -26,8 +26,8 @@ BOOL CheckDrive(BYTE nDrive)
 // Reads sectors up to 65536 sectors.
 BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
 {
-    _ASSERT(wCount > 0, "Tried to read 0 sectors from drive #%d", nDrive);
-    if (!CheckDrive(nDrive)) _KERNEL_PANIC("Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
+    _ASSERT(wCount > 0, L"Tried to read 0 sectors from drive #%d", nDrive);
+    if (!CheckDrive(nDrive)) _KERNEL_PANIC(L"Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
     switch (nDrive)
     {
     case DRIVE_TYPE_AHCI_SATA:
@@ -56,6 +56,6 @@ BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
 
 BOOL WriteToDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
 {
-    if (!CheckDrive(nDrive)) _KERNEL_PANIC("Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
+    if (!CheckDrive(nDrive)) _KERNEL_PANIC(L"Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
     return false;
 }

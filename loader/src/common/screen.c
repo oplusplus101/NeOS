@@ -409,16 +409,14 @@ void PrintStringW(const PWCHAR wsz)
         PrintChar(wsz[i]);
 }
 
-void PrintFormat(const PCHAR szFormat, ...)
+void PrintFormatVariadic(const PWCHAR wszFormat, __builtin_va_list args)
 {
-    __builtin_va_list args;
-    __builtin_va_start(args, szFormat);
-    for (QWORD i = 0; szFormat[i] != 0; i++)
+    for (QWORD i = 0; wszFormat[i] != 0; i++)
     {
-        if (szFormat[i] == '%')
+        if (wszFormat[i] == '%')
         {
             i++; // Skip the %
-            switch (szFormat[i])
+            switch (wszFormat[i])
             {
             case 'd':
             case 'i':
@@ -459,23 +457,23 @@ void PrintFormat(const PCHAR szFormat, ...)
                 break;
             case 'G': // GUID
                 BYTE *pGUID = __builtin_va_arg(args, BYTE *);
-                PrintFormat("%08X-%04X-%04X-%04X-%12X", *((DWORD *) &pGUID[0]),
-                                                        *((WORD *)  &pGUID[4]),
-                                                        *((WORD *)  &pGUID[6]),
-                                                        _BE2LEW(*((WORD *)  &pGUID[8])),
-                                                        _BE2LE48(*((QWORD *) &pGUID[10])));
+                PrintFormat(L"%08X-%04X-%04X-%04X-%12X", *((DWORD *) &pGUID[0]),
+                                                         *((WORD *)  &pGUID[4]),
+                                                         *((WORD *)  &pGUID[6]),
+                                                         _BE2LEW(*((WORD *)  &pGUID[8])),
+                                                         _BE2LE48(*((QWORD *) &pGUID[10])));
                 break;
             default:
     
-                if (szFormat[i] >= '0' && szFormat[i] <= '9' && szFormat[i + 1] >= '0' && szFormat[i + 1] <= '9')
+                if (wszFormat[i] >= '0' && wszFormat[i] <= '9' && wszFormat[i + 1] >= '0' && wszFormat[i + 1] <= '9')
                 {
-                    BYTE qwDigits = (szFormat[i] - '0') * 10 + (szFormat[i + 1] - '0');
+                    BYTE qwDigits = (wszFormat[i] - '0') * 10 + (wszFormat[i + 1] - '0');
                     i += 2;
-                    if (szFormat[i] == 'X')
+                    if (wszFormat[i] == 'X')
                         PrintHex(__builtin_va_arg(args, QWORD), qwDigits, true);
-                    else if (szFormat[i] == 'x')
+                    else if (wszFormat[i] == 'x')
                         PrintHex(__builtin_va_arg(args, QWORD), qwDigits, false);
-                    else if (szFormat[i] == 's')
+                    else if (wszFormat[i] == 's')
                         for (BYTE j = 0; j < qwDigits; j++)
                             PrintChar(__builtin_va_arg(args, const PCHAR)[j]);
                 }
@@ -483,8 +481,15 @@ void PrintFormat(const PCHAR szFormat, ...)
             
         }
         else
-            PrintChar(szFormat[i]);
+            PrintChar(wszFormat[i]);
     }
+}
+
+void PrintFormat(const PWCHAR wszFormat, ...)
+{
+    __builtin_va_list args;
+    __builtin_va_start(args, wszFormat);
+    PrintFormatVariadic(wszFormat, args);
     __builtin_va_end(args);
 }
 
@@ -528,7 +533,7 @@ void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII)
 {
     for (QWORD i = 0; i < qwLength; i++)
     {
-        PrintFormat("%02X ", ((BYTE *) pBuffer)[i]);
+        PrintFormat(L"%02X ", ((BYTE *) pBuffer)[i]);
         if (i % wBytesPerLine == wBytesPerLine - 1)
         {
             SetControlCharState(false);

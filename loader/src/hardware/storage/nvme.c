@@ -21,11 +21,11 @@ void SetupNVMe(BYTE nBus, BYTE nSlot, BYTE nFunction)
     MapPageToIdentity(NULL, (PVOID) g_nNVMeBaseAddress, PF_WRITEABLE | PF_CACHEDISABLE);
 
     if (!CreateAdminSubmissionQueue(&g_adminSubmissionQueue))
-        _KERNEL_PANIC("Failed to create an admin submission queue for NVMe");
+        _KERNEL_PANIC(L"Failed to create an admin submission queue for NVMe");
     if (!CreateAdminCompletionQueue(&g_adminCompletionQueue))
-        _KERNEL_PANIC("Failed to create an admin completion queue for NVMe");
+        _KERNEL_PANIC(L"Failed to create an admin completion queue for NVMe");
 
-    PrintFormat("NVMe Loaded! BUS=0x%02X, SLOT=0x%02X, FUNC=0x%02X, BAR: 0x%p\n", nBus, nSlot, nFunction, g_nNVMeBaseAddress);
+    PrintFormat(L"NVMe Loaded! BUS=0x%02X, SLOT=0x%02X, FUNC=0x%02X, BAR: 0x%p\n", nBus, nSlot, nFunction, g_nNVMeBaseAddress);
 }
 
 QWORD qwVMeReadRegister(QWORD qwOffset)

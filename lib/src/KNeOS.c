@@ -63,6 +63,12 @@ FUNC_EXPORT void KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, void (*pCall
     __asm__ volatile ("int $0x81" : : "a"(0x32), "b"(bInterrupt), "c"(bRing), "d"(pCallback));
 }
 
+FUNC_EXPORT void KNeoLog(PWCHAR wszMessage, BYTE bCode)
+{
+    __asm__ volatile ("int $0x81" : : "a"(0x33), "b"(wszMessage), "c"(bCode));
+}
+
+
 FUNC_EXPORT INT KNeoGetCurrentPID()
 {
     INT iPID;

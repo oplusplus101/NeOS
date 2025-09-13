@@ -33,7 +33,7 @@ void ReadCluster(DWORD dwCurrentCluster, PVOID pBuffer)
 BOOL SearchForFileInCluster(PWCHAR wszEntryName, DWORD dwCluster, sFAT32DirectoryEntry *pEntry)
 {
     PBYTE pBuffer = KHeapAlloc(g_wBytesPerCluster);
-    _ASSERT(pBuffer, "Could not allocate memory for file search");
+    _ASSERT(pBuffer, L"Could not allocate memory for file search");
     WCHAR wszLongFileNameBuffer[256];
     ZeroMemory(wszLongFileNameBuffer, 256 * sizeof(WCHAR));
     BOOL bLastLFNEntry = false;
@@ -107,7 +107,7 @@ void ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer)
 {
     DWORD dwFileSize = pEntry->dwFileSize;
     PVOID pClusterBuffer = KHeapAlloc(g_wBytesPerCluster);
-    _ASSERT(pClusterBuffer != NULL, "Could not allocate memory for directory read");
+    _ASSERT(pClusterBuffer != NULL, L"Could not allocate memory for directory read");
     
     for (DWORD dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow;
          dwFileSize != 0;

@@ -12,12 +12,12 @@ void PrintStack(QWORD qwRSP)
 void PrintRegs(QWORD qwRSP)
 {
     sCPUState *pState = (sCPUState *) qwRSP; 
-    PrintFormat("RAX=%p RBX=%p RCX=%p RDX=%p\n", pState->qwRAX, pState->qwRBX, pState->qwRCX, pState->qwRDX, pState->qwRSI, pState->qwRDI);
-    PrintFormat("RSI=%p RDI=%p RBP=%p RSP=%p\n", pState->qwRSI, pState->qwRDI, pState->qwRBP, pState->qwRSP);
-    PrintFormat("R8 =%p R9 =%p R10=%p R11=%p\n", pState->qwR8 , pState->qwR9 , pState->qwR10, pState->qwR11); 
-    PrintFormat("R12=%p R13=%p R14=%p R15=%p\n", pState->qwR12, pState->qwR13, pState->qwR14, pState->qwR15); 
-    PrintFormat("CS=%p SS=%p\n", pState->qwCS, pState->qwSS);
-    PrintFormat("RFLAGS=%08X [", pState->qwFlags);
+    PrintFormat(L"RAX=%p RBX=%p RCX=%p RDX=%p\n", pState->qwRAX, pState->qwRBX, pState->qwRCX, pState->qwRDX, pState->qwRSI, pState->qwRDI);
+    PrintFormat(L"RSI=%p RDI=%p RBP=%p RSP=%p\n", pState->qwRSI, pState->qwRDI, pState->qwRBP, pState->qwRSP);
+    PrintFormat(L"R8 =%p R9 =%p R10=%p R11=%p\n", pState->qwR8 , pState->qwR9 , pState->qwR10, pState->qwR11); 
+    PrintFormat(L"R12=%p R13=%p R14=%p R15=%p\n", pState->qwR12, pState->qwR13, pState->qwR14, pState->qwR15); 
+    PrintFormat(L"CS=%p SS=%p\n", pState->qwCS, pState->qwSS);
+    PrintFormat(L"RFLAGS=%08X [", pState->qwFlags);
     PCHAR sFlagLetters = "C-P-A-ZSTIDOINMR";
 
     for (SHORT i = 15; i >= 0; i--)
@@ -25,85 +25,85 @@ void PrintRegs(QWORD qwRSP)
         if (i == 1 || i == 3 || i == 5) continue;
         PrintChar(pState->qwFlags & (1 << i) ? sFlagLetters[i] : '-');
     }
-    PrintFormat("] Error=%p\n", pState->qwError);
+    PrintFormat(L"] Error=%p\n", pState->qwError);
 }
 
 QWORD Exception0(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Division by zero");
+    _KERNEL_PANIC(L"Division by zero");
     return qwRSP;
 }
 
 QWORD Exception1(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Debug");
+    _KERNEL_PANIC(L"Debug");
     return qwRSP;
 }
 
 QWORD Exception2(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Non-maskable interrupt");
+    _KERNEL_PANIC(L"Non-maskable interrupt");
     return qwRSP;
 }
 
 QWORD Exception3(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Breakpoint");
+    _KERNEL_PANIC(L"Breakpoint");
     return qwRSP;
 }
 
 QWORD Exception4(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Overflow");
+    _KERNEL_PANIC(L"Overflow");
     return qwRSP;
 }
 
 QWORD Exception5(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Bound range error");
+    _KERNEL_PANIC(L"Bound range error");
     return qwRSP;
 }
 
 QWORD Exception6(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Invalid opcode");
+    _KERNEL_PANIC(L"Invalid opcode");
     return qwRSP;
 }
 
 QWORD Exception7(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Device not available");
+    _KERNEL_PANIC(L"Device not available");
     return qwRSP;
 }
 
 QWORD Exception8(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Double fault");
+    _KERNEL_PANIC(L"Double fault");
     return qwRSP;
 }
 
 QWORD Exception10(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC_EC(nErrorCode, "Invalid TSS");
+    _KERNEL_PANIC_EC(nErrorCode, L"Invalid TSS");
     return qwRSP;
 }
 
 QWORD Exception11(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC_EC(nErrorCode, "Segment not present");
+    _KERNEL_PANIC_EC(nErrorCode, L"Segment not present");
     return qwRSP;
 }
 
 QWORD Exception12(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC_EC(nErrorCode, "Stack segment fault");
+    _KERNEL_PANIC_EC(nErrorCode, L"Stack segment fault");
     return qwRSP;
 }
 
 QWORD Exception13(QWORD qwRSP, BYTE nErrorCode)
 {
     PrintRegs(qwRSP);
-    _KERNEL_PANIC_EC(nErrorCode, "General protection fault");
+    _KERNEL_PANIC_EC(nErrorCode, L"General protection fault");
     return qwRSP;
 }
 
@@ -116,76 +116,76 @@ QWORD Exception14(QWORD qwRSP, BYTE nErrorCode)
     switch (nErrorCode & 7)
     {
     case 0b000:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a non-present page entry\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"Supervisory process tried to read a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b001:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     case 0b010:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write to a non-present page entry\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"Supervisory process tried to write to a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b011:
-        _KERNEL_PANIC_EC(nErrorCode, "Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     case 0b100:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a non-present page entry\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"User process tried to read a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b101:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to read a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"User process tried to read a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     case 0b110:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to write to a non-present page entry\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"User process tried to write to a non-present page entry\nAddress: 0x%p", nExceptionAddress);
     case 0b111:
-        _KERNEL_PANIC_EC(nErrorCode, "User process tried to write a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
+        _KERNEL_PANIC_EC(nErrorCode, L"User process tried to write a page and caused a protection fault\nAddress: 0x%p", nExceptionAddress);
     }
     return qwRSP;
 }
 
 QWORD Exception16(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("x87 Floating point error");
+    _KERNEL_PANIC(L"x87 Floating point error");
     return qwRSP;
 }
 
 QWORD Exception17(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC_EC(nErrorCode, "Alignment check");
+    _KERNEL_PANIC_EC(nErrorCode, L"Alignment check");
     return qwRSP;
 }
 
 QWORD Exception18(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Machine check");
+    _KERNEL_PANIC(L"Machine check");
     return qwRSP;
 }
 
 QWORD Exception19(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("SIMD Floating point error");
+    _KERNEL_PANIC(L"SIMD Floating point error");
     return qwRSP;
 }
 
 QWORD Exception20(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Virtualization error");
+    _KERNEL_PANIC(L"Virtualization error");
     return qwRSP;
 }
 
 QWORD Exception21(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC_EC(nErrorCode, "Control protection error");
+    _KERNEL_PANIC_EC(nErrorCode, L"Control protection error");
     return qwRSP;
 }
 
 QWORD Exception28(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC("Hypervisor injection error");
+    _KERNEL_PANIC(L"Hypervisor injection error");
     return qwRSP;
 }
 
 QWORD Exception29(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC_EC(nErrorCode, "VMM communication error");
+    _KERNEL_PANIC_EC(nErrorCode, L"VMM communication error");
     return qwRSP;
 }
 
 QWORD Exception30(QWORD qwRSP, BYTE nErrorCode)
 {
-    _KERNEL_PANIC_EC(nErrorCode, "Security error");
+    _KERNEL_PANIC_EC(nErrorCode, L"Security error");
     return qwRSP;
 }
 

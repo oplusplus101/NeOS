@@ -69,6 +69,7 @@ INT KNeoCallDriver(sDriverObject *pDriverObject, sIORequestPacket *pIRP);
 
 void KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags);
 void KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, void (*pCallback)());
+void KNeoLog(PWCHAR wszMessage, BYTE bCode);
 
 INT KNeoGetCurrentPID();
 INT KNeoStartProcess(void (*pEntryPoint), QWORD qwStackSize);

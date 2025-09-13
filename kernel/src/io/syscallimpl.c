@@ -176,6 +176,15 @@ void Syscall_KNeoRegisterInterrupt(sCPUState *pCPUState)
         RegisterInterrupt(pCPUState->qwRBX, (ISR) pCPUState->qwRDX);
 }
 
+// Code: 0x0033
+// RBX is a the log string (wide string)
+// RCX is the log type (0 is log, 1 is warning, 2 is error)
+void Syscall_KNeoLog(sCPUState *pCPUState)
+{
+   
+}
+
+
 // 0x40 - 0x4F Process stuff
 
 // Code: 0x0040
@@ -262,6 +271,7 @@ void RegisterSyscalls()
     RegisterSyscall(0x0030, 0, Syscall_KNeoRegisterSyscall);
     RegisterSyscall(0x0031, 0, Syscall_KNeoClearSyscall);
     RegisterSyscall(0x0032, 0, Syscall_KNeoRegisterInterrupt);
+    RegisterSyscall(0x0033, 0, Syscall_KNeoLog);
 
     RegisterSyscall(0x0040, 0, Syscall_KNeoGetCurrentPID);
     RegisterSyscall(0x0041, 0, Syscall_KNeoStartProcess);

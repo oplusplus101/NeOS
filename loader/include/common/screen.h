@@ -19,7 +19,8 @@ void PrintString(const PCHAR sz);
 void PrintStringW(const PWCHAR wsz);
 void PrintDec(QWORD qw);
 void PrintHex(QWORD qw, BYTE nDigits, BOOL bUppercase);
-void PrintFormat(const PCHAR sFormat, ...);
+void PrintFormatVariadic(const PWCHAR wszFormat, __builtin_va_list args);
+void PrintFormat(const PWCHAR wszFormat, ...);
 void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII);
 void FillRectangle(int x, int y, int w, int h, color_t c);
 

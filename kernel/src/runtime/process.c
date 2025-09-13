@@ -50,7 +50,7 @@ INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pPa
 
     // Keep an unaligned copy of the stack so it can be freed
     sProc.pStackUnaligned    = KHeapAlloc(qwStackSize + 16);
-    _ASSERT(sProc.pStackUnaligned != NULL, "Could not allocate memory for executable: %w", wszName);
+    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for executable: %w", wszName);
     QWORD qwAlignOffset      = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
     // Align the stack
     sProc.pStack             = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
@@ -98,7 +98,7 @@ INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pPa
 
 INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner, BYTE nState)
 {
-    _ASSERT(qwStackSize >= 256, "Stack must be at least 256 bytes");
+    _ASSERT(qwStackSize >= 256, L"Stack must be at least 256 bytes");
     sProcess sProc;
     if (wszName == NULL)
         *sProc.wszName = 0;
@@ -115,7 +115,7 @@ INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE n
 
     // Keep an unaligned copy of the stack so it can be freed
     sProc.pStackUnaligned = KHeapAlloc(qwStackSize + 16);
-    _ASSERT(sProc.pStackUnaligned != NULL, "Could not allocate memory for process: %w", wszName);
+    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for process: %w", wszName);
     QWORD qwAlignOffset   = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
     // Align the stack
     sProc.pStack          = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
@@ -156,7 +156,7 @@ void KillProcess(INT iPID, PWCHAR wszReason)
 {
     if (!DoesProcessExist(iPID)) return;
     SetFGColor(NEOS_ERROR_COLOR);
-    PrintFormat("Process %w with PID %d was killed: %w\n", GetProcess(iPID)->wszName, iPID, wszReason);
+    PrintFormat(L"Process %w with PID %d was killed: %w\n", GetProcess(iPID)->wszName, iPID, wszReason);
     SetFGColor(NEOS_FOREGROUND_COLOR);
     StopProcess(iPID);
 }
@@ -203,7 +203,7 @@ QWORD ScheduleProcesses(QWORD qwRSP)
         {
             KHeapFree(pProcess->pStackUnaligned);
             FreePML4(pProcess->pPML4);
-            PrintFormat("Killing %d\n", g_iCurrentProcessIndex);
+            PrintFormat(L"Killing %d\n", g_iCurrentProcessIndex);
             RemoveListElement(&g_lstProcesses, g_iCurrentProcessIndex);
         }
         

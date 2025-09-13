@@ -113,7 +113,7 @@ int FindCommandSlot(sHBAPort *pPort)
         if ((dwSlots & 0x01) == 0) return i;
         dwSlots >>= 1;
     }
-    _KERNEL_PANIC("Cannot find free command list entry\n");
+    _KERNEL_PANIC(L"Cannot find free command list entry\n");
     return -1;
 }
 
@@ -166,7 +166,7 @@ BOOL AHCIRead(sHBAPort *pPort, QWORD nStart, WORD wCount, WORD *pBuffer)
 
     if (nSpin == 1000000)
     {
-        _KERNEL_PANIC("Port is hung\n");
+        _KERNEL_PANIC(L"Port is hung\n");
         return false;
     }
 
@@ -180,7 +180,7 @@ BOOL AHCIRead(sHBAPort *pPort, QWORD nStart, WORD wCount, WORD *pBuffer)
 
         if (pPort->dwInterruptStatus & HBA_PxIS_TFES) // Task file error
         {
-            _KERNEL_PANIC("Task file error while reading %d sectors from LBA #%u\n", wCount, nStart);
+            _KERNEL_PANIC(L"Task file error while reading %d sectors from LBA #%u\n", wCount, nStart);
             return false;
         }
     }
@@ -188,7 +188,7 @@ BOOL AHCIRead(sHBAPort *pPort, QWORD nStart, WORD wCount, WORD *pBuffer)
     // Check again
     if (pPort->dwInterruptStatus & HBA_PxIS_TFES)
     {
-        _KERNEL_PANIC("Read disk error\n");
+        _KERNEL_PANIC(L"Read disk error\n");
         return false;
     }
 

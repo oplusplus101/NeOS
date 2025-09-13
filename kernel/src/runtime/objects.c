@@ -148,8 +148,6 @@ sObject *CreateObjectDirectory(PWCHAR wszPath)
     sObjectDirectory *pDirectory = KHeapAlloc(sizeof(sObjectDirectory));
     pDirectory->lstChildren      = CreateEmptyList(sizeof(sObject *));
     
-    PrintFormat("Creating directory: %w\n", wszPath);
-    
     return CreateObject(wszPath, g_pDirectoryType, pDirectory);
 }
 
@@ -267,7 +265,7 @@ void PrintObjectTree(sObject *pObject, DWORD dwCurrentDepth)
     if (pObject == NULL && dwCurrentDepth == 0)
         pObject = g_pRootDirectoryObject;
     if (dwCurrentDepth == 0)
-        PrintFormat("%w\n", pObject->wszName);
+        PrintFormat(L"%w\n", pObject->wszName);
     
     sObjectDirectory *pDirectory = pObject->pBody;
     
@@ -283,7 +281,7 @@ void PrintObjectTree(sObject *pObject, DWORD dwCurrentDepth)
         else
             PrintString("\xC3\xC4"); // ├─
             
-        PrintFormat("%w\n", pObject);
+        PrintFormat(L"%w\n", pObject);
 
         if (pObject->pType == g_pDirectoryType)
             PrintObjectTree(pObject, dwCurrentDepth + 1);
