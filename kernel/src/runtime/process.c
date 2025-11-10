@@ -2,13 +2,13 @@
 #include <runtime/process.h>
 #include <runtime/exe.h>
 #include <hardware/gdt.h>
-#include <common/screen.h>
 #include <common/memory.h>
 #include <common/string.h>
 #include <common/panic.h>
 #include <memory/heap.h>
 #include <io/timer.h>
 #include <neos.h>
+#include <loaderfunctions.h>
 
 sList g_lstProcesses;
 INT   g_iCurrentProcessIndex;
@@ -79,7 +79,7 @@ INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pPa
     sProc.pCPUState->qwRBP   = 0;
 
     sProc.pCPUState->qwRSP   = (QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState) - qwParamSizeBytes;
-    sProc.pCPUState->qwRIP   = (QWORD) pEXE->pEntryPoint;
+    sProc.pCPUState->qwRIP   = (QWORD) pEXE->qwEntryPoint;
     sProc.pCPUState->qwCS    = KERNEL_CODE_SEGMENT;
     sProc.pCPUState->qwFlags = 0x0202; // Set the reserved and interrupt enable flags
 

@@ -4,6 +4,7 @@
 #include <memory/paging.h>
 #include <common/memory.h>
 #include <common/panic.h>
+#include <common/log.h>
 
 QWORD g_nNVMeBaseAddress;
 QWORD g_nCompletionHead, g_nSubmissionQueueTail;

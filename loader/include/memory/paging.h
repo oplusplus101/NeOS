@@ -65,11 +65,12 @@ PVOID GetPhysicalAddress(sPageTable *pPML4, PVOID pVirtualAddress);
 sPageTable *ClonePML4(sPageTable *pTable);
 sPageTable *GetKernelPML4();
 sPageTable *GetCurrentPML4();
-sPageTable *CreateEmptyPML4();
+sPageTable *CreateEmptyPML4(WORD wFlags);
 void LoadPML4(sPageTable *pTable);
 sPagingData ExportPagingData();
 void ImportPagingData(sPagingData sData);
 void FreePML4(sPageTable *pTable);
+QWORD PML4Hash(sPageTable *pPML4);
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
                 QWORD qwMemoryMapSize, QWORD qwMemoryDescriptorSize,

@@ -3,11 +3,11 @@
 #include <runtime/process.h>
 #include <common/string.h>
 #include <common/memory.h>
-#include <common/screen.h>
 #include <io/io.h>
 #include <neos.h>
+#include <loaderfunctions.h>
 
-sList g_lstDrivers;
+sObjectType *g_pDriverObjectType;
 
 INT DispatchDriverIRP(sDriverObject *pDriver, sIORequestPacket *pIRP)
 {
@@ -24,59 +24,84 @@ INT DispatchDriverIRP(sDriverObject *pDriver, sIORequestPacket *pIRP)
     return iStatus;
 }
 
-sDriver *GetDriver(PWCHAR wszName)
+sObject *GetDriver(PWCHAR wszName)
 {
-    for (QWORD i = 0; i < g_lstDrivers.qwLength; i++)
-    {
-        sDriver *pDriver = GetListElement(&g_lstDrivers, i);
-        if (!strcmpW(pDriver->wszName, wszName))
-        return pDriver;
-    }
-    
-    return NULL;
+    WCHAR wszPath[256];
+    strcpyW(wszPath, L"Drivers\\");
+    strcatW(wszPath, wszName);
+    return LookupObject(wszPath, NULL);
 }
 
 INT LoadDriver(sExecutable *pDriverExecutable, PWCHAR wszName)
 {
     sDriverObject *pObject = KHeapAlloc(sizeof(sDriverObject));
     ZeroMemory(pObject, sizeof(sDriverObject));
-    pObject->pDriverEntry = (INT (*)(struct _tagDriverObject *)) (QWORD) pDriverExecutable->pEntryPoint;
+    pObject->pDriverEntry = (INT (*)(struct _tagDriverObject *)) (QWORD) (pDriverExecutable->qwEntryPoint + pDriverExecutable->qwBaseAddress);
 
+
+    Log(LOG_LOG, L"ENTRY %p", pObject->pDriverEntry);
+    
     sPageTable *pCurrentPML4 = GetCurrentPML4();
-    sPageTable *pPML4Clone = ClonePML4(pCurrentPML4);
+    pObject->pPML4 = pDriverExecutable->pPageTable;
+    // Log(LOG_LOG, L"CURR: %p\n", PML4Hash(pCurrentPML4));
+    // Log(LOG_LOG, L"POBJ: %p\n", PML4Hash(pObject->pPML4));
 
-    for (WORD i = 0; i < pDriverExecutable->lstSections.qwLength; i++)
+    for (;;);
+    // PML4
+    for (WORD i = 0; i < PAGE_TABLE_SIZE; i++)
     {
-        sExecutableSection *pSection = GetListElement(&pDriverExecutable->lstSections, i);
-        if (pSection->szName[0] != '.' || pSection->qwVirtualAddress == 0)
-            continue;
+        if (!(pObject->pPML4->arrEntries[i].wFlags & PF_PRESENT)) continue;
+        sPageTable *pPageDirectory = (sPageTable *) _PAGE_TO_ADDRESS(pObject->pPML4->arrEntries[i].qwAddress);
 
-        if (pSection->qwVirtualAddress >= NEOS_KERNEL_LOC_LOW &&
-            pSection->qwVirtualAddress <= NEOS_KERNEL_LOC_LOW) return NEOS_FAILURE;
-        
-        MapPageRange(pPML4Clone, (PVOID) pSection->qwVirtualAddress, pSection->pData, _BYTES_TO_PAGES(pSection->dwVirtualSize), PF_WRITEABLE);
+        // Page Directory
+        for (WORD j = 0; j < PAGE_TABLE_SIZE; j++)
+        {
+            if (!(pPageDirectory->arrEntries[j].wFlags & PF_PRESENT)) continue;
+            sPageTable *pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(pPageDirectory->arrEntries[j].qwAddress);
+
+            // Page Table
+            for (WORD k = 0; k < PAGE_TABLE_SIZE; k++)
+            {
+                if (!(pPageTable->arrEntries[k].wFlags & PF_PRESENT)) continue;
+                sPageTable *pPageEntry = (sPageTable *) _PAGE_TO_ADDRESS(pPageTable->arrEntries[k].qwAddress);
+                QWORD qVA = (QWORD) k * 4096 * 4096 +
+                            (QWORD) j * 4096 * 4096 * 4096 +
+                            (QWORD) i * 4096 * 4096 * 4096 * 4096;
+                Log(LOG_LOG, L"VA %p PA %p", qVA, _PAGE_TO_ADDRESS(pPageEntry->arrEntries[0].qwAddress), GetPhysicalAddress(pObject->pPML4, (PVOID) qVA));
+                for (QWORD l = 0; l < 0xffffff; l++) __asm__ volatile ("nop");
+            }
+        }
     }
-    
-    pObject->pPML4 = pPML4Clone;
-    
-    LoadPML4(pPML4Clone);
+
+    Log(LOG_LOG, L"Starting driver...");
+    PrintFormat(L"CPT: %p\n", pObject->pPML4);
+    LoadPML4(pObject->pPML4);
     INT iStatus = pObject->pDriverEntry(pObject);
     LoadPML4(pCurrentPML4);
+    for (;;);
     
     sDriver sDrv =
     {
         .pDriverObject = pObject,
         .pExecutable   = pDriverExecutable
     };
-    
-    strcpyW(sDrv.wszName, wszName);
 
-    AddListElement(&g_lstDrivers, &sDrv);
+    strcpyW(sDrv.wszName, wszName);
     
+    WCHAR wszPath[256];
+    strcpyW(wszPath, L"Drivers\\");
+    strcatW(wszPath, wszName);
+    CreateObject(wszPath, g_pDriverObjectType, &sDrv);
+
     return iStatus;
+}
+
+void DestroyDriver(sObject *pObject)
+{
+
 }
 
 void InitDriverManager()
 {
-    g_lstDrivers = CreateEmptyList(sizeof(sDriver));
+    g_pDriverObjectType = CreateType(L"Driver", sizeof(sDriver), DestroyDriver);
 }

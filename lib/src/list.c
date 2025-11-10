@@ -1,9 +1,9 @@
 
-#include <KNeOS.h>
+#define DLL_BUILD
 #include <NeoList.h>
 #include <NeoMemory.h>
 
-sList CreateEmptyList(QWORD qwElementSize)
+FUNC_EXPORT sList CreateEmptyList(QWORD qwElementSize)
 {
     sList list;
     list.pData = KNeoHeapAllocate(qwElementSize);
@@ -12,7 +12,7 @@ sList CreateEmptyList(QWORD qwElementSize)
     return list;
 }
 
-sList CreateSizedList(QWORD qwLength, QWORD qwElementSize)
+FUNC_EXPORT sList CreateSizedList(QWORD qwLength, QWORD qwElementSize)
 {
     sList list;
     list.pData = KNeoHeapAllocate(qwElementSize * qwLength);
@@ -22,20 +22,20 @@ sList CreateSizedList(QWORD qwLength, QWORD qwElementSize)
     return list;
 }
 
-void DestroyList(sList *pList)
+FUNC_EXPORT void DestroyList(sList *pList)
 {
     KNeoHeapFree(pList->pData);
     pList->qwLength = 0;
     pList->qwElementSize = 0;
 }
 
-void ClearList(sList *pList)
+FUNC_EXPORT void ClearList(sList *pList)
 {
     pList->qwLength = 1;
     pList->pData = KNeoHeapReAllocate(pList->pData, pList->qwElementSize);
 }
 
-void SwapListElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index)
+FUNC_EXPORT void SwapListElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index)
 {
     _ASSERT(pList != NULL, L"Tried to swap elements in a NULL list");
     _ASSERT(pList->pData != NULL, L"Tried to swap elements in a list without data");
@@ -49,7 +49,7 @@ void SwapListElements(sList *pList, QWORD qwElement1Index, QWORD qwElement2Index
     KNeoHeapFree(pTemp);
 }
 
-PVOID GetListElement(sList *pList, QWORD qwIndex)
+FUNC_EXPORT PVOID GetListElement(sList *pList, QWORD qwIndex)
 {
     _ASSERT(pList != NULL, L"Tried to get an element from a NULL list");
     _ASSERT(pList->pData != NULL, L"Tried to get an element from a list without data");
@@ -57,7 +57,7 @@ PVOID GetListElement(sList *pList, QWORD qwIndex)
     return (PVOID) ((QWORD) pList->pData + qwIndex * pList->qwElementSize);
 }
 
-PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
+FUNC_EXPORT PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
 {
     _ASSERT(pList != NULL, L"Tried to set an element in a NULL list");
     _ASSERT(pList->pData != NULL, L"Tried to set an element in a list without data");
@@ -69,7 +69,7 @@ PVOID SetListElement(sList *pList, QWORD qwIndex, PVOID pData)
     return (PVOID) ((QWORD) pList->pData + qwIndex * pList->qwElementSize);
 }
 
-PVOID AddListElement(sList *pList, PVOID pData)
+FUNC_EXPORT PVOID AddListElement(sList *pList, PVOID pData)
 {
     _ASSERT(pList != NULL, L"Tried to add an element to a NULL list");
     _ASSERT(pList->pData != NULL, L"Tried to add an element to a list without data");
@@ -78,7 +78,7 @@ PVOID AddListElement(sList *pList, PVOID pData)
     return SetListElement(pList, pList->qwLength - 1, pData);
 }
 
-void RemoveListElement(sList *pList, QWORD qwIndex)
+FUNC_EXPORT void RemoveListElement(sList *pList, QWORD qwIndex)
 {
     // _ASSERT(pList != NULL, L"Tried to remove an element from a NULL list");
     // _ASSERT(pList->pData != NULL, L"Tried to remove an element from a list without data");

@@ -3,6 +3,7 @@
 #include <hardware/storage/drive.h>
 #include <memory/heap.h>
 #include <common/screen.h>
+#include <common/log.h>
 #include <common/panic.h>
 #include <common/string.h>
 #include <common/memory.h>
@@ -103,31 +104,41 @@ BOOL GetEntryFromPath(PWCHAR wszPath, sFAT32DirectoryEntry *pEntry)
 
 // Reads the entire file into pBuffer
 // Returns the total amount read
-void ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer)
+QWORD ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer, QWORD qwSize, QWORD qwPosition)
 {
+    _ASSERT(pEntry != NULL, L"A NULL directory entry was passed");
     DWORD dwFileSize = pEntry->dwFileSize;
     PVOID pClusterBuffer = KHeapAlloc(g_wBytesPerCluster);
+    QWORD qwTotalReadSize = 0;
     _ASSERT(pClusterBuffer != NULL, L"Could not allocate memory for directory read");
+    _ASSERT(qwPosition + qwSize <= dwFileSize, L"Tried to read outside file");
+
+    DWORD dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow;
+
+    for (; qwPosition >= g_wBytesPerCluster; qwPosition -= g_wBytesPerCluster)
+        dwCurrentCluster = GetNextCluster(dwCurrentCluster);
     
-    for (DWORD dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow;
-         dwFileSize != 0;
+    for (; qwSize != 0;
          dwCurrentCluster = GetNextCluster(dwCurrentCluster),
          pBuffer = (PBYTE) pBuffer + g_wBytesPerCluster)
     {
         ReadCluster(dwCurrentCluster, pClusterBuffer);
-        if (dwFileSize >= g_wBytesPerCluster)
+        if (qwSize >= g_wBytesPerCluster)
         {
-            dwFileSize -= g_wBytesPerCluster;
-            memcpy(pBuffer, pClusterBuffer, g_wBytesPerCluster);
+            qwSize -= g_wBytesPerCluster;
+            qwTotalReadSize += g_wBytesPerCluster;
+            memcpy(pBuffer, (PBYTE) pClusterBuffer + qwPosition, g_wBytesPerCluster);
         }
         else
         {
-            memcpy(pBuffer, pClusterBuffer, dwFileSize);
-            dwFileSize = 0;
+            memcpy(pBuffer, (PBYTE) pClusterBuffer + qwPosition, qwSize);
+            qwTotalReadSize += qwSize;
+            qwSize = 0;
         }
     }
 
     KHeapFree(pClusterBuffer);
+    return qwTotalReadSize;
 }
 
 void LoadFAT32(BYTE nDrive, sGPTPartitionEntry kernelPartition)

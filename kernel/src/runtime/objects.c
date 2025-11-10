@@ -1,8 +1,10 @@
 
 #include <runtime/objects.h>
-#include <common/string.h>
-#include <common/screen.h>
+#include <common/memory.h>
 #include <memory/heap.h>
+#include <common/string.h>
+#include <loaderfunctions.h>
+
 
 sObject *g_pRootDirectoryObject;
 sObjectType *g_pDirectoryType;
@@ -42,7 +44,6 @@ void DestroyDirectoryCallback(sObject *pObject)
         if (pChild == pObject)
             RemoveListElement(pParentList, i);
     }
-    
 }
 
 ////////////////////////////////
@@ -103,8 +104,9 @@ sObject *CreateObject(PWCHAR wszPath, sObjectType *pType, PVOID pBody)
     sObject *pObject          = KHeapAlloc(sizeof(sObject));
     pObject->dwReferenceCount = 1;
     pObject->pType            = pType;
-    pObject->pBody            = pBody;
+    pObject->pBody            = KHeapAlloc(pType->qwBodySize);
     pObject->pParent          = pDirectoryObject;
+    memcpy(pObject->pBody, pBody, pType->qwBodySize);
     strncpyW(pObject->wszName, wszCurrentName, 256);
 
     sObjectDirectory *pDirBody = (sObjectDirectory *) pDirectoryObject->pBody;
@@ -145,10 +147,10 @@ sObject *LookupObject(PWCHAR wszPath, sObject *pParent)
 
 sObject *CreateObjectDirectory(PWCHAR wszPath)
 {
-    sObjectDirectory *pDirectory = KHeapAlloc(sizeof(sObjectDirectory));
-    pDirectory->lstChildren      = CreateEmptyList(sizeof(sObject *));
+    sObjectDirectory sDirectory;
+    sDirectory.lstChildren = CreateEmptyList(sizeof(sObject *));
     
-    return CreateObject(wszPath, g_pDirectoryType, pDirectory);
+    return CreateObject(wszPath, g_pDirectoryType, &sDirectory);
 }
 
 sObjectType *CreateType(PWCHAR wszName, QWORD qwBodySize, void (*pDestroyCallback)(sObject *))
@@ -164,7 +166,6 @@ void DestroyType(sObjectType *pType)
 {
     KHeapFree(pType);
 }
-
 
 void DestroyObjectByReference(sObject *pObject)
 {

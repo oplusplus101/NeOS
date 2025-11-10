@@ -1,11 +1,13 @@
 
 #include <hardware/storage/ahci.h>
 #include <hardware/storage/drive.h>
-#include <memory/paging.h>
-#include <common/screen.h>
-#include <common/panic.h>
-#include <common/memory.h>
 #include <hardware/pci.h>
+#include <memory/paging.h>
+
+#include <common/screen.h>
+#include <common/memory.h>
+#include <common/panic.h>
+#include <common/log.h>
 
 sHBAPort *g_arrDevicePorts[32];
 DWORD g_nActiveDevices;

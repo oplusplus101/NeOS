@@ -58,3 +58,4 @@ OVMF
 obj
 build
 run.sh
+build

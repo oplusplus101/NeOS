@@ -3,6 +3,7 @@
 #include <hardware/storage/drive.h>
 #include <common/panic.h>
 #include <common/memory.h>
+#include <common/log.h>
 
 static sGPTPartitionEntry g_arrPartitionEntries[128];
 static sGPTPartitionEntry g_kernelPartition;
@@ -13,12 +14,12 @@ void LoadGPT(BYTE nDrive)
 {
     sGPTProtectiveMasterBootRecord mbr;
     _ASSERT(ReadFromDrive(nDrive, 0, 1, &mbr), L"GPT: Could not read LBA 0 from Drive #%d", nDrive);
-    PrintString("GPT: LBA 0 loaded\n");
+    Log(LOG_LOG, L"GPT: LBA 0 loaded");
     sGPTPartitionTableHeader hdr;
     _ASSERT(ReadFromDrive(nDrive, 1, 1, &hdr), L"GPT: Could not read LBA 1 from Drive #%d", nDrive);
-    PrintString("GPT: LBA 1 loaded\n");
+    Log(LOG_LOG, L"GPT: LBA 1 loaded");
     _ASSERT(ReadFromDrive(nDrive, 2, 1, g_arrPartitionEntries), L"GPT: Could not read LBA 2 from Drive #%d", nDrive);
-    PrintString("GPT: LBA 2 loaded\n");
+    Log(LOG_LOG, L"GPT: LBA 2 loaded");
     
     if (hdr.qwSignature != 0x5452415020494645)
     _KERNEL_PANIC(L"Invalid GPT signature: 0x%16X", hdr.qwSignature);

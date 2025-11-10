@@ -545,4 +545,5 @@ void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII)
             PrintChar('\n');
         }
     }
+    PrintChar('\n');
 }

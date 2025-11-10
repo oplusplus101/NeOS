@@ -4,7 +4,7 @@
 #include <neos.h>
 #include <common/screen.h>
 #include <hardware/idt.h>
-#include <memory/list.h>
+#include <common/list.h>
 
 sList g_lstSyscallRegistry;
 

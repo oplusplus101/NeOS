@@ -145,7 +145,7 @@ void NeoScanPorts()
     }
 }
 
-void DriverMain()
+INT DriverMain(sDriverObject *pDriverObject)
 {
     // PVOID pPCIDriver = KNeoGetDriverObject("PCI");
     // sPCIDeviceDescriptor sDesc;
@@ -154,5 +154,6 @@ void DriverMain()
     // KNeoMapPagesToIdentity((PVOID) sBAR5.qwAddress, 1, PAGE_WRITEABLE | PAGE_CACHEDISABLE);
     // g_pHBAMemory = (sHBAMemory *) sBAR5.qwAddress;    
 
-    KNeoPauseProcess(KNeoGetCurrentPID());
+    // KNeoPauseProcess(KNeoGetCurrentPID());
+    return 0;
 }

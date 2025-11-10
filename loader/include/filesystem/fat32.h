@@ -95,7 +95,7 @@ typedef struct
 } __attribute__((packed)) sFAT32LongFilenameEntry;
 
 BOOL GetEntryFromPath(PWCHAR wszPath, sFAT32DirectoryEntry *pEntry);
-void ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer);
+QWORD ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer, QWORD qwSize, QWORD qwPosition);
 void LoadFAT32(BYTE nDrive, sGPTPartitionEntry kernelPartition);
 
 #endif // __FAT32_H

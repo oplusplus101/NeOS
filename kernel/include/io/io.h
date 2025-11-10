@@ -3,7 +3,7 @@
 #define __IO__IO_H
 
 #include <common/types.h>
-#include <memory/list.h>
+#include <common/list.h>
 #include <runtime/driver.h>
 #include <runtime/objects.h>
 
@@ -31,9 +31,12 @@ enum
 
 typedef struct
 {
-    sList        lstDriverStack;
-    DWORD        dwDeviceType;
-} sDeviceObject;
+    WCHAR wszName[256];
+    DWORD dwDriverStackSize;
+    sDriverObject **ppDriverStack;
+    DWORD dwDeviceType;
+} __attribute__((packed)) sDeviceObject;
+
 
 typedef struct _tagIORequestPacket
 {

@@ -10,6 +10,6 @@
 #define LOG_GOODBYE 3
 
 void InitLogger();
-void Log(int iType, const PWCHAR wszFormat, ...);
+void Log(INT iType, const PWCHAR wszFormat, ...);
 
 #endif // __LOG_H

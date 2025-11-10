@@ -1,5 +1,6 @@
 
 %define NUM_SEGMENTS 6
+    default rel
 
     extern g_gdt
 

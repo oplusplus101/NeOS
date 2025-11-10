@@ -1,8 +1,11 @@
 
 #include <hardware/storage/drive.h>
 #include <hardware/storage/ahci.h>
-#include <common/panic.h>
+
 #include <common/memory.h>
+#include <common/panic.h>
+#include <common/log.h>
+
 #include <memory/paging.h>
 
 DWORD g_nActiveDrives;
@@ -31,7 +34,7 @@ BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
     switch (nDrive)
     {
     case DRIVE_TYPE_AHCI_SATA:
-        // This code is necessary because DMA cannot read into non identity-mapped memory.
+        // This code is necessary because DMA cannot read into non-identity-mapped memory.
         if (wCount * 512 <= PAGE_SIZE)
         {
             if (!AHCIRead(GetHBAPort(AHCI_DEVICE_TYPE_SATA), qwStart, wCount, g_pReadBuffer))

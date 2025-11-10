@@ -3,13 +3,7 @@
 #define __COMMON__SCREEN_H
 
 #include <common/types.h>
-
-typedef struct
-{
-    BYTE r, g, b;
-} __attribute__((packed)) color_t;
-
-#define _RGB(r, g, b) ((color_t) { (r), (g), (b) })
+#include <neos.h>
 
 void InitScreen(int nWidth, int nHeight, DWORD *pScreenBuffer);
 void DrawPixel(int x, int y, color_t c);

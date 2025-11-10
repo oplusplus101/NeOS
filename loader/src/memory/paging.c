@@ -50,7 +50,7 @@ PVOID AllocatePage()
         return (PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex);
     }
 
-    _KERNEL_PANIC(L"Out of pages");
+    // _KERNEL_PANIC(L"Out of pages");
     
     return NULL;
 }
@@ -79,7 +79,7 @@ PVOID AllocateContinousPages(QWORD qwPages)
     }
 
     
-    _KERNEL_PANIC(L"Out of pages");
+    // _KERNEL_PANIC(L"Out of pages");
     return NULL;
 }
 
@@ -170,7 +170,7 @@ void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, W
     {
         pPageDirectoryPointer = AllocatePage();
         pEntry->qwAddress = _ADDRESS_TO_PAGE(pPageDirectoryPointer);
-        pEntry->wFlags    = PF_PRESENT | PF_WRITEABLE;
+        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED;
         pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
@@ -185,7 +185,7 @@ void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, W
     {
         pPageDirectory = AllocatePage();
         pEntry->qwAddress = _ADDRESS_TO_PAGE(pPageDirectory);
-        pEntry->wFlags    = PF_PRESENT | PF_WRITEABLE;
+        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED;
         pPageDirectoryPointer->arrEntries[_ADDRESS_TO_PD_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
@@ -203,9 +203,7 @@ void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, W
         pPageDirectory->arrEntries[_ADDRESS_TO_PT_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
-    {
         pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
-    }
 
     // Page Entry
     pEntry            = &pPageTable->arrEntries[_ADDRESS_TO_PE_INDEX(pVirtualAddress)];
@@ -214,7 +212,6 @@ void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, W
     
     pPageTable->arrEntries[_ADDRESS_TO_PE_INDEX(pVirtualAddress)] = *pEntry;
 }
-
 
 void MapPageRange(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwPages, WORD wFlags)
 {
@@ -230,6 +227,22 @@ void MapPageToIdentity(sPageTable *pPML4, PVOID pPage, WORD wFlags)
 void MapPageRangeToIdentity(sPageTable *pPML4, PVOID pPages, QWORD qwPages, WORD wFlags)
 {
     MapPageRange(pPML4, pPages, pPages, qwPages, wFlags);
+}
+
+void EnableWriteProtect()
+{
+    QWORD cr0;
+    __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0));
+    cr0 |= 1 << 16; // Write protect bit
+    __asm__ volatile ("mov %0, %%cr0" : : "r"(cr0) : "memory");
+}
+
+void DisableWriteProtect()
+{
+    QWORD cr0;
+    __asm__ volatile ("mov %%cr0, %0" : "=r"(cr0));
+    cr0 &= ~(1 << 16); // Write protect bit
+    __asm__ volatile ("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
@@ -278,8 +291,13 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
 
     // Identity map the whole memory.
     MapPageRangeToIdentity(NULL, NULL, qwMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
-
+    MapPageToIdentity(NULL, g_pCurrentPML4, PF_ACCESSED);
     LoadPML4(g_pCurrentPML4);
+    EnableWriteProtect();
+    
+    volatile QWORD *p = (QWORD*) g_pKernelPML4;
+    *p = 0xDEADBEEF; // should page fault
+
 }
 
 sPageTable *GetKernelPML4()
@@ -292,10 +310,10 @@ sPageTable *GetCurrentPML4()
     return g_pCurrentPML4;
 }
 
-sPageTable *CreateEmptyPML4()
+sPageTable *CreateEmptyPML4(WORD wFlags)
 {
     sPageTable *pTable = AllocatePage();
-    MapPageRangeToIdentity(pTable, NULL, g_qwMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
+    MapPageRangeToIdentity(pTable, NULL, g_qwMemorySize / PAGE_SIZE + 1, wFlags);
     return pTable;
 }
 

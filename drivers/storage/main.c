@@ -20,17 +20,17 @@ BYTE DriveToIndex(CHAR c)
     return c - 'A';
 }
 
-FUNC_EXPORT BOOL NeoDoesDriveExist(CHAR c)
+BOOL NeoDoesDriveExist(CHAR c)
 {
     return (g_dwActiveDrives & (1 << DriveToIndex(c))) != 0;
 }
 
-FUNC_EXPORT BOOL KNeoRegisterStorageDriver()
+BOOL KNeoRegisterStorageDriver()
 {
     return false;
 }
 
-FUNC_EXPORT BOOL KNeoReadSectors(CHAR cDrive, QWORD qwStart, QWORD qwSize, PVOID pBuffer)
+BOOL KNeoReadSectors(CHAR cDrive, QWORD qwStart, QWORD qwSize, PVOID pBuffer)
 {
     if (!NeoDoesDriveExist(cDrive)) return false;
 
@@ -38,14 +38,14 @@ FUNC_EXPORT BOOL KNeoReadSectors(CHAR cDrive, QWORD qwStart, QWORD qwSize, PVOID
 }
 
 
-FUNC_EXPORT BOOL KNeoWriteSectors(CHAR cDrive, QWORD qwStart, QWORD qwSize, PVOID pBuffer)
+BOOL KNeoWriteSectors(CHAR cDrive, QWORD qwStart, QWORD qwSize, PVOID pBuffer)
 {
     if (!NeoDoesDriveExist(cDrive)) return false;
 
     return g_arrDrives[DriveToIndex(cDrive)].WriteSector(qwStart, qwSize, pBuffer);
 }
 
-FUNC_EXPORT BOOL NeoReScanDrives()
+BOOL NeoReScanDrives()
 {
     return false;
 }

@@ -19,6 +19,7 @@
 #include <common/memory.h>
 #include <common/string.h>
 #include <common/ini.h>
+#include <common/log.h>
 #include <neos.h>
 
 QWORD __stack_chk_guard = 0x595e9fbd94fda766;
@@ -30,18 +31,49 @@ void __stack_chk_fail(void)
 
 // The functions below are for the kernel,
 // so the it doesn't have to access the directory entry directly (for compatibility with other file systems)
+
+typedef struct
+{
+    sFAT32DirectoryEntry sEntry;
+    QWORD qwPosition;
+} __attribute__((packed)) sFile;
+
 QWORD GetFileSize(sFAT32DirectoryEntry *pFile)
 {
     return pFile->dwFileSize;
 }
 
-PVOID GetFile(PWCHAR wszPath)
+PVOID OpenFile(PWCHAR wszPath)
 {
-    sFAT32DirectoryEntry sEntry;
-    if (!GetEntryFromPath(wszPath, &sEntry)) return NULL;
-    PVOID pEntry = KHeapAlloc(sizeof(sFAT32DirectoryEntry));
-    memcpy(pEntry, &sEntry, sizeof(sEntry));
-    return pEntry;
+    sFile *pFile = KHeapAlloc(sizeof(sFile));
+    if (pFile == NULL) return NULL;
+    pFile->qwPosition = 0;
+    if (!GetEntryFromPath(wszPath, &pFile->sEntry)) return NULL;
+    return pFile;
+}
+
+QWORD ReadFile(PVOID pFile, PVOID pBuffer, QWORD qwSize)
+{
+    sFile *pFileStruct = (sFile *) pFile;
+    QWORD qwReadSize = ReadDirectoryEntry(&pFileStruct->sEntry, pBuffer, qwSize, pFileStruct->qwPosition);
+    pFileStruct->qwPosition += qwReadSize;
+    return qwReadSize;
+}
+
+QWORD TellFile(PVOID pFile)
+{
+    return ((sFile *) pFile)->qwPosition;
+}
+
+void SeekFile(PVOID pFile, QWORD qwPosition)
+{
+    if (qwPosition >= ((sFile *) pFile)->sEntry.dwFileSize) return;
+    ((sFile *) pFile)->qwPosition = qwPosition;
+}
+
+void CloseFile(PVOID pFile)
+{
+    KHeapFree(pFile);
 }
 
 void LoaderMain(sBootData data)
@@ -56,52 +88,54 @@ void LoaderMain(sBootData data)
     ClearScreen();
     SetBGColor(NEOS_BACKGROUND_COLOR);
     SetFGColor(NEOS_FOREGROUND_COLOR);
+    InitLogger();
 
-    PrintString("Screen initialised!\n");
-
+    Log(LOG_LOG, L"Screen initialised!");
+    
     // Interrupts
     InitIDT();
     RegisterExceptions();
-    PrintString("Interrupts initialised!\n");
+    Log(LOG_LOG, L"Interrupts initialised!");
 
     // Paging
     InitPaging(data.pMemoryDescriptor,
                data.nMemoryMapSize, data.nMemoryDescriptorSize,
                data.nLoaderStart, data.nLoaderEnd);
 
+    for (;;);
     // Lock the GOP screen memory.
     ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
     MapPageRangeToIdentity(NULL, data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1, PF_WRITEABLE);
-    PrintString("Paging initialised!\n");
-
+    Log(LOG_LOG, L"Paging initialised!");
+    
     // Set up the heap
     sHeap sKernelHeap = CreateHeap(NEOS_HEAP_SIZE / PAGE_SIZE, false, true, NULL);
     SetKernelHeap(&sKernelHeap);
-    PrintString("Heap initialised!\n");
+    Log(LOG_LOG, L"Heap initialised!");
 
     // Set up the drive
-    PrintString("Scanning for PCI devices...\n");
+    Log(LOG_LOG, L"Scanning for PCI devices...");
     ScanPCIDevices();
 
     InitDrives();
 
     LoadGPT(DRIVE_TYPE_AHCI_SATA);
-    PrintString("GPT Loaded\n");
+    Log(LOG_LOG, L"GPT Loaded");
     
     sGPTPartitionEntry sKernelPartition = GetKernelPartition();
     LoadFAT32(DRIVE_TYPE_AHCI_SATA, sKernelPartition);
 
-    PrintFormat(L"Loading kernel...\n");
+    Log(LOG_LOG, L"Loading kernel...");
 
     sFAT32DirectoryEntry sKernelEntry;
     _ASSERT(GetEntryFromPath(L"NeOS\\NeOS.sys", &sKernelEntry), L"Kernel not found at C:\\NeOS\\NeOS.sys");
 
     // Read the kernel
     PBYTE pKernelData = KHeapAlloc(sKernelEntry.dwFileSize);
-    ReadDirectoryEntry(&sKernelEntry, pKernelData);
+    ReadDirectoryEntry(&sKernelEntry, pKernelData, sKernelEntry.dwFileSize, 0);
     
     // Parse the file (PE32+)
-    PrintFormat(L"Loading PE headers...\n");
+    Log(LOG_LOG, L"Loading PE headers...");
     sMZHeader *pMZHeader = (sMZHeader *) pKernelData;
     _ASSERT(pMZHeader->wMagic == 0x5A4D, L"Invalid DOS stub.");
 
@@ -112,7 +146,7 @@ void LoaderMain(sBootData data)
     
     sPE32OptionalHeader *pPEOHeader = (sPE32OptionalHeader *) (pPEHeader + 1);
     _ASSERT(pPEOHeader->wMagic == 0x020B, L"Invalid PE32 optional header.");
-    PrintFormat(L"Loading sections...\n");
+    Log(LOG_LOG, L"Loading sections...");
 
     // TODO: Add saftey checks to ensure that the entrypoint inside the file matches the expected value (NEOS_KERNEL_LOCATION).
     DisableInterrupts(); // To ensure that everything is loaded in the right order
@@ -121,8 +155,8 @@ void LoaderMain(sBootData data)
         sPE32SectionHeader *hdr = (sPE32SectionHeader *) ((PBYTE) pPEOHeader + pPEHeader->wSizeOfOptionalHeader + sizeof(sPE32SectionHeader) * i);
         QWORD qwAddress = hdr->dwVirtualAddress + pPEOHeader->qwImageBase;
         if (hdr->dwCharacteristics & PE32_SCN_MEM_DISCARDABLE) continue;
-        PrintFormat(L"Loading section: %s at 0x%p c: 0x%08X\n", hdr->szName, qwAddress, hdr->dwCharacteristics);
-        memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwPointerToRawData, hdr->dwVirtualSize);
+        Log(LOG_LOG, L"Loading section: %s at 0x%p", hdr->szName, qwAddress, hdr->dwCharacteristics);
+        memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwOffsetOfRawData, hdr->dwVirtualSize);
     }
     
     KHeapFree(pKernelData);
@@ -131,16 +165,38 @@ void LoaderMain(sBootData data)
     ReservePages((PVOID) NEOS_KERNEL_LOC_LOW, (NEOS_KERNEL_LOC_HIGH - NEOS_KERNEL_LOC_LOW) / PAGE_SIZE);
     MapPageRangeToIdentity(NULL, (PVOID) NEOS_KERNEL_LOC_LOW, (NEOS_KERNEL_LOC_HIGH - NEOS_KERNEL_LOC_LOW) / PAGE_SIZE, PF_WRITEABLE);
     
+    // Prepare the kernel boot header
+    
     sNEOSKernelHeader sHeader;
     sHeader.sGOP        = data.gop;
     sHeader.pKernelHeap = &sKernelHeap;
     sHeader.sPaging     = ExportPagingData();
-    sHeader.GetFileSize = (QWORD (*)(PVOID)) GetFileSize;
-    sHeader.GetFile     = (PVOID (*)(PWCHAR)) GetFile;
-    sHeader.ReadFile    = (void (*)(PVOID, PVOID)) ReadDirectoryEntry;
 
-    PrintFormat(L"Executing C:\\NeOS\\NeOS.sys at 0x%p\n", pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint);
-    SetCursor(0, 0);
+    // Filesystem functions
+    sHeader.LoaderOpenFile    = (PVOID (*)(PWCHAR)) OpenFile;
+    sHeader.LoaderGetFileSize = (QWORD (*)(PVOID)) GetFileSize;
+    sHeader.LoaderReadFile    = (QWORD (*)(PVOID, PVOID, QWORD)) ReadFile;
+    sHeader.LoaderCloseFile   = (void (*)(PVOID)) CloseFile;
+    sHeader.LoaderSeekFile    = (void (*)(PVOID, QWORD)) SeekFile;
+    sHeader.LoaderTellFile    = (QWORD (*)(PVOID)) TellFile;
+
+    // Screen functions
+    sHeader.PrintFormat     = (void (*)(const PWCHAR, ...)) PrintFormat;
+    sHeader.PrintString     = (void (*)(PCHAR)) PrintString;
+    sHeader.PrintBytes      = (void (*)(PVOID, QWORD, WORD, BOOL)) PrintBytes;
+    sHeader.PrintChar       = (void (*)(CHAR)) PrintChar;
+    sHeader.Log             = (void (*)(INT, const PWCHAR, ...)) Log;
+    sHeader.GetCursorX      = (INT  (*)()) GetCursorX;
+    sHeader.GetCursorY      = (INT  (*)()) GetCursorY;
+    sHeader.SetCursor       = (void (*)(INT, INT)) SetCursor;
+    sHeader.SetFGColor      = (void (*)(color_t)) SetFGColor;
+    sHeader.SetBGColor      = (void (*)(color_t)) SetBGColor;
+    sHeader.ClearScreen     = (void (*)()) ClearScreen;
+    sHeader.GetScreenWidth  = (INT  (*)()) GetScreenWidth;
+    sHeader.GetScreenHeight = (INT  (*)()) GetScreenHeight;
+
+    Log(LOG_LOG, L"Executing C:\\NeOS\\NeOS.sys at 0x%p", pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint);
+    
     ((void (*)(sNEOSKernelHeader)) (pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint))(sHeader);
 
     // Somthing went very wrong

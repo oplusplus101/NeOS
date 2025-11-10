@@ -100,7 +100,7 @@ int main()
         if (hdr.dwCharacteristics & PE32_SCN_MEM_DISCARDABLE) continue;
 
         size_t nPrevPos = ftell(pFile);
-        fseek(pFile, hdr.dwPointerToRawData, SEEK_SET);
+        fseek(pFile, hdr.dwOffsetOfRawData, SEEK_SET);
         size_t nAddress = hdr.dwVirtualAddress + peohdr.qwImageBase;
         size_t nPages   = (hdr.dwVirtualSize + 0x1000 - 1) / 0x1000;
 

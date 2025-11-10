@@ -4,8 +4,9 @@
 
 #include <common/types.h>
 #include <runtime/process.h>
+#include <runtime/objects.h>
 #include <runtime/exe.h>
-#include <memory/list.h>
+#include <common/list.h>
 
 // Definition to avoid circular includes
 struct _tagIORequestPacket;
@@ -27,7 +28,7 @@ typedef struct
 } sDriver;
 
 
-sDriver *GetDriver(PWCHAR wszName);
+sObject *GetDriver(PWCHAR wszName);
 INT LoadDriver(sExecutable *pDriverExecutable, PWCHAR wszName);
 INT DispatchDriverIRP(sDriverObject *pDriver, struct _tagIORequestPacket *pIRP);
 

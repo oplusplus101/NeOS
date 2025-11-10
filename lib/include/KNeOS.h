@@ -2,7 +2,6 @@
 #define __KNEOS_H
 
 #include <NeoTypes.h>
-#include <NeoList.h>
 
 #define PAGE_PRESENT            1
 #define PAGE_WRITEABLE          2
@@ -14,9 +13,13 @@
 #define PAGE_PAGETABLEATTRIBUTE 128
 #define PAGE_GLOBAL             256
 
-#define FUNC_EXPORT __attribute__((visibility("default")))
+#ifdef DLL_BUILD
+#define FUNC_EXPORT __declspec(dllexport)
+#else
+#define FUNC_EXPORT __declspec(dllimport)
+#endif
 
-#define _ASSERT(c, m) if (!(c)) KNeoPrintString(m);
+#define _ASSERT(c, m) if (!(c)) KNeoPrintFormat(L"%w", m);
 
 enum
 {
@@ -28,12 +31,25 @@ enum
 };
 
 
+struct _tagIORequestPacket;
+
+typedef struct _tagDriverObject
+{
+    void (*pDriverEntry)(struct _tagDriverObject *);
+    void (*pDriverUnload)(struct _tagDriverObject *);
+
+    INT (*arrIOHandlers[5])(struct _tagDriverObject *, struct _tagIORequestPacket *);
+
+    PVOID pPML4; // Drivers shouln't have to access this
+} __attribute__((packed)) sDriverObject;
+
 typedef struct
 {
-    WCHAR        wszName[256];
-    sList        lstDriverStack;
-    DWORD        dwDeviceType;
-} sDeviceObject;
+    WCHAR wszName[256];
+    DWORD dwDriverStackSize;
+    sDriverObject **ppDriverStack;
+    DWORD dwDeviceType;
+} __attribute__((packed)) sDeviceObject;
 
 typedef struct _tagIORequestPacket
 {
@@ -46,48 +62,37 @@ typedef struct _tagIORequestPacket
     void         (*pFinishCallback)(struct _tagIORequestPacket *);
 } __attribute__((packed)) sIORequestPacket;
 
-typedef struct _tagDriverObject
-{
-    void (*pDriverEntry)(struct _tagDriverObject *);
-    void (*pDriverUnload)(struct _tagDriverObject *);
+FUNC_EXPORT void KNeoPrintString(PCHAR sz);
+FUNC_EXPORT void KNeoGetCursor(INT *x, INT *y);
+FUNC_EXPORT void KNeoSetCursor(INT x, INT y);
+FUNC_EXPORT void KNeoClearScreen();
+FUNC_EXPORT void KNeoGetScreenSize(INT *pWidth, INT *pHeight);
+FUNC_EXPORT INT KNeoGetVideoMode();
 
-    INT (*arrIOHandlers[5])(struct _tagDriverObject *, sIORequestPacket *);
+FUNC_EXPORT PVOID KNeoGetDriverObject(PCHAR szName);
+FUNC_EXPORT INT KNeoCallDriver(sDriverObject *pDriverObject, sIORequestPacket *pIRP);
 
-    PVOID pPML4; // Drivers shouln't have to access this
-} __attribute__((packed)) sDriverObject;
+FUNC_EXPORT void KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags);
+FUNC_EXPORT void KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, void (*pCallback)());
+FUNC_EXPORT void KNeoLog(PWCHAR wszMessage, BYTE bCode);
 
+FUNC_EXPORT INT KNeoGetCurrentPID();
+FUNC_EXPORT INT KNeoStartProcess(void (*pEntryPoint), QWORD qwStackSize);
+FUNC_EXPORT void KNeoKillProcess(INT iPID);
+FUNC_EXPORT void KNeoPauseProcess(INT iPID);
 
-void KNeoPrintString(PCHAR sz);
-void KNeoGetCursor(INT *x, INT *y);
-void KNeoSetCursor(INT x, INT y);
-void KNeoClearScreen();
-void KNeoGetScreenSize(INT *pWidth, INT *pHeight);
-INT KNeoGetVideoMode();
+FUNC_EXPORT INT KNeoCreateDevice(sDriverObject *pDriverObject, PWCHAR wszDeviceName, DWORD dwDeviceType, sDeviceObject **ppDeviceObject);
+FUNC_EXPORT INT KNeoCreateFile(HANDLE *pHandle, PWCHAR wszPath, HANDLE hParentDirectory, WORD wAccessFlags, WORD wFileAttributes, WORD wShareFlags, WORD wCreateType);
 
-PVOID KNeoGetDriverObject(PCHAR szName);
-INT KNeoCallDriver(sDriverObject *pDriverObject, sIORequestPacket *pIRP);
-
-void KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags);
-void KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, void (*pCallback)());
-void KNeoLog(PWCHAR wszMessage, BYTE bCode);
-
-INT KNeoGetCurrentPID();
-INT KNeoStartProcess(void (*pEntryPoint), QWORD qwStackSize);
-void KNeoKillProcess(INT iPID);
-void KNeoPauseProcess(INT iPID);
-
-INT KNeoCreateDevice(sDriverObject *pDriverObject, PWCHAR wszDeviceName, DWORD dwDeviceType, sDeviceObject **ppDeviceObject);
-INT KNeoCreateFile(HANDLE *pHandle, PWCHAR wszPath, HANDLE hParentDirectory, WORD wAccessFlags, WORD wFileAttributes, WORD wShareFlags, WORD wCreateType);
-
-PVOID KNeoHeapAllocate(QWORD qwSize);
-PVOID KNeoHeapReAllocate(PVOID pOldMemory, QWORD qwNewSize);
-void KNeoHeapFree(PVOID pMemory);
-PVOID KNeoGetPhysicalAddress(PVOID pVirtualAddress);
+FUNC_EXPORT PVOID KNeoHeapAllocate(QWORD qwSize);
+FUNC_EXPORT PVOID KNeoHeapReAllocate(PVOID pOldMemory, QWORD qwNewSize);
+FUNC_EXPORT void KNeoHeapFree(PVOID pMemory);
+FUNC_EXPORT PVOID KNeoGetPhysicalAddress(PVOID pVirtualAddress);
 
 
-void KNeoPrintHex(QWORD n, BYTE nDigits, BOOL bUppercase);
-void KNeoPrintDec(QWORD n);
-void KNeoPrintFormat(const PWCHAR wszFormat, ...);
+FUNC_EXPORT void KNeoPrintHex(QWORD n, BYTE nDigits, BOOL bUppercase);
+FUNC_EXPORT void KNeoPrintDec(QWORD n);
+FUNC_EXPORT void KNeoPrintFormat(const PWCHAR wszFormat, ...);
 
 inline static void KNeoEnableInterrupts()
 {

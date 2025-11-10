@@ -11,7 +11,7 @@ sObjectType *g_pDeviceObjectType,
 void DestroyDeviceObjectCallback(sObject *pObject)
 {
     sDeviceObject *pDevice = (sDeviceObject *) pObject->pBody;
-    DestroyList(&pDevice->lstDriverStack);
+    KHeapFree(pDevice->ppDriverStack);
     KHeapFree(pDevice);
 }
 
@@ -19,36 +19,33 @@ INT DispatchIRP(sIORequestPacket *pIRP)
 {
     if (pIRP->pDevice == NULL) return NEOS_FAILURE;
     
-    sDriverObject *pDriver = *((sDriverObject **) GetListElement(&pIRP->pDevice->lstDriverStack, pIRP->qwDriverStackIndex++));
+    // sDriverObject *pDriver = *((sDriverObject **) GetListElement(&pIRP->pDevice->lstDriverStack, pIRP->qwDriverStackIndex++));
+    sDriverObject *pDriver = pIRP->pDevice->ppDriverStack[pIRP->qwDriverStackIndex++];
     return DispatchDriverIRP(pDriver, pIRP);
 }
 
 INT CreateDevice(sDriverObject *pDriverObject, PWCHAR wszPath, DWORD dwDeviceType, sDeviceObject **ppDeviceObject)
 {
-    sDeviceObject *pDeviceObject = KHeapAlloc(sizeof(sDeviceObject));
-    if (pDeviceObject == NULL)
-        return NEOS_FAILURE;
+    sDeviceObject sDevice;
+    sDevice.ppDriverStack     = KHeapAlloc(sizeof(sDriverObject *));
+    sDevice.dwDeviceType      = dwDeviceType;
+    *sDevice.ppDriverStack    = pDriverObject;
+    sDevice.dwDriverStackSize = 1;
 
-    pDeviceObject->lstDriverStack = CreateEmptyList(sizeof(sDriverObject *));
-    pDeviceObject->dwDeviceType   = dwDeviceType;
-    AddListElement(&pDeviceObject->lstDriverStack, &pDriverObject);
 
-    sObject *pObject = CreateObject(wszPath, g_pDeviceObjectType, pDeviceObject);
+    sObject *pObject = CreateObject(wszPath, g_pDeviceObjectType, &sDevice);
     if (pObject == NULL)
-    {
-        DestroyList(&pDeviceObject->lstDriverStack);
-        KHeapFree(pDeviceObject);
-    }
+        KHeapFree(sDevice.ppDriverStack);
     
-    *ppDeviceObject = pDeviceObject;
+    *ppDeviceObject = pObject->pBody;
     return NEOS_SUCCESS;
 }
 
 INT DestroyDevice(sDeviceObject *pDeviceObject)
 {
-    DestroyList(&pDeviceObject->lstDriverStack);
+    KHeapFree(pDeviceObject->ppDriverStack);
     KHeapFree(pDeviceObject);
-    return NEOS_FAILURE;
+    return NEOS_SUCCESS;
 }
 
 

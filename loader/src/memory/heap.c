@@ -1,6 +1,8 @@
 
 #include <memory/heap.h>
 #include <memory/bitmap.h>
+
+#include <common/log.h>
 #include <common/panic.h>
 #include <common/memory.h>
 
@@ -136,6 +138,8 @@ PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
 
 void HeapFree(sHeap *pHeap, PVOID pMemory)
 {
+//    Log(LOG_WARNING, L"HeapFree has not yet been properly implemented - meaning no memory will be freed, Heap 0x%p, ADDR 0x%p", pMemory);
+    return;
     sMemoryChunk *pChunk = (sMemoryChunk *) ((QWORD) pMemory - sizeof(sMemoryChunk));
     
     pHeap->qwFreeMemory += sizeof(sMemoryChunk) + pChunk->qwSize;

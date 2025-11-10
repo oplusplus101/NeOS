@@ -1,4 +1,5 @@
 
+#define DLL_BUILD
 #include <KNeOS.h>
 
 FUNC_EXPORT void KNeoPrintString(PCHAR sz)
@@ -95,10 +96,8 @@ FUNC_EXPORT void KNeoPauseProcess(INT iPID)
 
 FUNC_EXPORT INT KNeoCreateDevice(sDriverObject *pDriverObject, PWCHAR wszDeviceName, DWORD dwDeviceType, sDeviceObject **ppDeviceObject)
 {
-
     INT iStatus;
     __asm__ volatile ("int $0x81" : "=a"(ppDeviceObject), "=d"(iStatus) : "a"(0x50), "b"(pDriverObject), "c"(wszDeviceName), "d"(dwDeviceType));
-
     return iStatus;
 }
 
@@ -131,7 +130,6 @@ FUNC_EXPORT void KNeoHeapFree(PVOID pMemory)
 
 
 // Extra functions
-
 FUNC_EXPORT void KNeoPrintHex(QWORD n, BYTE nDigits, BOOL bUppercase)
 {
     nDigits = nDigits > 16 ? 16 : nDigits;
@@ -246,4 +244,10 @@ FUNC_EXPORT void KNeoPrintFormat(const PWCHAR wszFormat, ...)
             KNeoPrintChar(wszFormat[i]);
     }
     __builtin_va_end(args);
+}
+
+
+FUNC_EXPORT void DllMainCRTStartup()
+{
+    
 }

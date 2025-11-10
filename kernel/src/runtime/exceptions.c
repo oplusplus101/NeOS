@@ -1,7 +1,9 @@
 
 #include <runtime/exceptions.h>
 #include <runtime/process.h>
+
 #include <common/panic.h>
+#include <common/log.h>
 
 typedef struct _tagStackFrame
 {
@@ -9,10 +11,9 @@ typedef struct _tagStackFrame
     QWORD qwRIP;
 } __attribute__((packed)) sStackFrame;
 
-void PrintRegs(QWORD qwRSP);
 
 #define _PRINT_FAULT(qwRSP, ...) \
-    { PrintRegs(qwRSP); \
+    { \
     _KERNEL_PANIC(__VA_ARGS__); }
 
 
@@ -37,7 +38,7 @@ QWORD KException0(QWORD qwRSP, BYTE nErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Division by zero");
-        
+
     KillCurrentProcess(L"Division by zero");
 
     return ScheduleProcesses(qwRSP);
@@ -95,9 +96,11 @@ QWORD KException5(QWORD qwRSP, BYTE nErrorCode)
 
 QWORD KException6(QWORD qwRSP, BYTE nErrorCode)
 {
+    PrintBytes((PVOID) qwRSP, sizeof(sCPUState), 24, true);
+
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Invalid opcode");
-    
+        
     KillCurrentProcess(L"Invalid opcode");
 
     return ScheduleProcesses(qwRSP);

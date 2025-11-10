@@ -1,4 +1,5 @@
 
+    default rel
 
     section .text
     

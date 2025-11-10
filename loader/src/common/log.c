@@ -7,7 +7,7 @@ void InitLogger()
 
 }
 
-void Log(int iType, const PWCHAR wszFormat, ...)
+void Log(INT iType, const PWCHAR wszFormat, ...)
 {
     __builtin_va_list args;
     __builtin_va_start(args, wszFormat);
@@ -24,7 +24,7 @@ void Log(int iType, const PWCHAR wszFormat, ...)
     {
         PrintString("[");
         SetFGColor(_RGB(255, 255, 0));
-        PrintString("WARNING ");
+        PrintString("WARNING");
         SetFGColor(NEOS_FOREGROUND_COLOR);
         PrintString("] ");
     }

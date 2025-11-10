@@ -3,7 +3,7 @@
 #define __RUNTIME__OBJECTS_HH
 
 #include <common/types.h>
-#include <memory/list.h>
+#include <common/list.h>
 
 typedef struct
 {

@@ -1,7 +1,9 @@
 
-#include <memory/list.h>
+#include <common/list.h>
 #include <memory/heap.h>
 #include <common/panic.h>
+
+#include <common/log.h>
 #include <common/math.h>
 #include <common/memory.h>
 

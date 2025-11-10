@@ -2,7 +2,7 @@
 #ifndef __RUNTIME__PROCESS_H
 #define __RUNTIME__PROCESS_H
 
-#include <memory/list.h>
+#include <common/list.h>
 #include <hardware/idt.h>
 #include <common/types.h>
 #include <memory/paging.h>
