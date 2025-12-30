@@ -27,7 +27,7 @@ typedef struct
 {
     QWORD qwEntryPoint;
     sList lstSections;
-    QWORD qwBaseAddress;
+    QWORD qwVirtualStart, qwVirtualEnd;
     sPageTable *pPageTable;
     sList lstExportedFunctions;
     sList lstImportedFunctions;
@@ -42,7 +42,7 @@ typedef struct
 
 // Loads a PE32+ file into memory
 // Set qwBaseAddress to 0 in order to use the base address provided by the executable.
-sExecutable LoadExecutable(PVOID pFile, QWORD qwBaseAddress);
+INT LoadExecutable(PVOID pFile, QWORD qwVirtualAddress, sPageTable *pPML4, sExecutable *pEXE);
 void FreeExecutable(sExecutable *pExe);
 
 #endif // __RUNTIME__DRIVER_H

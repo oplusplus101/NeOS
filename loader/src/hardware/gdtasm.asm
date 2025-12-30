@@ -1,13 +1,15 @@
 
-%define NUM_SEGMENTS 6
     default rel
+
+%define NUM_SEGMENTS 6
 
     extern g_gdt
 
     global WriteGDT
 WriteGDT:
     mov word [gdtr.nLimit], NUM_SEGMENTS * 16 - 1
-    mov qword [gdtr.nBase], g_gdt
+    lea rax, [rel g_gdt]
+    mov qword [gdtr.nBase], rax
     lgdt [gdtr]
     push 0x10 ; Kernel Code Segment
     lea rax, [rel .ReloadCS]

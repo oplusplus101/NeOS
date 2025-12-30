@@ -77,7 +77,7 @@ sObject *FindObjectInDirectory(sObjectDirectory *pDirectory, PWCHAR wszName)
 
 sObject *CreateObject(PWCHAR wszPath, sObjectType *pType, PVOID pBody)
 {
-    if (LookupObject(wszPath, NULL) != NULL) return NULL;
+    if (FindObject(wszPath, NULL) != NULL) return NULL;
         
     PWCHAR wszPathDup         = strdupW(wszPath);
     sObject *pDirectoryObject = g_pRootDirectoryObject;
@@ -117,7 +117,7 @@ sObject *CreateObject(PWCHAR wszPath, sObjectType *pType, PVOID pBody)
     return pObject;
 }
 
-sObject *LookupObject(PWCHAR wszPath, sObject *pParent)
+sObject *FindObject(PWCHAR wszPath, sObject *pParent)
 {
     if (pParent == NULL)
         pParent = g_pRootDirectoryObject;
@@ -189,7 +189,7 @@ void DestroyObjectByReference(sObject *pObject)
 
 void DestroyObject(PWCHAR wszPath)
 {
-    DestroyObjectByReference(LookupObject(wszPath, NULL));
+    DestroyObjectByReference(FindObject(wszPath, NULL));
 }
 
 void ReferenceObject(sObject *pObject)
@@ -266,7 +266,7 @@ void PrintObjectTree(sObject *pObject, DWORD dwCurrentDepth)
     if (pObject == NULL && dwCurrentDepth == 0)
         pObject = g_pRootDirectoryObject;
     if (dwCurrentDepth == 0)
-        PrintFormat(L"%w\n", pObject->wszName);
+        PrintFormat(L"%S\n", pObject->wszName);
     
     sObjectDirectory *pDirectory = pObject->pBody;
     
@@ -282,7 +282,7 @@ void PrintObjectTree(sObject *pObject, DWORD dwCurrentDepth)
         else
             PrintString("\xC3\xC4"); // ├─
             
-        PrintFormat(L"%w\n", pObject);
+        PrintFormat(L"%S\n", pObject);
 
         if (pObject->pType == g_pDirectoryType)
             PrintObjectTree(pObject, dwCurrentDepth + 1);

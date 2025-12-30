@@ -3,9 +3,9 @@
 #include <io/syscalls.h>
 #include <io/io.h>
 #include <runtime/objects.h>
-#include <common/screen.h>
 #include <common/panic.h>
 #include <memory/heap.h>
+#include <loaderfunctions.h>
 
 // TEMPORARY
 sHandleTable g_sKernelHandleTable;

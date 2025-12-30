@@ -1,20 +1,23 @@
-Add a neater way of making driver syscalls (Completely redo the kernel-driver interface)
+Fix strange exception in the Object Manager's CreateObject (possibly caused by the heap)
+Fix the heap
 Make exceptions inside a driver not crash the entire kernel
+Redo the boot process (comlpete overhaul of the 1st and possibly remove the 2nd stage bootloader, redo the drive abstraction, add a better way of finding the main partition)
+Add a neater way of making driver-to-kernel calls (Completely redo the kernel-driver interface)
 Add the build process of the drivers and libraries to CMakeLists.txt
 Fix process killing in the scheduler
-Add proper error logging
 Rewrite/clean up the UEFI bootloader (Change UNIX types to Microsoft, make PE32+ code more efficient)
-Move all screen drawing routines to the kernel boot header
-Add a nicer way of reading from and writing to files to replace the kernel boot header routines.
 Implement Dynamic Linked Libraries (DLLs) 
 Add a basic MS-DOS-like shell
 Clean up AHCI code
 Add support for multiple drives (AHCI)
 Document the whole codebase with comments
 Find a way to build the disk image without root
+Implement a neater way of dealing with paths
 Implement NVMe reading for the bootloader
 Implement a Windows-like registry
-Make a user system - with a root user and admin, standard, and guest users
+Change the current filesystem (FAT-32) to a custom one
+Move all platform-specific code (GDT, IDT, TSS, etc.) over to a HAL-like interface
+Make a user system - with a root user and admin, standard, and guest users -- and also add groups so that different users can access the same file
 Move NEOSLDR.SYS to the main drive (Make the EFI bootloader directly read the main filesystem)
 Make an installer (a program that sets up the file system, copies in all important files, and creates a default user)
 Add support for multiple languages in the kernel

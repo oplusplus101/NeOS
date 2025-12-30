@@ -3,6 +3,7 @@
 #include <hardware/pci.h>
 #include <memory/paging.h>
 #include <common/memory.h>
+#include <common/screen.h>
 #include <common/panic.h>
 #include <common/log.h>
 

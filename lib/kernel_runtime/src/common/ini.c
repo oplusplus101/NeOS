@@ -1,7 +1,6 @@
 
 #include <common/ini.h>
 #include <common/string.h>
-#include <common/screen.h>
 
 sList ParseINIFile(PCHAR szContents)
 {

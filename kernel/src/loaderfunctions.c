@@ -17,11 +17,13 @@ void (*Log)(INT iType, const PWCHAR wszFormat, ...);
 INT  (*GetCursorX)();
 INT  (*GetCursorY)();
 void (*SetCursor)(INT x, INT y);
-void (*SetFGColor)(color_t c);
-void (*SetBGColor)(color_t c);
+void (*SetFGColor)(sColour c);
+void (*SetBGColor)(sColour c);
 void (*ClearScreen)();
 INT  (*GetScreenWidth)();
 INT  (*GetScreenHeight)();
+void (*RegisterException)(BYTE n, ESR pESR);
+void (*RegisterInterrupt)(BYTE n, ISR pISR);
 
 void InitialiseLoaderFunctions(sNEOSKernelHeader *pHeader)
 {
@@ -32,17 +34,20 @@ void InitialiseLoaderFunctions(sNEOSKernelHeader *pHeader)
     LoaderSeekFile    = pHeader->LoaderSeekFile;
     LoaderTellFile    = pHeader->LoaderTellFile;
 
-    PrintFormat     = pHeader->PrintFormat;
-    PrintString     = pHeader->PrintString;
-    PrintBytes      = pHeader->PrintBytes;
-    PrintChar       = pHeader->PrintChar;
-    Log             = pHeader->Log;
-    GetCursorX      = pHeader->GetCursorX;
-    GetCursorY      = pHeader->GetCursorY;
-    SetCursor       = pHeader->SetCursor;
-    SetFGColor      = pHeader->SetFGColor;
-    SetBGColor      = pHeader->SetBGColor;
-    ClearScreen     = pHeader->ClearScreen;
-    GetScreenWidth  = pHeader->GetScreenWidth;
-    GetScreenHeight = pHeader->GetScreenHeight;
+    PrintFormat       = pHeader->PrintFormat;
+    PrintString       = pHeader->PrintString;
+    PrintBytes        = pHeader->PrintBytes;
+    PrintChar         = pHeader->PrintChar;
+    Log               = pHeader->Log;
+    GetCursorX        = pHeader->GetCursorX;
+    GetCursorY        = pHeader->GetCursorY;
+    SetCursor         = pHeader->SetCursor;
+    SetFGColor        = pHeader->SetFGColor;
+    SetBGColor        = pHeader->SetBGColor;
+    ClearScreen       = pHeader->ClearScreen;
+    GetScreenWidth    = pHeader->GetScreenWidth;
+    GetScreenHeight   = pHeader->GetScreenHeight;
+    
+    RegisterException = pHeader->RegisterException;
+    RegisterInterrupt = pHeader->RegisterInterrupt;
 }

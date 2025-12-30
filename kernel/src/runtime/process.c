@@ -50,7 +50,7 @@ INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pPa
 
     // Keep an unaligned copy of the stack so it can be freed
     sProc.pStackUnaligned    = KHeapAlloc(qwStackSize + 16);
-    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for executable: %w", wszName);
+    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for executable: %S", wszName);
     QWORD qwAlignOffset      = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
     // Align the stack
     sProc.pStack             = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
@@ -115,7 +115,7 @@ INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE n
 
     // Keep an unaligned copy of the stack so it can be freed
     sProc.pStackUnaligned = KHeapAlloc(qwStackSize + 16);
-    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for process: %w", wszName);
+    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for process: %S", wszName);
     QWORD qwAlignOffset   = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
     // Align the stack
     sProc.pStack          = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
@@ -155,9 +155,9 @@ INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE n
 void KillProcess(INT iPID, PWCHAR wszReason)
 {
     if (!DoesProcessExist(iPID)) return;
-    SetFGColor(NEOS_ERROR_COLOR);
-    PrintFormat(L"Process %w with PID %d was killed: %w\n", GetProcess(iPID)->wszName, iPID, wszReason);
-    SetFGColor(NEOS_FOREGROUND_COLOR);
+    SetFGColor(NEOS_ERROR_COLOUR);
+    PrintFormat(L"Process %S with PID %d was killed: %S\n", GetProcess(iPID)->wszName, iPID, wszReason);
+    SetFGColor(NEOS_FOREGROUND_COLOUR);
     StopProcess(iPID);
 }
 

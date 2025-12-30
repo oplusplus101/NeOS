@@ -106,18 +106,19 @@ BOOL GetEntryFromPath(PWCHAR wszPath, sFAT32DirectoryEntry *pEntry)
 // Returns the total amount read
 QWORD ReadDirectoryEntry(sFAT32DirectoryEntry *pEntry, PVOID pBuffer, QWORD qwSize, QWORD qwPosition)
 {
-    _ASSERT(pEntry != NULL, L"A NULL directory entry was passed");
+    // TODO: Implement error codes (e.g like a GetErrorCode function)
+    if (pEntry == NULL) return 0;
     DWORD dwFileSize = pEntry->dwFileSize;
     PVOID pClusterBuffer = KHeapAlloc(g_wBytesPerCluster);
     QWORD qwTotalReadSize = 0;
-    _ASSERT(pClusterBuffer != NULL, L"Could not allocate memory for directory read");
-    _ASSERT(qwPosition + qwSize <= dwFileSize, L"Tried to read outside file");
+    if (pClusterBuffer == NULL) return 0;
+    if (qwPosition + qwSize > dwFileSize) return 0;
 
     DWORD dwCurrentCluster = (pEntry->nClusterHigh << 16) | pEntry->nClusterLow;
 
     for (; qwPosition >= g_wBytesPerCluster; qwPosition -= g_wBytesPerCluster)
         dwCurrentCluster = GetNextCluster(dwCurrentCluster);
-    
+
     for (; qwSize != 0;
          dwCurrentCluster = GetNextCluster(dwCurrentCluster),
          pBuffer = (PBYTE) pBuffer + g_wBytesPerCluster)

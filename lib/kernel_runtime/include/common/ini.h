@@ -2,8 +2,8 @@
 #ifndef __COMMON__INI_H
 #define __COMMON__INI_H
 
-#include <common/list.h>
 #include <common/types.h>
+#include <common/list.h>
 
 typedef struct
 {

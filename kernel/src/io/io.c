@@ -3,7 +3,7 @@
 #include <neos.h>
 #include <memory/heap.h>
 #include <common/string.h>
-#include <common/screen.h>
+#include <loaderfunctions.h>
 
 sObjectType *g_pDeviceObjectType,
             *g_pFileObjectType;
@@ -58,7 +58,7 @@ INT CreateFile(sHandleTable *pCallersHandleTable, HANDLE *pHandle, PWCHAR wszPat
     sObject *pParent = NULL;
     if (hParentDirectory != 0)
         pParent = GetObjectFromHandle(pCallersHandleTable, hParentDirectory);
-    sObject *pObject = LookupObject(wszPath, pParent);
+    sObject *pObject = FindObject(wszPath, pParent);
 
     if (pObject != NULL && pObject->pType == g_pDeviceObjectType)
     {
@@ -74,7 +74,7 @@ INT CreateFile(sHandleTable *pCallersHandleTable, HANDLE *pHandle, PWCHAR wszPat
         INT iStatus = DispatchIRP(sIRP);
         KHeapFree(sIRP);
 
-        if (_NEOS_SUCCESS(iStatus))
+        if (_SUCCESSFUL(iStatus))
         {
             *pHandle = AllocateHandle(pCallersHandleTable, pObject);
             if (*pHandle == 0)

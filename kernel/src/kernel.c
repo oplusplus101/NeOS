@@ -21,7 +21,6 @@
 #include <runtime/exe.h>
 #include <loaderfunctions.h>
 
-
 void __stack_chk_fail(void)
 {
     _KERNEL_PANIC(L"Stack smashing detected");
@@ -30,10 +29,10 @@ void __stack_chk_fail(void)
 sList LoadCFG(PWCHAR wszPath)
 {
     PVOID pFile = LoaderOpenFile(wszPath);
-    _ASSERT(pFile, L"File \"C:\\%w\" not found", wszPath);
+    _ASSERT(pFile, L"File 'C:\\%S' not found", wszPath);
     QWORD qwFileSize = LoaderGetFileSize(pFile);
     PVOID szText = KHeapAlloc(qwFileSize + 1);
-    _ASSERT(szText, L"Could not allocate memory for CFG file \"C:\\%w\"", wszPath);
+    _ASSERT(szText, L"Could not allocate memory for CFG file 'C:\\%S'", wszPath);
     LoaderReadFile(pFile, szText, qwFileSize);
     ((PBYTE) szText)[qwFileSize] = 0;
 
@@ -45,7 +44,9 @@ sList LoadCFG(PWCHAR wszPath)
 
 void KernelMain(sNEOSKernelHeader hdr)
 {
-    DisableInterrupts();
+    // Removed temporarly, until this function is implemented in the arch compatibility layer
+    // DisableInterrupts();
+    __asm__ volatile ("cli");
     
     InitialiseLoaderFunctions(&hdr);
 
@@ -57,18 +58,20 @@ void KernelMain(sNEOSKernelHeader hdr)
     
     // Override the previous exception handlers so that when a process crashes it doesn't kill the whole kernel.
     RegisterKernelExceptions();
+    Log(LOG_LOG, L"Exceptions remapped to kernel");
 
     InitSyscalls();
     RegisterSyscalls();
     Log(LOG_LOG, L"Syscalls initialised to interrupt 0x%02X", NEOS_SYSCALL_IRQ);
 
     InitObjectManager();
+    // TODO: Move these into their own init function
     CreateObjectDirectory(L"Devices");
     CreateObjectDirectory(L"Processes");
     CreateObjectDirectory(L"Threads");
     CreateObjectDirectory(L"Cache");
-    CreateObjectDirectory(L"Cache\\DLLs\\Kernel");
-    CreateObjectDirectory(L"Cache\\DLLs\\User");
+    CreateObjectDirectory(L"Cache\\Libraries\\Kernel");
+    CreateObjectDirectory(L"Cache\\Libraries\\User");
     Log(LOG_LOG, L"Object manager initialised");
     
     // 10th of a millisecond per cycle
@@ -84,10 +87,6 @@ void KernelMain(sNEOSKernelHeader hdr)
     Log(LOG_LOG, L"Loading drivers...");
     sList lstDrivers = LoadCFG(L"NeOS\\Drivers.cfg");
     // sList lstConfig  = LoadCFG(L"NeOS\\NeOS.cfg", &hdr);
-    Log(LOG_LOG, L"Running test");
-    PVOID pFile = LoaderOpenFile(L"NeOS\\Libraries\\KNeOS.dll");
-    LoadExecutable(pFile, 0);
-    LoaderCloseFile(pFile);
 
     // Load the drivers
     for (QWORD i = 0; i < lstDrivers.qwLength; i++)
@@ -101,28 +100,20 @@ void KernelMain(sNEOSKernelHeader hdr)
             for (int j = 0; pEntry->szLabel[j]; j++)
                 wszDriverName[j] = pEntry->szLabel[j];
             
-            WCHAR wszPath[256];
-            strcpyW(wszPath, L"NeOS\\Drivers\\");
-            strcatW(wszPath, wszDriverName);
-            strcatW(wszPath, L".drv");
-            PVOID pFile = LoaderOpenFile(wszPath);
-            _ASSERT(pFile != NULL, L"Driver '%w' not found", wszDriverName);
-
-            sExecutable sEXE = LoadExecutable(pFile, 0);
-            INT iStatus = LoadDriver(&sEXE, wszDriverName);
-            if (_NEOS_SUCCESS(iStatus))
-                Log(LOG_LOG, L"Driver '%w' loaded!", wszDriverName);
+            INT iStatus = LoadDriver(wszDriverName);
+            if (_SUCCESSFUL(iStatus))
+                Log(LOG_LOG, L"Driver '%S' loaded!", wszDriverName);
             else
-                Log(LOG_ERROR, L"Failed to load driver '%w' [%d]", wszDriverName, iStatus);
-            LoaderCloseFile(pFile);
+                Log(LOG_ERROR, L"Failed to load driver '%S' [%08X]", wszDriverName, iStatus);
         }
     }
 
     Log(LOG_LOG, L"Drivers loaded!");
     Log(LOG_LOG, L"Enabling interrupts...");
 
-    EnableInterrupts();
-    
+    // EnableInterrupts();
+    __asm__ volatile ("sti");
+
     for (;;) __asm__ volatile ("hlt"); // Halt so less power is wasted
     __asm__ volatile ("cli\nhlt"); // Ensure the kernel does not exit at all
 }

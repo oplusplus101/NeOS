@@ -1,9 +1,24 @@
 
 #include <common/string.h>
-#include <common/screen.h>
 
 PCHAR g_szStrtokNext = NULL;
 PWCHAR g_wszStrtokNext = NULL;
+extern PVOID KHeapAlloc(QWORD qwSize);
+
+PCHAR strdup(PCHAR sz)
+{
+    PCHAR szNew = KHeapAlloc(strlen(sz) + 1); // add 1 for the null terminator
+    strcpy(szNew, sz);
+    return szNew;
+}
+
+PWCHAR strdupW(PWCHAR sz)
+{
+    PWCHAR szNew = KHeapAlloc((strlenW(sz) + 1) * sizeof(WCHAR)); // add 1 for the null terminator
+    strcpyW(szNew, sz);
+    return szNew;
+}
+
 
 PCHAR strtok(PCHAR sz, const PCHAR szDelim)
 {

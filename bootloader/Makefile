@@ -2,6 +2,6 @@
 ARCH = x86_64
 TARGET = bootloader.efi
 SRCS = $(wildcard *.c)
-CFLAGS = -Wpedantic -Wall -Wextra --ansi -O0 -std=c99 -Iinclude
+CFLAGS = -Wpedantic -Wall -Wextra --ansi -O0 -std=c99 -I../lib/kernel_runtime/include
 
 include uefi/Makefile

@@ -12,9 +12,9 @@ typedef enum
 } eDriveType;
 
 void InitDrives();
-void ActivateDrive(BYTE nDrive);
-BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer);
-BOOL WriteToDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer);
+void ActivateDrive(BYTE bDrive);
+BOOL ReadFromDrive(BYTE bDrive, QWORD qwStart, WORD wCount, PVOID pBuffer);
+BOOL WriteToDrive(BYTE bDrive, QWORD qwStart, WORD wCount, PVOID pBuffer);
 QWORD GetDriveCapacityInSectors(BYTE nDrive);
 
 

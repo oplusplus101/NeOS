@@ -11,24 +11,51 @@
 typedef struct
 {
     BYTE r, g, b;
-} __attribute__((packed)) color_t;
+} __attribute__((packed)) sColour;
 
-#define _RGB(r, g, b) ((color_t) { (r), (g), (b) })
+typedef QWORD (*ISR)(QWORD);
+typedef QWORD (*ESR)(QWORD, BYTE);
 
-#define NEOS_SUCCESS 0
-#define NEOS_FAILURE 1
+#define _RGB(r, g, b) ((sColour) { (r), (g), (b) })
 
-#define _NEOS_SUCCESS(x) ((x) == 0)
+// Extra context
+#define NEOS_ERROR_KERNEL         0x00010000
+#define NEOS_ERROR_LIBRARY        0x00020000
+#define NEOS_ERROR_EXECUTABLE     0x00030000
+#define NEOS_ERROR_DISK           0x00040000
+#define NEOS_ERROR_DRIVER         0x00050000
 
-#define NEOS_BACKGROUND_COLOR _RGB(0, 0, 0)
-#define NEOS_FOREGROUND_COLOR _RGB(168, 168, 168)
-#define NEOS_ERROR_COLOR      _RGB(255, 0, 0)
-#define NEOS_MINIMUM_RAM_SIZE (1024 * 1024 * 1024 * 1) // 1 GiB minimum ram
-#define NEOS_HEAP_SIZE        (1024 * 1024 * 10)       // 10 MiB heap
-#define NEOS_STACK_SIZE       (1024 * 32)              // 32 KiB heap
-#define NEOS_KERNEL_LOC_LOW   0x200000
-#define NEOS_KERNEL_LOC_HIGH  0x300000
-#define NEOS_SYSCALL_IRQ      0x81                   // 0x81 so it doesn't conflict with the POSIX interrupts
+// Status
+#define NEOS_SUCCESS              0x00000000
+#define NEOS_FAILURE              0xFFFFFFFF
+
+// Read operations
+#define NEOS_OPEN_FILE_FAILURE    0x00001000
+#define NEOS_READ_FILE_FAILURE    0x00001001
+#define NEOS_LOAD_FAILURE         0x00001002
+
+// Write operations
+#define NEOS_WRITE_FILE_FAILURE   0x00002000
+
+// Other
+#define NEOS_CLOSE_FILE_FAILURE   0x00003000
+
+
+#define _SUCCESSFUL(x) (((x) & 0x0000FFFF) == 0)
+#define NEOS_BACKGROUND_COLOUR       _RGB(0, 0, 0)
+#define NEOS_FOREGROUND_COLOUR       _RGB(168, 168, 168)
+#define NEOS_ERROR_COLOUR            _RGB(255, 0, 0)
+#define NEOS_MINIMUM_RAM_SIZE        (1024 * 1024 * 1024 * 1) // 1 GiB minimum ram
+#define NEOS_HEAP_SIZE               (1024 * 1024 * 10)       // 10 MiB heap
+#define NEOS_STACK_SIZE              (1024 * 32)              // 32 KiB heap
+#define NEOS_SYSCALL_IRQ             0x81                     // 0x81 so it doesn't conflict with the POSIX interrupts
+#define NEOS_KERNEL_PHYSICAL_ADDRESS 0x000000
+
+// Memory map
+#define MM_USER_SPACE_START  0x0000000000000000
+#define MM_KERNEL_START      0xFFFFF80000000000
+#define MM_ARCH_START        0xFFFFF81000000000
+#define MM_DRIVERS_START     0xFFFFF82000000000
 
 typedef struct
 {
@@ -56,11 +83,14 @@ typedef struct
     INT  (*GetCursorX)();
     INT  (*GetCursorY)();
     void (*SetCursor)(INT x, INT y);
-    void (*SetFGColor)(color_t c);
-    void (*SetBGColor)(color_t c);
+    void (*SetFGColor)(sColour c);
+    void (*SetBGColor)(sColour c);
     void (*ClearScreen)();
     INT  (*GetScreenWidth)();
     INT  (*GetScreenHeight)();
+    void (*RegisterException)(BYTE n, ESR pESR);
+    void (*RegisterInterrupt)(BYTE n, ISR pISR);
+
 } sNEOSKernelHeader;
 
 #endif // __NEOS_H

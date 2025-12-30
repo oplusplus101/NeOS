@@ -17,13 +17,14 @@ b KException13
 b KException14
 skip function Log
 skip function PrintFormat
-#skip function KHeapAlloc
-#skip function KHeapFree
-#skip function KHeapReAlloc
-#skip function HeapAlloc
-#skip function HeapFree
-#skip function HeapReAlloc
+skip function KHeapAlloc
+skip function KHeapFree
+skip function KHeapReAlloc
+skip function HeapAlloc
+skip function HeapFree
+skip function HeapReAlloc
 skip function memset
 skip function memcpy
 skip function memcmp
 skip function ZeroMemory
+set disassembly-flavor intel

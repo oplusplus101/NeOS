@@ -8,30 +8,33 @@
 
 #include <memory/paging.h>
 
-DWORD g_nActiveDrives;
+DWORD g_dwActiveDrives;
 PVOID g_pReadBuffer;
 
 void InitDrives()
 {
     g_pReadBuffer = AllocatePage();
+    g_dwActiveDrives = 0; // No drives by default
 }
 
-void ActivateDrive(BYTE nDrive)
+void ActivateDrive(BYTE bDrive)
 {
-    g_nActiveDrives |= 1 << nDrive;
+    g_dwActiveDrives |= 1 << bDrive;
 }
 
-BOOL CheckDrive(BYTE nDrive)
+BOOL CheckDrive(BYTE bDrive)
 {
-    return (g_nActiveDrives >> nDrive) & 0x01;
+    return (g_dwActiveDrives >> bDrive) & 0x01;
 }
+
 
 // Reads sectors up to 65536 sectors.
-BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
+BOOL ReadFromDrive(BYTE bDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
 {
-    _ASSERT(wCount > 0, L"Tried to read 0 sectors from drive #%d", nDrive);
-    if (!CheckDrive(nDrive)) _KERNEL_PANIC(L"Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
-    switch (nDrive)
+    _ASSERT(wCount > 0, L"Tried to read 0 sectors from drive #%d", bDrive);
+    _ASSERT(CheckDrive(bDrive), L"Tried to read from a drive that doesn't exist.\nDrive: #%d", bDrive);
+
+    switch (bDrive)
     {
     case DRIVE_TYPE_AHCI_SATA:
         // This code is necessary because DMA cannot read into non-identity-mapped memory.
@@ -57,8 +60,8 @@ BOOL ReadFromDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
     return false;
 }
 
-BOOL WriteToDrive(BYTE nDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
+BOOL WriteToDrive(BYTE bDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
 {
-    if (!CheckDrive(nDrive)) _KERNEL_PANIC(L"Tried to read from a drive that doesn't exist.\nDrive: #%d", nDrive);
+    if (!CheckDrive(bDrive)) _KERNEL_PANIC(L"Tried to read from a drive that doesn't exist.\bDrive: #%d", bDrive);
     return false;
 }

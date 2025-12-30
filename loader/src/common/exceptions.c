@@ -2,8 +2,10 @@
 #include <common/exceptions.h>
 #include <common/log.h>
 #include <common/panic.h>
-#include <hardware/idt.h>
+#include <common/screen.h>
 #include <common/types.h>
+
+#include <hardware/idt.h>
 
 void PrintStack(QWORD qwRSP)
 {

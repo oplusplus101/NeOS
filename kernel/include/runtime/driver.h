@@ -17,7 +17,6 @@ typedef struct _tagDriverObject
     INT (*pDriverUnload)(struct _tagDriverObject *);
 
     INT (*arrIOHandlers[5])(struct _tagDriverObject *, struct _tagIORequestPacket *);
-    sPageTable *pPML4;
 } __attribute__((packed)) sDriverObject;
 
 typedef struct
@@ -29,7 +28,7 @@ typedef struct
 
 
 sObject *GetDriver(PWCHAR wszName);
-INT LoadDriver(sExecutable *pDriverExecutable, PWCHAR wszName);
+INT LoadDriver(PWCHAR wszName);
 INT DispatchDriverIRP(sDriverObject *pDriver, struct _tagIORequestPacket *pIRP);
 
 void InitDriverManager();

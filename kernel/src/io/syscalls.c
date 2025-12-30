@@ -2,8 +2,7 @@
 #include <io/syscalls.h>
 #include <runtime/process.h>
 #include <neos.h>
-#include <common/screen.h>
-#include <hardware/idt.h>
+#include <loaderfunctions.h>
 #include <common/list.h>
 
 sList g_lstSyscallRegistry;

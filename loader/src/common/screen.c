@@ -8,7 +8,7 @@ INT g_iWidth, g_iHeight;
 INT g_iTextWidth, g_iTextHeight;
 INT g_iCursorX, g_iCursorY;
 const INT g_iFontWidth = 8, g_iFontHeight = 16;
-color_t g_fgColor, g_bgColor;
+sColour g_fgColor, g_bgColor;
 BOOL g_bControlCharState = true;
 
 // Array from: https://files.osdev.org/mirrors/geezer/osd/graphics/modes.c
@@ -288,7 +288,7 @@ void ClearScreen()
     ZeroMemory(g_pScreen, g_iWidth * g_iHeight * 4);
 }
 
-void FillRectangle(int x, int y, int w, int h, color_t c)
+void FillRectangle(int x, int y, int w, int h, sColour c)
 {
     for (INT i = 0; i < h; i++)
         for (INT j = 0; j < w; j++)
@@ -328,17 +328,17 @@ INT GetCursorY()
     return g_iCursorY;
 }
 
-void SetFGColor(color_t c)
+void SetFGColor(sColour c)
 {
     g_fgColor = c;
 }
 
-void SetBGColor(color_t c)
+void SetBGColor(sColour c)
 {
     g_bgColor = c;
 }
 
-void DrawPixel(INT x, INT y, color_t c)
+void DrawPixel(INT x, INT y, sColour c)
 {
     if (x < 0 || y < 0 || x >= g_iWidth || y >= g_iHeight) return;
     g_pScreen[x + y * g_iWidth] = 0xFF000000 | c.b | (c.g << 8) | (c.r << 16);
@@ -441,7 +441,7 @@ void PrintFormatVariadic(const PWCHAR wszFormat, __builtin_va_list args)
                 else
                     PrintString(sz);
                 break;
-            case 'w':
+            case 'S':
                 const PWCHAR wsz = __builtin_va_arg(args, const PWCHAR);
                 if (wsz == NULL)
                     PrintString("(null)");
@@ -544,6 +544,7 @@ void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII)
             
             PrintChar('\n');
         }
+
     }
     PrintChar('\n');
 }

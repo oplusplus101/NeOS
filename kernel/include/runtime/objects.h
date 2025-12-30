@@ -41,7 +41,7 @@ typedef struct
 void         DestroyDirectoryCallback(sObject *pObject);
 BOOL         AddObjectToDirectory(sObject *pDirectory, sObject *pObject);
 sObject     *FindObjectInDirectory(sObjectDirectory *pDirectory, PWCHAR wszName);
-sObject     *LookupObject(PWCHAR wszPath, sObject *pParent);
+sObject     *FindObject(PWCHAR wszPath, sObject *pParent);
 sObject     *CreateObjectDirectory(PWCHAR wszPath);
 sObjectType *CreateType(PWCHAR wszName, QWORD qwBodySize, void (*pDestroyCallback)(sObject *));
 void         DestroyType(sObjectType *pType);

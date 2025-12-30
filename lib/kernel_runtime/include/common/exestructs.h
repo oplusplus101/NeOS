@@ -138,7 +138,8 @@ typedef struct
 
 typedef struct
 {
-    union {
+    union
+    {
         DWORD dwCharacteristics;
         DWORD dwAddressOfOriginalFirstThunk;
     };
@@ -154,6 +155,13 @@ typedef union
     QWORD qwFunction;
     QWORD qwOrdinal;
     QWORD qwAddressOfData;
-} sPE32ImageThunkData;
+} uPE32ImageThunkData;
+
+typedef struct
+{
+    DWORD dwVirtualAddress;
+    DWORD dwSizeOfBlock;
+    WORD  arrTypeOffset[1];
+} __attribute__((packed)) sPE32ImageBaseRelocation;
 
 #endif // __COMMON__EXEHEADERS_H

@@ -1,6 +1,7 @@
 
 #include <common/log.h>
 #include <neos.h>
+#include <common/screen.h>
 
 void InitLogger()
 {
@@ -17,7 +18,7 @@ void Log(INT iType, const PWCHAR wszFormat, ...)
         PrintString("[");
         SetFGColor(_RGB(0, 255, 255));
         PrintString("  LOG  ");
-        SetFGColor(NEOS_FOREGROUND_COLOR);
+        SetFGColor(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
     else if (iType == 1)
@@ -25,7 +26,7 @@ void Log(INT iType, const PWCHAR wszFormat, ...)
         PrintString("[");
         SetFGColor(_RGB(255, 255, 0));
         PrintString("WARNING");
-        SetFGColor(NEOS_FOREGROUND_COLOR);
+        SetFGColor(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
     else if (iType == 2)
@@ -33,7 +34,7 @@ void Log(INT iType, const PWCHAR wszFormat, ...)
         PrintString("[");
         SetFGColor(_RGB(255, 0, 0));
         PrintString(" ERROR ");
-        SetFGColor(NEOS_FOREGROUND_COLOR);
+        SetFGColor(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
     else if (iType == 3)
@@ -41,7 +42,7 @@ void Log(INT iType, const PWCHAR wszFormat, ...)
         PrintString("[");
         SetFGColor(_RGB(255, 0, 255));
         PrintString("GOODBYE");
-        SetFGColor(NEOS_FOREGROUND_COLOR);
+        SetFGColor(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
 

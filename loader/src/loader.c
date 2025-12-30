@@ -22,6 +22,14 @@
 #include <common/log.h>
 #include <neos.h>
 
+
+// TEMPORARY: Setup some basic stack stuff
+#define KERNEL_STACK_SIZE (32 * 1024) // 32 KiB
+#define DOUBLE_FAULT_STACK_SIZE (8 * 1024) // 8 KiB shall suffice
+
+static BYTE g_arrKernelStack[KERNEL_STACK_SIZE] __attribute__((aligned(4096)));
+static BYTE g_arrDoubleFaultStack[DOUBLE_FAULT_STACK_SIZE] __attribute__((aligned(4096)));
+
 QWORD __stack_chk_guard = 0x595e9fbd94fda766;
 
 void __stack_chk_fail(void)
@@ -48,7 +56,13 @@ PVOID OpenFile(PWCHAR wszPath)
     sFile *pFile = KHeapAlloc(sizeof(sFile));
     if (pFile == NULL) return NULL;
     pFile->qwPosition = 0;
-    if (!GetEntryFromPath(wszPath, &pFile->sEntry)) return NULL;
+    PWCHAR wszPathDup = strdupW(wszPath);
+    if (!GetEntryFromPath(wszPathDup, &pFile->sEntry))
+    {
+        KHeapFree(wszPathDup);
+        return NULL;
+    }
+    KHeapFree(wszPathDup);
     return pFile;
 }
 
@@ -76,48 +90,27 @@ void CloseFile(PVOID pFile)
     KHeapFree(pFile);
 }
 
-void LoaderMain(sBootData data)
+void LoaderMainAfterStackSwitch(sBootData sData)
 {
-    DisableInterrupts();
-
-    InitGDT();
-    WriteGDT();
-
-    // Screen
-    InitScreen(data.gop.nWidth, data.gop.nHeight, data.gop.pFramebuffer);
-    ClearScreen();
-    SetBGColor(NEOS_BACKGROUND_COLOR);
-    SetFGColor(NEOS_FOREGROUND_COLOR);
-    InitLogger();
-
-    Log(LOG_LOG, L"Screen initialised!");
+    // Create a new stack -- and also the Task State Segment
+    sTaskStateSegment *pTSS = GetTSS();
+    pTSS->qwRSP0 = (QWORD) g_arrKernelStack + KERNEL_STACK_SIZE;
+    pTSS->qwIST1 = (QWORD) g_arrDoubleFaultStack + DOUBLE_FAULT_STACK_SIZE;
     
-    // Interrupts
-    InitIDT();
-    RegisterExceptions();
-    Log(LOG_LOG, L"Interrupts initialised!");
-
-    // Paging
-    InitPaging(data.pMemoryDescriptor,
-               data.nMemoryMapSize, data.nMemoryDescriptorSize,
-               data.nLoaderStart, data.nLoaderEnd);
-
-    for (;;);
-    // Lock the GOP screen memory.
-    ReservePages(data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1);
-    MapPageRangeToIdentity(NULL, data.gop.pFramebuffer, data.gop.nBufferSize / PAGE_SIZE + 1, PF_WRITEABLE);
-    Log(LOG_LOG, L"Paging initialised!");
+    FlushTSS();
+    Log(LOG_LOG, L"Task State Segment reloaded");
     
     // Set up the heap
     sHeap sKernelHeap = CreateHeap(NEOS_HEAP_SIZE / PAGE_SIZE, false, true, NULL);
     SetKernelHeap(&sKernelHeap);
     Log(LOG_LOG, L"Heap initialised!");
 
+    InitDrives();
+    
     // Set up the drive
     Log(LOG_LOG, L"Scanning for PCI devices...");
     ScanPCIDevices();
 
-    InitDrives();
 
     LoadGPT(DRIVE_TYPE_AHCI_SATA);
     Log(LOG_LOG, L"GPT Loaded");
@@ -132,12 +125,14 @@ void LoaderMain(sBootData data)
 
     // Read the kernel
     PBYTE pKernelData = KHeapAlloc(sKernelEntry.dwFileSize);
-    ReadDirectoryEntry(&sKernelEntry, pKernelData, sKernelEntry.dwFileSize, 0);
+    QWORD qwSizeRead = ReadDirectoryEntry(&sKernelEntry, pKernelData, sKernelEntry.dwFileSize, 0);
+    _ASSERT(qwSizeRead == sKernelEntry.dwFileSize, L"Failed to read kernel! expected size: %d size read: %d", sKernelEntry.dwFileSize, qwSizeRead);
+    // TODO: Implement a proper PE32+ parsing library, so that there isn't duplicate code everywhere.
     
     // Parse the file (PE32+)
     Log(LOG_LOG, L"Loading PE headers...");
     sMZHeader *pMZHeader = (sMZHeader *) pKernelData;
-    _ASSERT(pMZHeader->wMagic == 0x5A4D, L"Invalid DOS stub.");
+    _ASSERT(pMZHeader->wMagic == 0x5A4D, L"Invalid DOS stub %c%c.", pMZHeader->wMagic & 0xFF, pMZHeader->wMagic >> 8);
 
     sPE32Header *pPEHeader = (sPE32Header *) (pKernelData + 128); // FIXME: Replace the 128 with the proper size of the MZ header
     _ASSERT(pPEHeader->dwMagic == 0x4550, L"Invalid PE32 header.");
@@ -148,27 +143,31 @@ void LoaderMain(sBootData data)
     _ASSERT(pPEOHeader->wMagic == 0x020B, L"Invalid PE32 optional header.");
     Log(LOG_LOG, L"Loading sections...");
 
-    // TODO: Add saftey checks to ensure that the entrypoint inside the file matches the expected value (NEOS_KERNEL_LOCATION).
     DisableInterrupts(); // To ensure that everything is loaded in the right order
+
+    QWORD qwMinAddress = 0xFFFFFFFFFFFFFFFF, qwMaxAddress = 0x0000000000000000;
+
     for (QWORD i = 0; i < pPEHeader->wNumberOfSections; i++)
     {
         sPE32SectionHeader *hdr = (sPE32SectionHeader *) ((PBYTE) pPEOHeader + pPEHeader->wSizeOfOptionalHeader + sizeof(sPE32SectionHeader) * i);
-        QWORD qwAddress = hdr->dwVirtualAddress + pPEOHeader->qwImageBase;
+        QWORD qwAddress = (QWORD) hdr->dwVirtualAddress + pPEOHeader->qwImageBase + NEOS_KERNEL_PHYSICAL_ADDRESS;
         if (hdr->dwCharacteristics & PE32_SCN_MEM_DISCARDABLE) continue;
         Log(LOG_LOG, L"Loading section: %s at 0x%p", hdr->szName, qwAddress, hdr->dwCharacteristics);
         memcpy((PVOID) qwAddress, (PBYTE) pKernelData + hdr->dwOffsetOfRawData, hdr->dwVirtualSize);
+        ReservePages((PVOID) qwAddress, _BYTES_TO_PAGES(hdr->dwVirtualSize));
+        qwMinAddress = _MIN(qwMinAddress, qwAddress);
+        qwMaxAddress = _MAX(qwMaxAddress, qwAddress + hdr->dwVirtualSize);
     }
     
     KHeapFree(pKernelData);
 
-    // Assume the kernel will be between 0x200000 - 0x300000
-    ReservePages((PVOID) NEOS_KERNEL_LOC_LOW, (NEOS_KERNEL_LOC_HIGH - NEOS_KERNEL_LOC_LOW) / PAGE_SIZE);
-    MapPageRangeToIdentity(NULL, (PVOID) NEOS_KERNEL_LOC_LOW, (NEOS_KERNEL_LOC_HIGH - NEOS_KERNEL_LOC_LOW) / PAGE_SIZE, PF_WRITEABLE);
+    // Map the kernel to high memory
+    // MapPageRange(NULL, (PVOID) MM_KERNEL_START, (PVOID) qwMinAddress, _BYTES_TO_PAGES(qwMaxAddress - qwMinAddress), PF_WRITEABLE);
     
     // Prepare the kernel boot header
     
     sNEOSKernelHeader sHeader;
-    sHeader.sGOP        = data.gop;
+    sHeader.sGOP        = sData.gop;
     sHeader.pKernelHeap = &sKernelHeap;
     sHeader.sPaging     = ExportPagingData();
 
@@ -181,24 +180,72 @@ void LoaderMain(sBootData data)
     sHeader.LoaderTellFile    = (QWORD (*)(PVOID)) TellFile;
 
     // Screen functions
-    sHeader.PrintFormat     = (void (*)(const PWCHAR, ...)) PrintFormat;
-    sHeader.PrintString     = (void (*)(PCHAR)) PrintString;
-    sHeader.PrintBytes      = (void (*)(PVOID, QWORD, WORD, BOOL)) PrintBytes;
-    sHeader.PrintChar       = (void (*)(CHAR)) PrintChar;
-    sHeader.Log             = (void (*)(INT, const PWCHAR, ...)) Log;
-    sHeader.GetCursorX      = (INT  (*)()) GetCursorX;
-    sHeader.GetCursorY      = (INT  (*)()) GetCursorY;
-    sHeader.SetCursor       = (void (*)(INT, INT)) SetCursor;
-    sHeader.SetFGColor      = (void (*)(color_t)) SetFGColor;
-    sHeader.SetBGColor      = (void (*)(color_t)) SetBGColor;
-    sHeader.ClearScreen     = (void (*)()) ClearScreen;
-    sHeader.GetScreenWidth  = (INT  (*)()) GetScreenWidth;
-    sHeader.GetScreenHeight = (INT  (*)()) GetScreenHeight;
+    sHeader.PrintFormat       = (void (*)(const PWCHAR, ...)) PrintFormat;
+    sHeader.PrintString       = (void (*)(PCHAR)) PrintString;
+    sHeader.PrintBytes        = (void (*)(PVOID, QWORD, WORD, BOOL)) PrintBytes;
+    sHeader.PrintChar         = (void (*)(CHAR)) PrintChar;
+    sHeader.Log               = (void (*)(INT, const PWCHAR, ...)) Log;
+    sHeader.GetCursorX        = (INT  (*)()) GetCursorX;
+    sHeader.GetCursorY        = (INT  (*)()) GetCursorY;
+    sHeader.SetCursor         = (void (*)(INT, INT)) SetCursor;
+    sHeader.SetFGColor        = (void (*)(sColour)) SetFGColor;
+    sHeader.SetBGColor        = (void (*)(sColour)) SetBGColor;
+    sHeader.ClearScreen       = (void (*)()) ClearScreen;
+    sHeader.GetScreenWidth    = (INT  (*)()) GetScreenWidth;
+    sHeader.GetScreenHeight   = (INT  (*)()) GetScreenHeight;
 
-    Log(LOG_LOG, L"Executing C:\\NeOS\\NeOS.sys at 0x%p", pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint);
+    sHeader.RegisterException = (void (*)(BYTE, ESR)) RegisterException;
+    sHeader.RegisterInterrupt = (void (*)(BYTE, ISR)) RegisterInterrupt;
+
+    Log(LOG_LOG, L"Executing C:\\NeOS\\NeOS.sys at 0x%p", pPEOHeader->qwImageBase + (QWORD) pPEOHeader->dwAddressOfEntrypoint + NEOS_KERNEL_PHYSICAL_ADDRESS);
     
     ((void (*)(sNEOSKernelHeader)) (pPEOHeader->qwImageBase + pPEOHeader->dwAddressOfEntrypoint))(sHeader);
 
     // Somthing went very wrong
     _KERNEL_PANIC(L"The kernel has crashed :/");
+}
+
+void LoaderMain(sBootData sData)
+{
+    DisableInterrupts();
+
+    InitGDT();
+    WriteGDT();
+
+    // Screen
+    InitScreen(sData.gop.nWidth, sData.gop.nHeight, sData.gop.pFramebuffer);
+    ClearScreen();
+    SetBGColor(NEOS_BACKGROUND_COLOUR);
+    SetFGColor(NEOS_FOREGROUND_COLOUR);
+    InitLogger();
+
+    Log(LOG_LOG, L"Screen initialised!");
+    
+    // Interrupts
+    InitIDT();
+    RegisterExceptions();
+    Log(LOG_LOG, L"Interrupts initialised!");
+
+    // Paging
+    InitPaging(sData.pMemoryDescriptor,
+               sData.nMemoryMapSize, sData.nMemoryDescriptorSize,
+               sData.nLoaderStart, sData.nLoaderEnd);
+
+    // Lock the GOP screen memory.
+    ReservePages(sData.gop.pFramebuffer, sData.gop.nBufferSize / PAGE_SIZE + 1);
+    MapPageRangeToIdentity(NULL, sData.gop.pFramebuffer, sData.gop.nBufferSize / PAGE_SIZE + 1, PF_WRITEABLE);
+    Log(LOG_LOG, L"Paging initialised!");
+
+    PBYTE pNewStackTop = g_arrKernelStack + KERNEL_STACK_SIZE;
+    pNewStackTop = (PBYTE) ((QWORD) pNewStackTop & ~0x0F); // Align the stack
+
+    // Push the boot header
+    pNewStackTop -= sizeof(sBootData);
+    *((sBootData *) pNewStackTop) = sData;
+    
+    __asm__ volatile(
+        "mov %0, %%rsp\nmov %%rsp, %%rbp\njmp *%1\n"
+        : : "r"(pNewStackTop), "r"(LoaderMainAfterStackSwitch)
+        : "memory"
+    );
 }

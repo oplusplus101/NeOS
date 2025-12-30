@@ -49,7 +49,7 @@ PVOID AllocatePage()
 
         return (PVOID) _PAGE_TO_ADDRESS(g_qwPageBitmapIndex);
     }
-
+ 
     // _KERNEL_PANIC(L"Out of pages");
     
     return NULL;
@@ -170,7 +170,7 @@ void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, W
     {
         pPageDirectoryPointer = AllocatePage();
         pEntry->qwAddress = _ADDRESS_TO_PAGE(pPageDirectoryPointer);
-        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED;
+        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED | PF_WRITEABLE;
         pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
@@ -185,7 +185,7 @@ void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, W
     {
         pPageDirectory = AllocatePage();
         pEntry->qwAddress = _ADDRESS_TO_PAGE(pPageDirectory);
-        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED;
+        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED | PF_WRITEABLE;
         pPageDirectoryPointer->arrEntries[_ADDRESS_TO_PD_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
@@ -245,11 +245,15 @@ void DisableWriteProtect()
     __asm__ volatile ("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
+void PopulatePageMap(sPageTable *pPageTable)
+{
+
+}
+
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
                 QWORD nMemoryMapSize, QWORD nMemoryDescriptorSize,
                 QWORD nLoaderStart, QWORD nLoaderEnd)
 {
-
     PVOID pLargestSegment = NULL;
     QWORD nLargestSegmentSize = 0, qwMemorySize = 0;
 
@@ -291,13 +295,9 @@ void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
 
     // Identity map the whole memory.
     MapPageRangeToIdentity(NULL, NULL, qwMemorySize / PAGE_SIZE + 1, PF_WRITEABLE);
-    MapPageToIdentity(NULL, g_pCurrentPML4, PF_ACCESSED);
+    MapPageToIdentity(NULL, g_pCurrentPML4, PF_ACCESSED | PF_WRITEABLE);
     LoadPML4(g_pCurrentPML4);
-    EnableWriteProtect();
-    
-    volatile QWORD *p = (QWORD*) g_pKernelPML4;
-    *p = 0xDEADBEEF; // should page fault
-
+    // EnableWriteProtect();
 }
 
 sPageTable *GetKernelPML4()

@@ -3,7 +3,6 @@
 #define __COMMON__STRING_H
 
 #include <common/types.h>
-#include <memory/heap.h>
 
 inline static QWORD strlen(PCHAR sz)
 {
@@ -122,20 +121,6 @@ inline static BOOL isalnum(CHAR c)
     return isdigit(c) || isalpha(c);
 }
 
-inline static PCHAR strdup(PCHAR sz)
-{
-    PCHAR szNew = KHeapAlloc(strlen(sz) + 1); // add 1 for the null terminator
-    strcpy(szNew, sz);
-    return szNew;
-}
-
-inline static PWCHAR strdupW(PWCHAR sz)
-{
-    PWCHAR szNew = KHeapAlloc((strlenW(sz) + 1) * sizeof(WCHAR)); // add 1 for the null terminator
-    strcpyW(szNew, sz);
-    return szNew;
-}
-
 inline static PCHAR StripString(PCHAR sz)
 {
     // First remove the prefix
@@ -167,5 +152,8 @@ inline static void ToUppercaseW(PWCHAR wsz)
 
 PCHAR strtok(PCHAR sz, const PCHAR szDelim);
 PWCHAR strtokW(PWCHAR wsz, const PWCHAR wszDelim);
+PCHAR strdup(PCHAR sz);
+PWCHAR strdupW(PWCHAR sz);
+
 
 #endif // __COMMON__STRING_H

@@ -2,8 +2,10 @@
 #include <runtime/exceptions.h>
 #include <runtime/process.h>
 
+
+#include <common/types.h>
 #include <common/panic.h>
-#include <common/log.h>
+#include <loaderfunctions.h>
 
 typedef struct _tagStackFrame
 {
@@ -195,7 +197,7 @@ QWORD KException14(QWORD qwRSP, BYTE nErrorCode)
             _PRINT_FAULT(qwRSP, L"User process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
         }
 
-    SetFGColor(NEOS_ERROR_COLOR);
+    SetFGColor(NEOS_ERROR_COLOUR);
     PrintFormat(L"Address: 0x%p\n", qwExceptionAddress);
     PrintFormat(L"PML4 Address: 0x%p\n", GetCurrentPML4());
 

@@ -3,11 +3,14 @@
 #include <runtime/process.h>
 #include <common/string.h>
 #include <common/memory.h>
+#include <common/panic.h>
 #include <io/io.h>
-#include <neos.h>
 #include <loaderfunctions.h>
+#include <neos.h>
 
 sObjectType *g_pDriverObjectType;
+// FIXME: Temporary until proper driver allocation is implemented
+QWORD g_qwDriverOffset = 0;
 
 INT DispatchDriverIRP(sDriverObject *pDriver, sIORequestPacket *pIRP)
 {
@@ -17,10 +20,7 @@ INT DispatchDriverIRP(sDriverObject *pDriver, sIORequestPacket *pIRP)
     if (pHandler == NULL)
         return NEOS_FAILURE;
     
-    sPageTable *pCurrentPML4 = GetCurrentPML4();
-    LoadPML4(pDriver->pPML4);
     INT iStatus = pHandler(pDriver, pIRP);
-    LoadPML4(pCurrentPML4);
     return iStatus;
 }
 
@@ -29,76 +29,68 @@ sObject *GetDriver(PWCHAR wszName)
     WCHAR wszPath[256];
     strcpyW(wszPath, L"Drivers\\");
     strcatW(wszPath, wszName);
-    return LookupObject(wszPath, NULL);
+    return FindObject(wszPath, NULL);
 }
 
-INT LoadDriver(sExecutable *pDriverExecutable, PWCHAR wszName)
+INT LoadDriver(PWCHAR wszName)
 {
-    sDriverObject *pObject = KHeapAlloc(sizeof(sDriverObject));
-    ZeroMemory(pObject, sizeof(sDriverObject));
-    pObject->pDriverEntry = (INT (*)(struct _tagDriverObject *)) (QWORD) (pDriverExecutable->qwEntryPoint + pDriverExecutable->qwBaseAddress);
+    WCHAR wszPath[256];
+    strcpyW(wszPath, L"NeOS\\Drivers\\");
+    strcatW(wszPath, wszName);
+    strcatW(wszPath, L".drv");
+    PVOID pFile = LoaderOpenFile(wszPath);
 
-
-    Log(LOG_LOG, L"ENTRY %p", pObject->pDriverEntry);
-    
-    sPageTable *pCurrentPML4 = GetCurrentPML4();
-    pObject->pPML4 = pDriverExecutable->pPageTable;
-    // Log(LOG_LOG, L"CURR: %p\n", PML4Hash(pCurrentPML4));
-    // Log(LOG_LOG, L"POBJ: %p\n", PML4Hash(pObject->pPML4));
-
-    for (;;);
-    // PML4
-    for (WORD i = 0; i < PAGE_TABLE_SIZE; i++)
+    if (pFile == NULL)
     {
-        if (!(pObject->pPML4->arrEntries[i].wFlags & PF_PRESENT)) continue;
-        sPageTable *pPageDirectory = (sPageTable *) _PAGE_TO_ADDRESS(pObject->pPML4->arrEntries[i].qwAddress);
-
-        // Page Directory
-        for (WORD j = 0; j < PAGE_TABLE_SIZE; j++)
-        {
-            if (!(pPageDirectory->arrEntries[j].wFlags & PF_PRESENT)) continue;
-            sPageTable *pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(pPageDirectory->arrEntries[j].qwAddress);
-
-            // Page Table
-            for (WORD k = 0; k < PAGE_TABLE_SIZE; k++)
-            {
-                if (!(pPageTable->arrEntries[k].wFlags & PF_PRESENT)) continue;
-                sPageTable *pPageEntry = (sPageTable *) _PAGE_TO_ADDRESS(pPageTable->arrEntries[k].qwAddress);
-                QWORD qVA = (QWORD) k * 4096 * 4096 +
-                            (QWORD) j * 4096 * 4096 * 4096 +
-                            (QWORD) i * 4096 * 4096 * 4096 * 4096;
-                Log(LOG_LOG, L"VA %p PA %p", qVA, _PAGE_TO_ADDRESS(pPageEntry->arrEntries[0].qwAddress), GetPhysicalAddress(pObject->pPML4, (PVOID) qVA));
-                for (QWORD l = 0; l < 0xffffff; l++) __asm__ volatile ("nop");
-            }
-        }
+        Log(LOG_ERROR, L"Could not load file for driver '%S'", wszName);
+        return NEOS_LOAD_FAILURE | NEOS_ERROR_DRIVER;        
     }
 
-    Log(LOG_LOG, L"Starting driver...");
-    PrintFormat(L"CPT: %p\n", pObject->pPML4);
-    LoadPML4(pObject->pPML4);
-    INT iStatus = pObject->pDriverEntry(pObject);
-    LoadPML4(pCurrentPML4);
-    for (;;);
+    sExecutable *pExecutable = KHeapAlloc(sizeof(sExecutable));
+    INT iStatus = LoadExecutable(pFile, MM_DRIVERS_START + g_qwDriverOffset, GetKernelPML4(), pExecutable);
+    g_qwDriverOffset += 0x10000000; // FIXME: Assume a 256MiB driver size for now
+    
+    if (!_SUCCESSFUL(iStatus))
+    {
+        Log(LOG_ERROR, L"Could not load executable for driver '%S'", wszName);
+        return iStatus;
+    }
+    
+    sDriverObject *pObject = KHeapAlloc(sizeof(sDriverObject));
+    ZeroMemory(pObject, sizeof(sDriverObject));
+    pObject->pDriverEntry = (INT (*)(struct _tagDriverObject *)) (QWORD) (pExecutable->qwEntryPoint + pExecutable->qwVirtualStart);
+
+    Log(LOG_LOG, L"Starting driver '%S'...", wszName);
+    iStatus = pObject->pDriverEntry(pObject);
+
+    if (!_SUCCESSFUL(iStatus))
+    {
+        Log(LOG_WARNING, L"Driver freeing isn't implemented yet");
+        return iStatus;
+    }
     
     sDriver sDrv =
     {
         .pDriverObject = pObject,
-        .pExecutable   = pDriverExecutable
+        .pExecutable   = pExecutable
     };
-
     strcpyW(sDrv.wszName, wszName);
-    
-    WCHAR wszPath[256];
+
+    memset(wszPath, 0, sizeof(wszPath));
     strcpyW(wszPath, L"Drivers\\");
     strcatW(wszPath, wszName);
-    CreateObject(wszPath, g_pDriverObjectType, &sDrv);
+
+    PrintFormat(L"address: %p\n", sDrv.pExecutable->qwVirtualStart);
+
+    // Commented out temporarly, because the heap causes crashes
+    // CreateObject(wszPath, g_pDriverObjectType, &sDrv);
 
     return iStatus;
 }
 
 void DestroyDriver(sObject *pObject)
 {
-
+    _KERNEL_PANIC(L"DestroyDriver isn't yet implemented");
 }
 
 void InitDriverManager()

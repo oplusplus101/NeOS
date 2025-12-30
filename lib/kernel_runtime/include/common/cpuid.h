@@ -2,7 +2,7 @@
 #ifndef __COMMON__CPUID_H
 #define __COMMON__CPUID_H
 
-#include <types.h>
+#include <common/types.h>
 
 // Code from: https://wiki.osdev.org/CPUID
 enum {

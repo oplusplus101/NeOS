@@ -3,7 +3,6 @@
 #define __RUNTIME__PROCESS_H
 
 #include <common/list.h>
-#include <hardware/idt.h>
 #include <common/types.h>
 #include <memory/paging.h>
 #include <runtime/exe.h>

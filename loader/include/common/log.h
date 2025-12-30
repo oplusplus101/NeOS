@@ -1,8 +1,8 @@
 
-#ifndef __LOG_H
-#define __LOG_H
+#ifndef __COMMON__LOG_H
+#define __COMMON__LOG_H
 
-#include <common/screen.h>
+#include <common/types.h>
 
 #define LOG_LOG 0
 #define LOG_WARNING 1

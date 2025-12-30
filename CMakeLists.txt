@@ -9,25 +9,31 @@ set(LOADER_EXE      NEOSLDR.sys)
 set(KERNEL_EXE      NeOS.sys)
 set(BOOTLOADER_PATH ${CMAKE_SOURCE_DIR}/bootloader/bootloader.efi)
 set(IMAGE_PATH      ${CMAKE_BINARY_DIR}/NeOS.qcow2)
-set(TERMINAL_EXE    st)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_FLAGS "-m64 -O0 -g -nostdlib -ffreestanding -fno-builtin -fstack-protector-all -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Wall -Wpedantic -Werror -fshort-wchar -no-pie")
+set(CMAKE_C_FLAGS "-m64 -O0 -g -nostdlib -ffreestanding -fno-builtin -fstack-protector-all -fno-exceptions \
+                   -mno-stack-arg-probe -mno-red-zone -Wall -Wpedantic -Werror -fshort-wchar -fPIE -Wl,--no-relax")
 
 # Load the headers
 include_directories(${LOADER_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/loader/include)
 include_directories(${KERNEL_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/kernel/include)
+include_directories(${LOADER_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/lib/kernel_runtime/include)
+include_directories(${KERNEL_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/lib/kernel_runtime/include)
 
 # Load the sources
 file(GLOB_RECURSE LOADER_SRC ${CMAKE_SOURCE_DIR}/loader/src/*.c ${CMAKE_SOURCE_DIR}/loader/src/*.asm)
 file(GLOB_RECURSE KERNEL_SRC FOLLOW_SYMLINKS ${CMAKE_SOURCE_DIR}/kernel/src/*.c ${CMAKE_SOURCE_DIR}/kernel/src/*.asm)
-add_executable(${LOADER_EXE} ${LOADER_SRC})
-add_executable(${KERNEL_EXE} ${KERNEL_SRC})
+add_executable(${LOADER_EXE} ${LOADER_SRC} $<TARGET_OBJECTS:runtime>)
+add_executable(${KERNEL_EXE} ${KERNEL_SRC} $<TARGET_OBJECTS:runtime>)
 
 # Linker stuff
 set_target_properties(${LOADER_EXE} PROPERTIES LINK_FLAGS "-T ${CMAKE_SOURCE_DIR}/loader/linker.ld")
 set_target_properties(${KERNEL_EXE} PROPERTIES LINK_FLAGS "-T ${CMAKE_SOURCE_DIR}/kernel/linker.ld")
+
+file(GLOB_RECURSE KERNEL_RUNTIME_SRC "${CMAKE_SOURCE_DIR}/lib/kernel_runtime/src/*.c")
+
+add_library(runtime OBJECT ${KERNEL_RUNTIME_SRC})
 
 # Post build
 add_custom_command(
@@ -61,7 +67,7 @@ add_custom_target(
     COMMAND cp ${CMAKE_SOURCE_DIR}/drivers/*/*.drv ${CMAKE_BINARY_DIR}/main_part/NeOS/Drivers
 
     # Copy the libraries
-    COMMAND cp ${CMAKE_SOURCE_DIR}/lib/*.dll ${CMAKE_BINARY_DIR}/main_part/NeOS/Libraries
+    COMMAND cp ${CMAKE_SOURCE_DIR}/lib/*/*.dll ${CMAKE_BINARY_DIR}/main_part/NeOS/Libraries
     
     # Assemble the image
     COMMAND ${TERMINAL_EXE} ${CMAKE_SOURCE_DIR}/assemble_qcow.sh ${CMAKE_SOURCE_DIR}
@@ -71,9 +77,9 @@ add_custom_target(
 )
 
 # For some reason, this breaks in vscode
-add_custom_target(run COMMAND ${TERMINAL_EXE} ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH})
-add_custom_target(gdb COMMAND ${TERMINAL_EXE} ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH} "-gdb tcp::9000 -S")
-add_custom_target(qemu-dbg COMMAND ${TERMINAL_EXE} ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH} "-d int,cpu_reset,guest_errors -no-reboot -no-shutdown -D qemu.log")
+add_custom_target(run COMMAND ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH})
+add_custom_target(gdb COMMAND ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH} "-gdb tcp::9000 -S")
+add_custom_target(qemu-dbg COMMAND ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH} "-d int,cpu_reset,guest_errors,nochain -no-reboot -no-shutdown -D qemu.log -no-hpet")
 
 # Clean up
 set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${IMAGE_PATH};${CMAKE_BINARY_DIR}/efi_part;${CMAKE_BINARY_DIR}/main_part")
