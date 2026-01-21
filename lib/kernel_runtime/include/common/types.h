@@ -32,6 +32,7 @@ typedef unsigned short WCHAR;
 typedef WCHAR *PWCHAR;
 
 typedef INT HANDLE;
+typedef int STATUS;
 
 #define true 1
 #define false 0

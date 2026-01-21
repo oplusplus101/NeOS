@@ -2,6 +2,7 @@
 #include <common/screen.h>
 #include <common/memory.h>
 #include <common/numbers.h>
+#include <hardware/ports.h>
 
 DWORD *g_pScreen;
 INT g_iWidth, g_iHeight;
@@ -336,6 +337,12 @@ void SetFGColor(sColour c)
 void SetBGColor(sColour c)
 {
     g_bgColor = c;
+}
+
+sColour GetPixel(INT x, INT y)
+{
+    if (x < 0 || y < 0 || x >= g_iWidth || y >= g_iHeight) return (sColour) { 0, 0, 0 };
+    return (sColour) { g_pScreen[x + y * g_iWidth] & 0xFF, (g_pScreen[x + y * g_iWidth] >> 8) & 0xFF, (g_pScreen[x + y * g_iWidth] >> 16) & 0xFF };
 }
 
 void DrawPixel(INT x, INT y, sColour c)

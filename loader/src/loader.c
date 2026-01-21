@@ -92,7 +92,7 @@ void CloseFile(PVOID pFile)
 
 void LoaderMainAfterStackSwitch(sBootData sData)
 {
-    // Create a new stack -- and also the Task State Segment
+    // Set up the Task State Segment
     sTaskStateSegment *pTSS = GetTSS();
     pTSS->qwRSP0 = (QWORD) g_arrKernelStack + KERNEL_STACK_SIZE;
     pTSS->qwIST1 = (QWORD) g_arrDoubleFaultStack + DOUBLE_FAULT_STACK_SIZE;
@@ -101,7 +101,9 @@ void LoaderMainAfterStackSwitch(sBootData sData)
     Log(LOG_LOG, L"Task State Segment reloaded");
     
     // Set up the heap
-    sHeap sKernelHeap = CreateHeap(NEOS_HEAP_SIZE / PAGE_SIZE, false, true, NULL);
+    sHeap sKernelHeap;
+    INT iStatus = CreateHeap(NEOS_HEAP_SIZE, false, true, 16, (PVOID) MM_KERNEL_HEAP_START, &sKernelHeap);
+    _ASSERT(_SUCCESSFUL(iStatus), L"Failed to create the kernel heap [%08X]", iStatus);
     SetKernelHeap(&sKernelHeap);
     Log(LOG_LOG, L"Heap initialised!");
 
@@ -111,13 +113,12 @@ void LoaderMainAfterStackSwitch(sBootData sData)
     Log(LOG_LOG, L"Scanning for PCI devices...");
     ScanPCIDevices();
 
-
     LoadGPT(DRIVE_TYPE_AHCI_SATA);
     Log(LOG_LOG, L"GPT Loaded");
     
     sGPTPartitionEntry sKernelPartition = GetKernelPartition();
     LoadFAT32(DRIVE_TYPE_AHCI_SATA, sKernelPartition);
-
+    
     Log(LOG_LOG, L"Loading kernel...");
 
     sFAT32DirectoryEntry sKernelEntry;
@@ -162,7 +163,7 @@ void LoaderMainAfterStackSwitch(sBootData sData)
     KHeapFree(pKernelData);
 
     // Map the kernel to high memory
-    // MapPageRange(NULL, (PVOID) MM_KERNEL_START, (PVOID) qwMinAddress, _BYTES_TO_PAGES(qwMaxAddress - qwMinAddress), PF_WRITEABLE);
+    MapPageRange(NULL, (PVOID) MM_KERNEL_START, (PVOID) qwMinAddress, _BYTES_TO_PAGES(qwMaxAddress - qwMinAddress), PF_WRITEABLE);
     
     // Prepare the kernel boot header
     

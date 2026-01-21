@@ -6,6 +6,7 @@
 #include <neos.h>
 
 void InitScreen(int nWidth, int nHeight, DWORD *pScreenBuffer);
+sColour GetPixel(INT x, INT y);
 void DrawPixel(int x, int y, sColour c);
 void PrintChar(char c);
 

@@ -27,6 +27,9 @@ file(GLOB_RECURSE KERNEL_SRC FOLLOW_SYMLINKS ${CMAKE_SOURCE_DIR}/kernel/src/*.c 
 add_executable(${LOADER_EXE} ${LOADER_SRC} $<TARGET_OBJECTS:runtime>)
 add_executable(${KERNEL_EXE} ${KERNEL_SRC} $<TARGET_OBJECTS:runtime>)
 
+target_compile_definitions(${LOADER_EXE} PRIVATE LOADER)
+target_compile_definitions(${KERNEL_EXE} PRIVATE KERNEL)
+
 # Linker stuff
 set_target_properties(${LOADER_EXE} PROPERTIES LINK_FLAGS "-T ${CMAKE_SOURCE_DIR}/loader/linker.ld")
 set_target_properties(${KERNEL_EXE} PROPERTIES LINK_FLAGS "-T ${CMAKE_SOURCE_DIR}/kernel/linker.ld")

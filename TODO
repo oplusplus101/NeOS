@@ -1,5 +1,3 @@
-Fix strange exception in the Object Manager's CreateObject (possibly caused by the heap)
-Fix the heap
 Make exceptions inside a driver not crash the entire kernel
 Redo the boot process (comlpete overhaul of the 1st and possibly remove the 2nd stage bootloader, redo the drive abstraction, add a better way of finding the main partition)
 Add a neater way of making driver-to-kernel calls (Completely redo the kernel-driver interface)

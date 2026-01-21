@@ -3,12 +3,9 @@
 #include <neos.h>
 #include <common/screen.h>
 
-void InitLogger()
-{
+void (*Log)(INT iType, const PWCHAR wszFormat, ...);
 
-}
-
-void Log(INT iType, const PWCHAR wszFormat, ...)
+static void InternalLog(INT iType, const PWCHAR wszFormat, ...)
 {
     __builtin_va_list args;
     __builtin_va_start(args, wszFormat);
@@ -50,4 +47,9 @@ void Log(INT iType, const PWCHAR wszFormat, ...)
     PrintChar(10);
     
     __builtin_va_end(args);
+}
+
+void InitLogger()
+{
+    Log = InternalLog;
 }

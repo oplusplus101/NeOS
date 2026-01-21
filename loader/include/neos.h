@@ -24,10 +24,12 @@ typedef QWORD (*ESR)(QWORD, BYTE);
 #define NEOS_ERROR_EXECUTABLE     0x00030000
 #define NEOS_ERROR_DISK           0x00040000
 #define NEOS_ERROR_DRIVER         0x00050000
+#define NEOS_ERROR_MEMORY         0x00060000
+#define NEOS_OUT_OF_BOUNDS        0x00060001
 
 // Status
 #define NEOS_SUCCESS              0x00000000
-#define NEOS_FAILURE              0xFFFFFFFF
+#define NEOS_FAILURE              0x0000FFFF
 
 // Read operations
 #define NEOS_OPEN_FILE_FAILURE    0x00001000
@@ -39,6 +41,13 @@ typedef QWORD (*ESR)(QWORD, BYTE);
 
 // Other
 #define NEOS_CLOSE_FILE_FAILURE   0x00003000
+
+// Memory
+#define NEOS_ALLOCATION_FAILURE   0x00004000
+#define NEOS_FREEING_FAILURE      0x00004001
+#define NEOS_OUT_OF_HEAP_SPACE    0x00004002
+#define NEOS_CREATE_HEAP_FAILURE  0x00004003
+#define NEOS_DESTROY_HEAP_FAILURE 0x00004004
 
 
 #define _SUCCESSFUL(x) (((x) & 0x0000FFFF) == 0)
@@ -53,10 +62,10 @@ typedef QWORD (*ESR)(QWORD, BYTE);
 
 // Memory map
 #define MM_USER_SPACE_START  0x0000000000000000
+#define MM_KERNEL_HEAP_START 0xFFFFF70000000000
 #define MM_KERNEL_START      0xFFFFF80000000000
 #define MM_ARCH_START        0xFFFFF81000000000
 #define MM_DRIVERS_START     0xFFFFF82000000000
-
 
 typedef struct
 {
@@ -91,6 +100,7 @@ typedef struct
     INT  (*GetScreenHeight)();
     void (*RegisterException)(BYTE n, ESR pESR);
     void (*RegisterInterrupt)(BYTE n, ISR pISR);
+
 } sNEOSKernelHeader;
 
 #endif // __NEOS_H
