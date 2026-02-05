@@ -351,8 +351,20 @@ void DrawPixel(INT x, INT y, sColour c)
     g_pScreen[x + y * g_iWidth] = 0xFF000000 | c.b | (c.g << 8) | (c.r << 16);
 }
 
+
+// Simple debug function for QEMU
+void QEMU_UART_WriteChar(CHAR c)
+{
+    if (c == '\n')
+        QEMU_UART_WriteChar('\r');
+    
+    while (!(inb(0x3F8 + 5) & 0x20)); // Wait for TX empty
+    outb(0x3F8, c);
+}
+
 void PrintChar(CHAR c)
 {
+    QEMU_UART_WriteChar(c);
     switch (c)
     {
     case '\n':

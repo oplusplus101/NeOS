@@ -4,7 +4,17 @@
 
 #include <common/types.h>
 
-#define _HEAP_FOOTER(h) ((sHeapFooter *) ((PBYTE) (h) + sizeof(sHeapHeader) + (h)->qwSize))
+// Calculates the header's padding size based on the aligment
+// FIXME: Figure out the proper math to account for the header pointer
+#define _HEAP_PADDING_SIZE(chunkStart, align) (2 * (align) - (((chunkStart) + sizeof(sHeapHeader)) & ((align) - 1)))
+#define _HEAP_CHUNK_SIZE(chunkStart, payloadSize, align) (sizeof(sHeapHeader) + _HEAP_PADDING_SIZE((chunkStart), (align)) + (payloadSize) + sizeof(sHeapFooter))
+
+// Calculates the footer of the header h, based on it's size.
+#define _HEAP_FOOTER(h, align) ((sHeapFooter *) ((PBYTE) (h) + sizeof(sHeapHeader) + _HEAP_PADDING_SIZE((QWORD) (h), (align)) + (h)->qwSize))
+
+#define HEAP_PADDING_REDZONE_SEQUENCE 0x55
+#define HEAP_FOOTER_REDZONE_SEQUENCE 0xAA
+#define HEAP_FOOTER_REDZONE_SIZE 16
 
 typedef struct _tagHeapHeader
 {
@@ -15,6 +25,7 @@ typedef struct _tagHeapHeader
 
 typedef struct _tagHeapFooter
 {
+    BYTE  arrRedzone[HEAP_FOOTER_REDZONE_SIZE];
     QWORD qwSize;
 } __attribute__((packed)) sHeapFooter;
 
@@ -22,7 +33,7 @@ typedef struct
 {
     sHeapHeader *pFirstChunk;
     QWORD qwStart, qwSize;
-    WORD  wAlignment;
+    DWORD dwAlignment;
     QWORD qwFreeMemory;
     BOOL  bResizeable, bUser;
 } sHeap;
@@ -36,11 +47,11 @@ sHeap *GetKernelHeap();
 /// @param qwSize The size in bytes
 /// @param bUser User-mode heap
 /// @param bResizeable Can the heap grow or shrink
-/// @param wAlignment Must be a power of two (at least 8 bytes)
+/// @param dwAlignment Must be a power of two (at least 8 bytes)
 /// @param pStart The virtual start address of the heap
 /// @param pHeap The resulting heap object
 /// @return NEOS_SUCCESS upon success, an error code otherwise
-STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, WORD wAlignment, PVOID pStart, sHeap *pHeap);
+STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, DWORD dwAlignment, PVOID pStart, sHeap *pHeap);
 
 /// @brief Destroys the passed heap if nothing is allocated
 /// @param pHeap The heap to be destroyed

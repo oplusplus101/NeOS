@@ -11,7 +11,7 @@
 #include <loaderfunctions.h>
 
 sList g_lstProcesses;
-INT   g_iCurrentProcessIndex;
+INT   g_iCurrentProcessIndex = -1;
 
 void DummyProcess()
 {

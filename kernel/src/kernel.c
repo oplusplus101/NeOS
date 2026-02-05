@@ -21,10 +21,6 @@
 #include <runtime/exe.h>
 #include <loaderfunctions.h>
 
-void __stack_chk_fail(void)
-{
-    _KERNEL_PANIC(L"Stack smashing detected");
-}
 
 sList LoadCFG(PWCHAR wszPath)
 {
@@ -65,13 +61,15 @@ void KernelMain(sNEOSKernelHeader hdr)
     Log(LOG_LOG, L"Syscalls initialised to interrupt 0x%02X", NEOS_SYSCALL_IRQ);
 
     InitObjectManager();
+
+
     // TODO: Move these into their own init function
-    CreateObjectDirectory(L"Devices");
-    CreateObjectDirectory(L"Processes");
-    CreateObjectDirectory(L"Threads");
-    CreateObjectDirectory(L"Cache");
-    CreateObjectDirectory(L"Cache\\Libraries\\Kernel");
-    CreateObjectDirectory(L"Cache\\Libraries\\User");
+    _ASSERT(CreateObjectDirectory(L"Devices") != NULL, L"Could not create object directory \"Devices\"");
+    _ASSERT(CreateObjectDirectory(L"Processes") != NULL, L"Could not create object directory \"Processes\"");
+    _ASSERT(CreateObjectDirectory(L"Threads") != NULL, L"Could not create object directory \"Threads\"");
+    _ASSERT(CreateObjectDirectory(L"Cache") != NULL, L"Could not create object directory \"Cache\"");
+    _ASSERT(CreateObjectDirectory(L"Cache\\Libraries\\Kernel") != NULL, L"Could not create object directory \"Cache\\Libraries\\Kernel\"");
+    _ASSERT(CreateObjectDirectory(L"Cache\\Libraries\\User") != NULL, L"Could not create object directory \"Cache\\Libraries\\User\"");
     Log(LOG_LOG, L"Object manager initialised");
     
     // 10th of a millisecond per cycle

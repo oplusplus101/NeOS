@@ -12,7 +12,7 @@ set(IMAGE_PATH      ${CMAKE_BINARY_DIR}/NeOS.qcow2)
 
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_FLAGS "-m64 -O0 -g -nostdlib -ffreestanding -fno-builtin -fstack-protector-all -fno-exceptions \
+set(CMAKE_C_FLAGS "-m64 -O0 -g -nostdlib -ffreestanding -fno-builtin -fno-stack-protector -fno-omit-frame-pointer -fno-exceptions \
                    -mno-stack-arg-probe -mno-red-zone -Wall -Wpedantic -Werror -fshort-wchar -fPIE -Wl,--no-relax")
 
 # Load the headers
@@ -79,7 +79,6 @@ add_custom_target(
     DEPENDS ${KERNEL_EXE} ${LOADER_EXE}
 )
 
-# For some reason, this breaks in vscode
 add_custom_target(run COMMAND ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH})
 add_custom_target(gdb COMMAND ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH} "-gdb tcp::9000 -S")
 add_custom_target(qemu-dbg COMMAND ${CMAKE_SOURCE_DIR}/run.sh ${CMAKE_SOURCE_DIR}/OVMF ${IMAGE_PATH} "-d int,cpu_reset,guest_errors,nochain -no-reboot -no-shutdown -D qemu.log -no-hpet")

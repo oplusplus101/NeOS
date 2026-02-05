@@ -1,6 +1,7 @@
 Make exceptions inside a driver not crash the entire kernel
 Redo the boot process (comlpete overhaul of the 1st and possibly remove the 2nd stage bootloader, redo the drive abstraction, add a better way of finding the main partition)
 Add a neater way of making driver-to-kernel calls (Completely redo the kernel-driver interface)
+Replace sList with a different structure where appropriate to reduce heap overhead
 Add the build process of the drivers and libraries to CMakeLists.txt
 Fix process killing in the scheduler
 Rewrite/clean up the UEFI bootloader (Change UNIX types to Microsoft, make PE32+ code more efficient)

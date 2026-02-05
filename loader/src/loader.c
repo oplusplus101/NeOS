@@ -30,13 +30,6 @@
 static BYTE g_arrKernelStack[KERNEL_STACK_SIZE] __attribute__((aligned(4096)));
 static BYTE g_arrDoubleFaultStack[DOUBLE_FAULT_STACK_SIZE] __attribute__((aligned(4096)));
 
-QWORD __stack_chk_guard = 0x595e9fbd94fda766;
-
-void __stack_chk_fail(void)
-{
-	_KERNEL_PANIC(L"Stack smashing detected");
-}
-
 // The functions below are for the kernel,
 // so the it doesn't have to access the directory entry directly (for compatibility with other file systems)
 
@@ -120,6 +113,7 @@ void LoaderMainAfterStackSwitch(sBootData sData)
     LoadFAT32(DRIVE_TYPE_AHCI_SATA, sKernelPartition);
     
     Log(LOG_LOG, L"Loading kernel...");
+
 
     sFAT32DirectoryEntry sKernelEntry;
     _ASSERT(GetEntryFromPath(L"NeOS\\NeOS.sys", &sKernelEntry), L"Kernel not found at C:\\NeOS\\NeOS.sys");

@@ -66,6 +66,8 @@ sObject *FindObjectInDirectory(sObjectDirectory *pDirectory, PWCHAR wszName)
     for (QWORD i = 0; i < pDirectory->lstChildren.qwLength; i++)
     {
         sObject *pObject = *((sObject **) GetListElement(&pDirectory->lstChildren, i));
+        if (pObject == NULL)
+            return NULL;
         
         if (!strncmpW(pObject->wszName, wszName, 256))
             return pObject;
@@ -102,6 +104,11 @@ sObject *CreateObject(PWCHAR wszPath, sObjectType *pType, PVOID pBody)
     }
 
     sObject *pObject          = KHeapAlloc(sizeof(sObject));
+    if (pObject == NULL)
+    {
+        Log(LOG_ERROR, L"Failed to allocate memory for object at path: %S", wszPath);
+        return NULL;
+    }
     pObject->dwReferenceCount = 1;
     pObject->pType            = pType;
     pObject->pBody            = KHeapAlloc(pType->qwBodySize);
@@ -121,6 +128,7 @@ sObject *FindObject(PWCHAR wszPath, sObject *pParent)
 {
     if (pParent == NULL)
         pParent = g_pRootDirectoryObject;
+    
     PWCHAR wszPathDup = strdupW(wszPath);
     PWCHAR wsz = strtokW(wszPathDup, L"\\/");
     
@@ -149,7 +157,8 @@ sObject *CreateObjectDirectory(PWCHAR wszPath)
 {
     sObjectDirectory sDirectory;
     sDirectory.lstChildren = CreateEmptyList(sizeof(sObject *));
-    
+    if (sDirectory.lstChildren.pData == NULL)
+        return NULL;
     return CreateObject(wszPath, g_pDirectoryType, &sDirectory);
 }
 
