@@ -4,33 +4,45 @@
 
 #include <common/types.h>
 
-#define KERNEL_CODE_SEGMENT 0x10
-#define KERNEL_DATA_SEGMENT 0x20
-#define USER_CODE_SEGMENT   0x30
-#define USER_DATA_SEGMENT   0x40
-#define TASK_STATE_SEGMENT  0x50
+#define KERNEL_CODE_SEGMENT 0x08
+#define KERNEL_DATA_SEGMENT 0x10
+#define USER_CODE_SEGMENT   0x18
+#define USER_DATA_SEGMENT   0x20
+#define TASK_STATE_SEGMENT  0x28
 
 
 typedef struct
 {
     WORD  wLimitLow;
-    DWORD nBaseLow    : 24;
-    BYTE  nAccessByte;
-    BYTE  nLimitHigh  : 4;
-    BYTE  nFlags      : 4;
-    QWORD nBaseHigh   : 40;
-    DWORD dwReserved;
+    WORD  wBaseLow;
+    BYTE  bBaseMid;
+    BYTE  bAccessByte;
+    BYTE  bLimitHighAndFlags;
+    BYTE  bBaseHigh;
 } __attribute__((packed)) sSegmentDescriptor;
 
 typedef struct
 {
-    sSegmentDescriptor nullSegment;
-    sSegmentDescriptor kernelCodeSegment;
-    sSegmentDescriptor kernelDataSegment;
-    sSegmentDescriptor userCodeSegment;
-    sSegmentDescriptor userDataSegment;
-    sSegmentDescriptor tssSegment;
-} sGlobalDescriptorTable;
+    WORD  wLimitLow;
+    WORD  wBaseLow;
+    BYTE  bBaseMid;
+    BYTE  bAccessByte;
+    BYTE  bLimitHighAndFlags;
+    BYTE  bBaseHigh;
+    DWORD dwBaseHighest;
+    DWORD dwReserved;
+} __attribute__((packed)) sTSSDescriptor;
+
+
+typedef struct
+{
+    sSegmentDescriptor sNullSegment;
+    sSegmentDescriptor sKernelCodeSegment;
+    sSegmentDescriptor sKernelDataSegment;
+    sSegmentDescriptor sUserCodeSegment;
+    sSegmentDescriptor sUserDataSegment;
+    sTSSDescriptor sTSSSegment;
+} __attribute__((packed)) sGlobalDescriptorTable;
 
 typedef struct
 {
