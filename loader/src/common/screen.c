@@ -273,6 +273,7 @@ const static BYTE g_8x16_font[4096] =
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
+__attribute__((no_instrument_function))
 void InitScreen(INT iWidth, INT iHeight, DWORD *pScreenBuffer)
 {
     g_pScreen = pScreenBuffer;
@@ -283,12 +284,14 @@ void InitScreen(INT iWidth, INT iHeight, DWORD *pScreenBuffer)
     g_iCursorX = g_iCursorY = 0;
 }
 
+__attribute__((no_instrument_function))
 void ClearScreen()
 {
     SetCursor(0, 0);
     ZeroMemory(g_pScreen, g_iWidth * g_iHeight * 4);
 }
 
+__attribute__((no_instrument_function))
 void FillRectangle(int x, int y, int w, int h, sColour c)
 {
     for (INT i = 0; i < h; i++)
@@ -297,54 +300,64 @@ void FillRectangle(int x, int y, int w, int h, sColour c)
 }
 
 // If set to true, control characters (i.e. \n, \t, etc.) will work normally, if false, they will just be whitespace
+__attribute__((no_instrument_function))
 void SetControlCharState(BOOL bState)
 {
     g_bControlCharState = bState;
 }
 
 // TODO: Clamp the range
+__attribute__((no_instrument_function))
 void SetCursor(INT x, INT y)
 {
     g_iCursorX = x;
     g_iCursorY = y;
 }
 
+__attribute__((no_instrument_function))
 INT GetScreenWidth()
 {
     return g_iWidth;
 }
 
+__attribute__((no_instrument_function))
 INT GetScreenHeight()
 {
     return g_iHeight;
 }
 
+__attribute__((no_instrument_function))
 INT GetCursorX()
 {
     return g_iCursorX;
 }
 
+__attribute__((no_instrument_function))
 INT GetCursorY()
 {
     return g_iCursorY;
 }
 
+__attribute__((no_instrument_function))
 void SetFGColor(sColour c)
 {
     g_fgColor = c;
 }
 
+__attribute__((no_instrument_function))
 void SetBGColor(sColour c)
 {
     g_bgColor = c;
 }
 
+__attribute__((no_instrument_function))
 sColour GetPixel(INT x, INT y)
 {
     if (x < 0 || y < 0 || x >= g_iWidth || y >= g_iHeight) return (sColour) { 0, 0, 0 };
     return (sColour) { g_pScreen[x + y * g_iWidth] & 0xFF, (g_pScreen[x + y * g_iWidth] >> 8) & 0xFF, (g_pScreen[x + y * g_iWidth] >> 16) & 0xFF };
 }
 
+__attribute__((no_instrument_function))
 void DrawPixel(INT x, INT y, sColour c)
 {
     if (x < 0 || y < 0 || x >= g_iWidth || y >= g_iHeight) return;
@@ -353,15 +366,23 @@ void DrawPixel(INT x, INT y, sColour c)
 
 
 // Simple debug function for QEMU
+__attribute__((no_instrument_function))
 void QEMU_UART_WriteChar(CHAR c)
 {
+    if (!g_bControlCharState && c < 0x20)
+    {
+        QEMU_UART_WriteChar(' ');
+        return;
+    }
+    
     if (c == '\n')
         QEMU_UART_WriteChar('\r');
-    
+
     while (!(inb(0x3F8 + 5) & 0x20)); // Wait for TX empty
     outb(0x3F8, c);
 }
 
+__attribute__((no_instrument_function))
 void PrintChar(CHAR c)
 {
     QEMU_UART_WriteChar(c);
@@ -416,18 +437,21 @@ void PrintChar(CHAR c)
     }
 }
 
+__attribute__((no_instrument_function))
 void PrintString(const PCHAR sz)
 {
     for (INT i = 0; sz[i] != 0; i++)
         PrintChar(sz[i]);
 }
 
+__attribute__((no_instrument_function))
 void PrintStringW(const PWCHAR wsz)
 {
     for (INT i = 0; wsz[i] != 0; i++)
         PrintChar(wsz[i]);
 }
 
+__attribute__((no_instrument_function))
 void PrintFormatVariadic(const PWCHAR wszFormat, __builtin_va_list args)
 {
     for (QWORD i = 0; wszFormat[i] != 0; i++)
@@ -504,6 +528,7 @@ void PrintFormatVariadic(const PWCHAR wszFormat, __builtin_va_list args)
     }
 }
 
+__attribute__((no_instrument_function))
 void PrintFormat(const PWCHAR wszFormat, ...)
 {
     __builtin_va_list args;
@@ -512,6 +537,7 @@ void PrintFormat(const PWCHAR wszFormat, ...)
     __builtin_va_end(args);
 }
 
+__attribute__((no_instrument_function))
 void PrintDec(QWORD n)
 {
     if (n == 0)
@@ -532,6 +558,7 @@ void PrintDec(QWORD n)
         PrintChar(sNumber[j]);
 }
 
+__attribute__((no_instrument_function))
 void PrintHex(QWORD n, BYTE nDigits, BOOL bUppercase)
 {
     nDigits = nDigits > 16 ? 16 : nDigits;
@@ -548,6 +575,7 @@ void PrintHex(QWORD n, BYTE nDigits, BOOL bUppercase)
         PrintChar(sNumber[i]);
 }
 
+__attribute__((no_instrument_function))
 void PrintBytes(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII)
 {
     for (QWORD i = 0; i < qwLength; i++)
