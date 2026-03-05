@@ -42,6 +42,7 @@ typedef QWORD (*ESR)(QWORD, BYTE);
 #define NEOS_OPEN_FILE_FAILURE    0x00003000
 #define NEOS_CLOSE_FILE_FAILURE   0x00003001
 #define NEOS_INVALID_ARGUMENT     0x00003002
+#define NEOS_NOT_IMPLEMENTED      0x00003003
 
 // Memory
 #define NEOS_ALLOCATION_FAILURE   0x00004000
@@ -63,7 +64,8 @@ typedef QWORD (*ESR)(QWORD, BYTE);
 // Memory map
 #define MM_USER_SPACE_START  0x0000000000000000
 #define MM_KERNEL_HEAP_START 0xFFFFF70000000000
-#define MM_KERNEL_START      0xFFFFF80000000000
+// #define MM_KERNEL_START      0xFFFFF80000000000
+#define MM_KERNEL_START      0x200000
 #define MM_ARCH_START        0xFFFFF81000000000
 #define MM_DRIVERS_START     0xFFFFF82000000000
 
@@ -86,10 +88,12 @@ typedef struct
     QWORD (*LoaderTellFile)(PVOID);
 
     void (*PrintFormat)(const PWCHAR wszFormat, ...);
+    void (*PrintFormatVariadic)(const PWCHAR wszFormat, __builtin_va_list lst);
     void (*PrintString)(PCHAR szString);
     void (*PrintBytes)(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII);
     void (*PrintChar)(CHAR c);
     void (*Log)(INT iType, const PWCHAR wszFormat, ...);
+    void (*LogVariadic)(INT iType, const PWCHAR wszFormat, __builtin_va_list lst);
     INT  (*GetCursorX)();
     INT  (*GetCursorY)();
     void (*SetCursor)(INT x, INT y);
