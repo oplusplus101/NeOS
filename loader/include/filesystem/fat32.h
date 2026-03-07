@@ -15,26 +15,6 @@
 
 typedef struct
 {
-    BYTE nHour : 5;
-    BYTE nMinute : 6;
-    BYTE nTimeTwoSeconds : 5;
-} __attribute__((packed)) sFAT32Time;
-
-typedef struct
-{
-    BYTE nYear : 7;
-    BYTE nMonth : 4;
-    BYTE nDay : 5;
-} __attribute((packed)) sFAT32Date;
-
-typedef struct
-{
-    sFAT32Time sTime;
-    sFAT32Date sDate;
-} __attribute__((packed)) sFAT32Timestamp;
-
-typedef struct
-{
     BYTE  arrJumpCode[3];
     BYTE  sOEMIdentifier[8];
     WORD  wBytesPerSector;
@@ -67,6 +47,7 @@ typedef struct
     BYTE  arrBootCode[420];
     WORD  wMagicNumber;
 } __attribute__((packed)) sFAT32BootSector;
+static_assert(sizeof(sFAT32BootSector) == 512, "sFAT32BootSector must be 512 bytes long");
 
 typedef struct
 {
@@ -74,10 +55,10 @@ typedef struct
     BYTE            nAttributes;
     BYTE            nReservedNT;
     BYTE            nCreationTimeOneHundredths;
-    sFAT32Timestamp sCreationTimestamp;
-    sFAT32Date      sAccessDate;
+    DWORD           dwCreationTimestamp;
+    WORD            wAccessDate;
     WORD            nClusterHigh;
-    sFAT32Timestamp sModificationTimestamp;
+    DWORD           dwModificationTimestamp;
     WORD            nClusterLow;
     DWORD           dwFileSize;
 } __attribute__((packed)) sFAT32DirectoryEntry;
