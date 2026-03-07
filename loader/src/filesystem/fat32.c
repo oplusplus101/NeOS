@@ -18,6 +18,7 @@ QWORD ClusterToSector(DWORD dwCluster)
     return g_qwFATDataStart + ((dwCluster & 0x0FFFFFFF) - 2) * g_nSectorsPerCluster;
 }
 
+// Returns the next cluster; if we've reached the end, the function will return 0
 DWORD GetNextCluster(DWORD dwCurrentCluster)
 {
     BYTE arrFATBuffer[512];
@@ -25,7 +26,6 @@ DWORD GetNextCluster(DWORD dwCurrentCluster)
     return ((PDWORD) &arrFATBuffer)[dwCurrentCluster % 128] & 0x0FFFFFFF;
 }
 
-// Returns the next cluster; in we've reached the end, the function will return 0
 void ReadCluster(DWORD dwCurrentCluster, PVOID pBuffer)
 {
     ReadFromDrive(g_nDrive, ClusterToSector(dwCurrentCluster), g_nSectorsPerCluster, pBuffer);
