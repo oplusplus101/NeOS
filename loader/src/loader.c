@@ -95,7 +95,7 @@ void LoaderMainAfterStackSwitch(sBootData sData)
     
     // Set up the heap
     sHeap sKernelHeap;
-    INT iStatus = CreateHeap(NEOS_HEAP_SIZE, false, true, 16, (PVOID) MM_KERNEL_HEAP_START, &sKernelHeap);
+    INT iStatus = CreateHeap(NEOS_HEAP_SIZE, false, true, false, 16, (PVOID) MM_KERNEL_HEAP_START, &sKernelHeap);
     _ASSERT(_SUCCESSFUL(iStatus), L"Failed to create the kernel heap [%08X]", iStatus);
     SetKernelHeap(&sKernelHeap);
     Log(LOG_LOG, L"Heap initialised!");
