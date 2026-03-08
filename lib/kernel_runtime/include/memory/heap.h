@@ -47,11 +47,12 @@ sHeap *GetKernelHeap();
 /// @param qwSize The size in bytes
 /// @param bUser User-mode heap
 /// @param bResizeable Can the heap grow or shrink
+/// @param bIdentity Will create a continous heap mapped to identity
 /// @param dwAlignment Must be a power of two (at least 8 bytes)
-/// @param pStart The virtual start address of the heap
+/// @param pStart The virtual start address of the heap (will not work for an identity-mapped heap)
 /// @param pHeap The resulting heap object
 /// @return NEOS_SUCCESS upon success, an error code otherwise
-STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, DWORD dwAlignment, PVOID pStart, sHeap *pHeap);
+STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, BOOL bIdentity, DWORD dwAlignment, PVOID pStart, sHeap *pHeap);
 
 /// @brief Destroys the passed heap if nothing is allocated
 /// @param pHeap The heap to be destroyed

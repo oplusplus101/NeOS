@@ -16,7 +16,7 @@ extern void (*Log)(INT, const PWCHAR, ...);
 sHeap *g_pKernelHeap;
 inline static void WriteChunk(PVOID pStart, QWORD qwPayloadSize, sHeapHeader *pNext, BOOL bAllocated, DWORD dwAlignment);
 
-STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, DWORD dwAlignment, PVOID pStart, sHeap *pHeap)
+STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, BOOL bContinous, DWORD dwAlignment, PVOID pStart, sHeap *pHeap)
 {
     if (((dwAlignment) & ((dwAlignment) - 1)) && dwAlignment >= 8)
         return NEOS_INVALID_ARGUMENT;
@@ -24,21 +24,29 @@ STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, DWORD dwAlignment,
     pHeap->qwStart = (QWORD) pStart;
     pHeap->bUser = bUser;
 
-    for (QWORD i = 0; i < _BYTES_TO_PAGES(qwSize); i++)
+    if (bContinous)
     {
-        PVOID pPage = AllocatePage();
-        if (pPage == NULL)
+        PVOID pPhysicalData = AllocateContinousPages(_BYTES_TO_PAGES(qwSize));
+        MapPageRange(NULL, pStart, pPhysicalData, _BYTES_TO_PAGES(qwSize), PF_WRITEABLE | (bUser ? PF_USER : 0));
+    }
+    else
+    {
+        for (QWORD i = 0; i < _BYTES_TO_PAGES(qwSize); i++)
         {
-            // Free everything allocated until now
-            for (QWORD j = 0; j <= i; j++)
+            PVOID pPage = AllocatePage();
+            if (pPage == NULL)
             {
-                PVOID pAddress = GetPhysicalAddress(NULL, (PVOID) ((QWORD) pStart + j * PAGE_SIZE));
-                if (pAddress == NULL) continue;
-                FreePage(pAddress);
+                // Free everything allocated until now
+                for (QWORD j = 0; j <= i; j++)
+                {
+                    PVOID pAddress = GetPhysicalAddress(NULL, (PVOID) ((QWORD) pStart + j * PAGE_SIZE));
+                    if (pAddress == NULL) continue;
+                    FreePage(pAddress);
+                }
+                return NEOS_CREATE_HEAP_FAILURE;
             }
-            return NEOS_CREATE_HEAP_FAILURE;
+            MapPage(NULL, (PVOID) ((QWORD) pStart + i * PAGE_SIZE), pPage, PF_WRITEABLE | (bUser ? PF_USER : 0));
         }
-        MapPage(NULL, (PVOID) ((QWORD) pStart + i * PAGE_SIZE), pPage, PF_WRITEABLE | (bUser ? PF_USER : 0));
     }
     
     pHeap->dwAlignment             = dwAlignment;
@@ -145,9 +153,10 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader)
     }
 
     // Check whether the chunk is bigger than the heap
-    if (pHeader->qwSize > pHeap->qwSize - sizeof(sHeapHeader) - sizeof(sHeapFooter) - _HEAP_PADDING_SIZE((QWORD) pHeader, pHeap->dwAlignment))
+    QWORD qwPaddingSize = _HEAP_PADDING_SIZE((QWORD) pHeader, pHeap->dwAlignment);
+    if (pHeader->qwSize > pHeap->qwSize - sizeof(sHeapHeader) - sizeof(sHeapFooter) - qwPaddingSize)
     {
-        Log(LOG_WARNING, L"Chunk 0x%p is bigger than the heap 0x%p, size: %u bytes, heap size: %u bytes", pHeader, pHeap, pHeader->qwSize + sizeof(sHeapHeader) + sizeof(sHeapFooter) + _HEAP_PADDING_SIZE((QWORD) pHeader, pHeap->dwAlignment), pHeap->qwSize);
+        Log(LOG_WARNING, L"Chunk 0x%p is bigger than the heap 0x%p, size: %u bytes, heap size: %u bytes", pHeader, pHeap, pHeader->qwSize + sizeof(sHeapHeader) + sizeof(sHeapFooter) + qwPaddingSize, pHeap->qwSize);
         return false;
     }
     
@@ -159,15 +168,39 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader)
     }
     
     // Check whether the payload's size matches the value listed in the header (and footer)
-    QWORD qwPayloadSize = (QWORD) _HEAP_FOOTER(pHeader, pHeap->dwAlignment) - (QWORD) pHeader - sizeof(sHeapHeader) - _HEAP_PADDING_SIZE((QWORD) pHeader, pHeap->dwAlignment);
+    QWORD qwPayloadSize = (QWORD) _HEAP_FOOTER(pHeader, pHeap->dwAlignment) - (QWORD) pHeader - sizeof(sHeapHeader) - qwPaddingSize;
     if (qwPayloadSize != pHeader->qwSize)
     {
         Log(LOG_WARNING, L"Payload size %u bytes doesn't match the size listed in the header: %u bytes in heap 0x%p", qwPayloadSize, pHeader->qwSize, pHeap);
         return false;
     }
 
+    // The next field must be larger than the previous
+    if ((QWORD) pHeader->pNext <= (QWORD) pHeader && (QWORD) pHeader->pNext != 0)
+    {
+        Log(LOG_WARNING, L"The chunk's next field is lower than the current chunk: current chunk at 0x%p, next chunk 0x%p", pHeader, pHeader->pNext);
+        return false;
+    }
+
+    PBYTE pPadding = (PBYTE) pHeader + sizeof(sHeapHeader);
+    for (QWORD i = 0; i < qwPaddingSize - sizeof(sHeapHeader *); i++)
+        if (pPadding[i] != HEAP_PADDING_REDZONE_SEQUENCE)
+        {
+            Log(LOG_WARNING, L"Invalid padding redzone sequence 0x%02X found at address 0x%p", pPadding[i], &pPadding[i]);
+            return false;
+        }
+    
+    sHeapFooter *pFooter = _HEAP_FOOTER(pHeader, pHeap->dwAlignment);
+    for (QWORD i = 0; i < HEAP_FOOTER_REDZONE_SIZE; i++)
+        if (pFooter->arrRedzone[i] != HEAP_FOOTER_REDZONE_SEQUENCE)
+        {
+            Log(LOG_WARNING, L"Invalid footer redzone sequence 0x%02X found at address 0x%p", pFooter->arrRedzone[i], &pFooter->arrRedzone[i]);
+            return false;
+        }
+    
+
     // Check whether the padding pointer matches the header address
-    sHeapHeader *pHeaderPointer = *((sHeapHeader **) ((PBYTE) pHeader + sizeof(sHeapHeader) + _HEAP_PADDING_SIZE((QWORD) pHeader, pHeap->dwAlignment) - sizeof(PVOID)));
+    sHeapHeader *pHeaderPointer = *((sHeapHeader **) ((PBYTE) pHeader + sizeof(sHeapHeader) + qwPaddingSize - sizeof(PVOID)));
     if ((QWORD) pHeader != (QWORD) pHeaderPointer)
     {
         Log(LOG_WARNING, L"Padding pointer 0x%p doesn't match actual header address 0x%p", pHeaderPointer, pHeader);
@@ -295,9 +328,10 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
     }
     
     sHeapHeader *pHeader = *((sHeapHeader **) ((PBYTE) pMemory - sizeof(PVOID)));
+    // Log(LOG_LOG, L"Header pointer 0x%p", *((PQWORD) ((PBYTE) pMemory - 8)));
     if ((QWORD) pHeader < pHeap->qwStart || (QWORD) pHeader >= pHeap->qwStart + pHeap->qwSize - sizeof(sHeapHeader *))
     {
-        Log(LOG_WARNING, L"Got invalid header pointer 0x%p in chunk 0x%p in heap 0x%p", pHeader, pMemory, pHeap);
+        Log(LOG_WARNING, L"Got invalid header pointer 0x%p from payload 0x%p in heap 0x%p", pHeader, pMemory, pHeap);
         return;
     }
     
