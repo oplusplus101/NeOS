@@ -1,31 +1,36 @@
 
 ENTRY(KernelMain);
 OUTPUT_ARCH(i386:x86-64);
-OUTPUT_FORMAT(elf64-x86-64);
+OUTPUT_FORMAT(pei-x86-64);
 
 SECTIONS
 {
     . = 0x200000;
 
-    .text :
+    .text : ALIGN(4096)
     {
         *(.text)
     }
 
-    .data :
+    .data : ALIGN(4096)
     {
         *(.data)
     }
 
-    .rodata :
+    .rodata : ALIGN(4096)
     {
         *(.rodata)
     }
 
-    .bss :
+    .bss : ALIGN(4096)
     {
         *(COMMON)
         *(.bss)
+    }
+
+    .edata : ALIGN(4096)
+    {
+        *(.edata)
     }
 
     /DISCARD/ :

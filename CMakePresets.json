@@ -1,0 +1,12 @@
+{
+    "version": 3,
+    "configurePresets": [
+        {
+            "name": "mingw64",
+            "displayName": "MinGW-w64 x86_64",
+            "generator": "Unix Makefiles",
+            "binaryDir": "build",
+            "toolchainFile": "cmake/toolchain-mingw64.cmake"
+        }
+    ]
+}
