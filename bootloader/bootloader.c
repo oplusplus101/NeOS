@@ -116,11 +116,17 @@ int main()
 
         printf("Address: %16X, Pages: %d, Name: %s\n", nAddress, nPages, hdr.szName);
         //_ASSERT(!EFI_ERROR(s), "Unable to allocate pages for the %s section.", hdr.szName);
-        fread((void *) nAddress, hdr.dwVirtualSize, 1, pFile);
+        if (hdr.dwCharacteristics & PE32_SCN_CNT_UNINITIALISED_DATA)
+            memset((void *) nAddress, 0, hdr.dwVirtualSize);
+        else
+            fread((void *) nAddress, hdr.dwVirtualSize, 1, pFile);
         fseek(pFile, nPrevPos, SEEK_SET);
     }
 
     fclose(pFile);
+
+    printf("Starting 2nd stage loader at 0x%p\n", (void *) (peohdr.dwAddressOfEntrypoint + peohdr.qwImageBase));
+    
     exit_bs();
 
     ((void (*)(sBootData)) (peohdr.dwAddressOfEntrypoint + peohdr.qwImageBase))(bootData);
