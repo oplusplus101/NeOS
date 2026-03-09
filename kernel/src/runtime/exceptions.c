@@ -98,7 +98,9 @@ QWORD KException5(QWORD qwRSP, BYTE nErrorCode)
 
 QWORD KException6(QWORD qwRSP, BYTE nErrorCode)
 {
-    PrintBytes((PVOID) qwRSP, sizeof(sCPUState), 24, true);
+    sCPUState *pState = (sCPUState *) qwRSP;
+    Log(LOG_LOG, L"Dump of RIP at address 0x%p", pState->qwRIP);
+    PrintBytes((PVOID) pState->qwRIP, 512, 32, true);
 
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Invalid opcode");
@@ -158,13 +160,11 @@ QWORD KException12(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException13(QWORD qwRSP, BYTE nErrorCode)
+// NOTE: bErrorCode is technically a WORD in this exception
+QWORD KException13(QWORD qwRSP, BYTE bErrorCode)
 {
-    QWORD qwExceptionAddress;
-    __asm__ volatile("mov %%cr2, %0" : "=r" (qwExceptionAddress));
-    PrintFormat(L"Address: 0x%p\n", qwExceptionAddress);
     if (GetCurrentPID() == -1)
-        _PRINT_FAULT(qwRSP, L"General protection fault");
+        _PRINT_FAULT(qwRSP, L"General protection fault, Error Code 0x%08X", bErrorCode);
         
     KillCurrentProcess(L"General protection fault");
 
