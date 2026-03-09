@@ -32,13 +32,16 @@ typedef unsigned short WCHAR;
 typedef WCHAR *PWCHAR;
 
 typedef INT HANDLE;
-typedef int STATUS;
+typedef INT STATUS;
 
 #define true 1
 #define false 0
 #define TRUE 1
 #define FALSE 0
 #define NULL ((PVOID) 0)
+#define STDCALL __attribute__((stdcall))
+#define SYSV __attribute__((sysv_abi))
+#define FASTCALL __attribute__((fastcall))
 
 typedef struct
 {

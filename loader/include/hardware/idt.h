@@ -14,11 +14,13 @@ typedef struct
 {
     WORD  wISRLow;
     WORD  wKernelCS;
-    BYTE  nIST;
-    BYTE  nFlags;
-    QWORD nISRHigh : 48;
+    BYTE  bIST;
+    BYTE  bFlags;
+    WORD  wISRMid;
+    DWORD dwISRHigh;
     DWORD dwReserved;
 } __attribute__((packed)) sIDTEntry;
+static_assert(sizeof(sIDTEntry) == 16, "sIDTEntry must be 16 bytes long");
 
 typedef struct
 {
@@ -26,8 +28,8 @@ typedef struct
     QWORD qwBase;
 } __attribute__((packed)) sIDTPointer;
 
-typedef QWORD (*ISR)(QWORD);
-typedef QWORD (*ESR)(QWORD, BYTE);
+typedef QWORD (FASTCALL *ISR)(QWORD);
+typedef QWORD (FASTCALL *ESR)(QWORD, BYTE);
 
 void InitIDT();
 void RegisterException(BYTE n, ESR pESR);

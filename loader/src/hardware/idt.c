@@ -49,14 +49,15 @@ extern void HandleInterrupt0x23();
 extern void HandleInterrupt0x81();
 extern void IgnoreInterrupt();
 
-void SetIDTEntry(BYTE nInterrupt, void (*pHandler)(), BYTE nFlags)
+void SetIDTEntry(BYTE nInterrupt, void (*pHandler)(), BYTE bFlags)
 {
-    sIDTEntry *pEntry = &g_idt[nInterrupt];
-    pEntry->wISRLow   = ((QWORD) pHandler) & 0xFFFF;
-    pEntry->nISRHigh  = ((QWORD) pHandler) >> 16;
-    pEntry->nFlags    = nFlags;
-    pEntry->wKernelCS = KERNEL_CODE_SEGMENT;
-    pEntry->nIST      = 0;
+    sIDTEntry *pEntry  = &g_idt[nInterrupt];
+    pEntry->wISRLow    = ((QWORD) pHandler) & 0xFFFF;
+    pEntry->wISRMid    = ((QWORD) pHandler) >> 16;
+    pEntry->dwISRHigh  = ((QWORD) pHandler) >> 32;
+    pEntry->bFlags     = bFlags;
+    pEntry->wKernelCS  = KERNEL_CODE_SEGMENT;
+    pEntry->bIST       = 0;
     pEntry->dwReserved = 0;
 }
 
@@ -138,7 +139,8 @@ void InitIDT()
     __asm__ volatile ("lidt %0" : : "m" (g_idtr));
 }
 
-QWORD HandleInterrupt(BYTE nInterrupt, QWORD qwRSP, BYTE nErrorCode)
+// Mark as sysv_abi, since some compilers default to a different one
+QWORD SYSV HandleInterrupt(BYTE nInterrupt, QWORD qwRSP, BYTE nErrorCode)
 {
     if (nInterrupt < 32 && g_ESRs[nInterrupt] != 0)
         qwRSP = g_ESRs[nInterrupt](qwRSP, nErrorCode);
