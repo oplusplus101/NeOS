@@ -11,9 +11,6 @@
 #define LOG_ERROR 2
 #define LOG_GOODBYE 3
 
-typedef QWORD (*ISR)(QWORD);
-typedef QWORD (*ESR)(QWORD, BYTE);
-
 // Returns a handle to the file, or NULL if not found
 extern PVOID (*LoaderOpenFile)(PWCHAR wszFileName);
 // Returns the file size in bytes
@@ -27,10 +24,12 @@ extern QWORD (*LoaderTellFile)(PVOID);
 
 
 extern void (*PrintFormat)(const PWCHAR wszFormat, ...);
+extern void (*PrintFormatVariadic)(const PWCHAR wszFormat, __builtin_va_list lst);
 extern void (*PrintString)(PCHAR szString);
 extern void (*PrintBytes)(PVOID pBuffer, QWORD qwLength, WORD wBytesPerLine, BOOL bASCII);
 extern void (*PrintChar)(CHAR c);
 extern void (*Log)(INT iType, const PWCHAR wszFormat, ...);
+extern void (*LogVariadic)(INT iType, const PWCHAR wszFormat, __builtin_va_list lst);
 extern INT  (*GetCursorX)();
 extern INT  (*GetCursorY)();
 extern void (*SetCursor)(INT x, INT y);
@@ -38,8 +37,7 @@ extern void (*SetFGColor)(sColour c);
 extern void (*SetBGColor)(sColour c);
 extern void (*ClearScreen)();
 extern INT  (*GetScreenWidth)();
-extern INT  (*GetScreenHeight)()
-;
+extern INT  (*GetScreenHeight)();
 extern void (*RegisterException)(BYTE n, ESR pESR);
 extern void (*RegisterInterrupt)(BYTE n, ISR pISR);
 
