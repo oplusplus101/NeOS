@@ -3,7 +3,6 @@
 
 #include <memory/paging.h>
 #include <hardware/idt.h>
-#include <common/screen.h>
 #include <common/memory.h>
 #include <common/panic.h>
 
@@ -16,7 +15,7 @@ sPagingData ExportPagingData()
 {
     sPagingData sData =
     {
-        .pPML4        = g_pCurrentPML4,
+        .pPML4             = g_pCurrentPML4,
         .sPageBitmap       = g_sPageBitmap,
         .qwMemorySize      = g_qwMemorySize,
         .qwFreeMemory      = g_qwFreeMemory,
@@ -140,23 +139,23 @@ PVOID GetPhysicalAddress(sPageTable *pPML4, PVOID pVirtualAddress)
     QWORD qwOffset = (QWORD) pVirtualAddress % PAGE_SIZE;
     
     // Page Directory Pointer
-    sPageTableEntry *pEntry = &pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
-    if (!(pEntry->wFlags & PF_PRESENT)) return NULL;
-    sPageTable *pPageDirectoryPointer = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
+    PTE *pEntry = &pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
+    if (!(*pEntry & PF_PRESENT)) return NULL;
+    sPageTable *pPageDirectoryPointer = (sPageTable *) _PAGE_TO_ADDRESS(*pEntry >> 12);
 
     // Page Directory
     pEntry = &pPageDirectoryPointer->arrEntries[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
-    if (!(pEntry->wFlags & PF_PRESENT)) return NULL;
-    sPageTable *pPageDirectory = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
+    if (!(*pEntry & PF_PRESENT)) return NULL;
+    sPageTable *pPageDirectory = (sPageTable *) _PAGE_TO_ADDRESS(*pEntry >> 12);
 
     // Page Table
     pEntry = &pPageDirectory->arrEntries[_ADDRESS_TO_PT_INDEX(pVirtualAddress)];
-    if (!(pEntry->wFlags & PF_PRESENT)) return NULL;
-    sPageTable *pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
+    if (!(*pEntry & PF_PRESENT)) return NULL;
+    sPageTable *pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(*pEntry >> 12);
 
     // Page Entry
     pEntry = &pPageTable->arrEntries[_ADDRESS_TO_PE_INDEX(pVirtualAddress)];
-    return (pEntry->wFlags & PF_PRESENT) ? (PVOID) (_PAGE_TO_ADDRESS(pEntry->qwAddress) + qwOffset) : NULL;
+    return (*pEntry & PF_PRESENT) ? (PVOID) (_PAGE_TO_ADDRESS(*pEntry >> 12) + qwOffset) : NULL;
 }
 
 // If pPML4 is null, the current PML4 will be used
@@ -164,51 +163,47 @@ void MapPage(sPageTable *pPML4, PVOID pVirtualAddress, PVOID pPhysicalAddress, W
 {
     if (pPML4 == NULL) pPML4 = g_pCurrentPML4;
     // Page Directory Pointer
-    sPageTableEntry *pEntry = &pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
+    PTE *pEntry = &pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)];
     sPageTable *pPageDirectoryPointer;
-    if (!(pEntry->wFlags & PF_PRESENT))
+    if (!(*pEntry & PF_PRESENT))
     {
         pPageDirectoryPointer = AllocatePage();
-        pEntry->qwAddress = _ADDRESS_TO_PAGE(pPageDirectoryPointer);
-        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED | PF_WRITEABLE;
+        *pEntry = (_ADDRESS_TO_PAGE(pPageDirectoryPointer) << 12) | PF_PRESENT | PF_ACCESSED | PF_WRITEABLE;
         pPML4->arrEntries[_ADDRESS_TO_PDP_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
-        pPageDirectoryPointer = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
+        pPageDirectoryPointer = (sPageTable *) _PAGE_TO_ADDRESS(*pEntry >> 12);
 
 
     // Page Directory
     pEntry = &pPageDirectoryPointer->arrEntries[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
 
     sPageTable *pPageDirectory;
-    if (!(pEntry->wFlags & PF_PRESENT))
+    if (!(*pEntry & PF_PRESENT))
     {
         pPageDirectory = AllocatePage();
-        pEntry->qwAddress = _ADDRESS_TO_PAGE(pPageDirectory);
-        pEntry->wFlags    = PF_PRESENT | PF_ACCESSED | PF_WRITEABLE;
+        *pEntry = (_ADDRESS_TO_PAGE(pPageDirectory) << 12) | PF_PRESENT | PF_ACCESSED | PF_WRITEABLE;
         pPageDirectoryPointer->arrEntries[_ADDRESS_TO_PD_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
-        pPageDirectory = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
+        pPageDirectory = (sPageTable *) _PAGE_TO_ADDRESS(*pEntry >> 12);
 
     // Page Table
     pEntry = &pPageDirectory->arrEntries[_ADDRESS_TO_PT_INDEX(pVirtualAddress)];
 
     sPageTable *pPageTable;
-    if (!(pEntry->wFlags & PF_PRESENT))
+    if (!(*pEntry & PF_PRESENT))
     {
         pPageTable = AllocatePage();
-        pEntry->qwAddress = _ADDRESS_TO_PAGE(pPageTable);
-        pEntry->wFlags    = PF_PRESENT | PF_WRITEABLE;
+        *pEntry = (_ADDRESS_TO_PAGE(pPageTable) << 12) | PF_PRESENT | PF_WRITEABLE;
         pPageDirectory->arrEntries[_ADDRESS_TO_PT_INDEX(pVirtualAddress)] = *pEntry;
     }
     else
-        pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(pEntry->qwAddress);
+        pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(*pEntry >> 12);
 
     // Page Entry
-    pEntry            = &pPageTable->arrEntries[_ADDRESS_TO_PE_INDEX(pVirtualAddress)];
-    pEntry->qwAddress = _ADDRESS_TO_PAGE(pPhysicalAddress);
-    pEntry->wFlags    = PF_PRESENT | (wFlags & 0x0FFF);
+    pEntry = &pPageTable->arrEntries[_ADDRESS_TO_PE_INDEX(pVirtualAddress)];
+    *pEntry = (_ADDRESS_TO_PAGE(pPhysicalAddress) << 12) | PF_PRESENT | (wFlags & 0x0FFF);
     
     pPageTable->arrEntries[_ADDRESS_TO_PE_INDEX(pVirtualAddress)] = *pEntry;
 }
@@ -317,82 +312,28 @@ sPageTable *CreateEmptyPML4(WORD wFlags)
     return pTable;
 }
 
-sPageTable *ClonePML4(sPageTable *pPML4)
-{
-    sPageTable *pPML4Clone = AllocatePage();
-    
-    // PML4
-    for (WORD i = 0; i < PAGE_TABLE_SIZE; i++)
-    {
-        if (!(pPML4->arrEntries[i].wFlags & PF_PRESENT)) continue;
-
-        sPageTable *pPageDirectory = (sPageTable *) _PAGE_TO_ADDRESS(pPML4->arrEntries[i].qwAddress);
-        sPageTable *pPageDirectoryClone = AllocatePage();
-        pPML4Clone->arrEntries[i].qwAddress = _ADDRESS_TO_PAGE(pPageDirectoryClone);
-        pPML4Clone->arrEntries[i].wFlags    = PF_PRESENT | PF_WRITEABLE;
-
-        // Page Directory
-        for (WORD j = 0; j < PAGE_TABLE_SIZE; j++)
-        {
-            if (!(pPageDirectory->arrEntries[j].wFlags & PF_PRESENT)) continue;
-
-            sPageTable *pPageTable = (sPageTable *) _PAGE_TO_ADDRESS(pPageDirectory->arrEntries[j].qwAddress);
-            sPageTable *pPageTableClone = AllocatePage();
-            pPageDirectoryClone->arrEntries[j].qwAddress = _ADDRESS_TO_PAGE(pPageTableClone);
-            pPageDirectoryClone->arrEntries[j].wFlags    = PF_PRESENT | PF_WRITEABLE;
-
-            // Page Table
-            for (WORD k = 0; k < PAGE_TABLE_SIZE; k++)
-            {
-                if (!(pPageTable->arrEntries[k].wFlags & PF_PRESENT)) continue;
-
-                sPageTable *pPageEntry = (sPageTable *) _PAGE_TO_ADDRESS(pPageTable->arrEntries[k].qwAddress);
-                sPageTable *pPageEntryClone = AllocatePage();
-                pPageTableClone->arrEntries[k].qwAddress = _ADDRESS_TO_PAGE(pPageEntryClone);
-                pPageTableClone->arrEntries[k].wFlags    = PF_PRESENT | PF_WRITEABLE;
-
-                // FIXME: remove this code once the cause of the error is found (i.e. the addresses randomly blowing up to ridiculously high amounts)
-                if ((QWORD) pPageEntry > 0xFFFFFFFF)
-                    continue;
-
-                // Page Entry
-                for (WORD l = 0; l < PAGE_TABLE_SIZE; l++)
-                {
-                    if (!(pPageEntry->arrEntries[l].wFlags & PF_PRESENT)) continue;
-
-                    pPageEntryClone->arrEntries[l].qwAddress = pPageEntry->arrEntries[l].qwAddress;
-                    pPageEntryClone->arrEntries[l].wFlags    = pPageEntry->arrEntries[l].wFlags;
-                }
-            }
-        }
-
-    }
-
-    return pPML4Clone;
-}
-
 void FreePML4(sPageTable *pTable)
 {
     // PML4
     for (WORD i = 0; i < PAGE_TABLE_SIZE; i++)
     {
-        if (!(pTable->arrEntries[i].wFlags & PF_PRESENT)) continue;
+        if (!(pTable->arrEntries[i] & PF_PRESENT)) continue;
 
-        sPageTable *pPageDirectory = (sPageTable *) _ADDRESS_TO_PAGE(pTable->arrEntries[i].qwAddress);
+        sPageTable *pPageDirectory = (sPageTable *) _ADDRESS_TO_PAGE(pTable->arrEntries[i] >> 12);
         
         // Page Directory
         for (WORD j = 0; j < PAGE_TABLE_SIZE; j++)
         {
-            if (!(pPageDirectory->arrEntries[j].wFlags & PF_PRESENT)) continue;
+            if (!(pPageDirectory->arrEntries[j] & PF_PRESENT)) continue;
 
-            sPageTable *pPageTable = (sPageTable *) _ADDRESS_TO_PAGE(pPageDirectory->arrEntries[i].qwAddress);
+            sPageTable *pPageTable = (sPageTable *) _ADDRESS_TO_PAGE(pPageDirectory->arrEntries[i] >> 12);
             
             // Page Table
             for (WORD k = 0; k < PAGE_TABLE_SIZE; k++)
             {
-                if (!(pPageTable->arrEntries[k].wFlags & PF_PRESENT)) continue;
+                if (!(pPageTable->arrEntries[k] & PF_PRESENT)) continue;
 
-                sPageTable *pPageEntry = (sPageTable *) _ADDRESS_TO_PAGE(pPageTable->arrEntries[i].qwAddress);
+                sPageTable *pPageEntry = (sPageTable *) _ADDRESS_TO_PAGE(pPageTable->arrEntries[i] >> 12);
     
                 FreePage(pPageEntry);
             }
