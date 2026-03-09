@@ -50,23 +50,46 @@ typedef enum
 #define HBA_PxCMD_CR                   0x8000
 #define HBA_PxIS_TFES                  0x40000000
 
-typedef struct tagFISRegisterHostToDevice
+typedef struct _tagFISRegisterHostToDevice
 {
     BYTE  nFISType;
-    BYTE  nPortMultiplier : 4;
-    BYTE  nReserved0 : 3;
-    BOOL  bCommand : 1;
+    union
+    {
+        BYTE bPortMultiplierCommand;
+        struct
+        {
+            BYTE  nPortMultiplier : 4;
+            BYTE  nReserved0 : 3;
+            BOOL  bCommand : 1;
+        };
+    };
     BYTE  nCommand;
     BYTE  nFeatureLow;
-    DWORD nLBALow : 24;
-    BYTE  nDevice;
-    DWORD nLBAHigh : 24;
-    BYTE  nFeatureHigh;
+    union
+    {
+        DWORD dwLBALowDevice : 32;
+        struct
+        {
+            DWORD nLBALow : 24;
+            DWORD  nDevice : 8; // Must be a DWORD, since MinGW packs it strangely as a BYTE
+        };
+    };
+    union
+    {
+        DWORD dwLBAHighFeatureHigh;
+        struct
+        {
+            DWORD nLBAHigh : 24;
+            DWORD  nFeatureHigh : 8;
+        };
+    };
     WORD  wCount;
     BYTE  nIsochronousCommandCompletion;
     BYTE  nControl;
     BYTE  arrReserved1[4];
-} sFISRegisterHostToDevice;
+} __attribute__((packed)) sFISRegisterHostToDevice;
+
+static_assert(sizeof(sFISRegisterHostToDevice) == 20, "sFISRegisterHostToDevice must be 20 bytes long");
 
 typedef struct _tagHBAPort
 {
@@ -124,22 +147,26 @@ typedef struct _tagHBACommandHeader
     DWORD arrReserved1[4];
 } __attribute__((packed)) sHBACommandHeader;
 
-typedef struct tagHBA_PRDT_ENTRY
+static_assert(sizeof(sHBACommandHeader) == 32, "sHBACommandHeader must be 32 bytes long");
+
+typedef struct _tagsHBAPRDTEntry
 {
     QWORD qwDataBaseAddress;      // Data base address
     DWORD dwReserved0;     // Reserved
     DWORD nByteCount : 22;       // Byte count, 4M max
-    WORD  nReserved1 : 9;       // Reserved
-    BOOL  bInterruptOnCompletion : 1;      // Interrupt on completion
-} HBA_PRDT_ENTRY;
+    DWORD  nReserved1 : 9;       // Reserved
+    DWORD  bInterruptOnCompletion : 1;      // Interrupt on completion
+} __attribute__((packed)) sHBAPRDTEntry;
+
+static_assert(sizeof(sHBAPRDTEntry) == 16, "sHBAPRDTEntry must be 16 bytes long");
 
 typedef struct tagHBACommandTable
 {
     BYTE arrCommandFIS[64];
     BYTE arrATAPICommand[16];
     BYTE arrReserved[48];
-    HBA_PRDT_ENTRY arrPhysicalRegionDescriptorTableEntries[65535];
-} sHBACommandTable;
+    sHBAPRDTEntry arrPhysicalRegionDescriptorTableEntries[65535];
+} __attribute__((packed)) sHBACommandTable;
 
 sHBAPort *GetHBAPort(BYTE nPort);
 
