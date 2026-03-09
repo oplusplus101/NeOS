@@ -28,16 +28,11 @@
 #define PF_PAGETABLEATTRIBUTE 128
 #define PF_GLOBAL             256
 
+typedef QWORD PTE;
 
 typedef struct
 {
-    WORD  wFlags    : 12;
-    QWORD qwAddress : 52;
-} __attribute__((packed)) sPageTableEntry;
-
-typedef struct
-{
-    sPageTableEntry arrEntries[PAGE_TABLE_SIZE];
+    PTE arrEntries[PAGE_TABLE_SIZE];
 } __attribute__((packed)) __attribute__((aligned(PAGE_SIZE))) sPageTable;
 
 
@@ -62,7 +57,6 @@ PVOID AllocateContinousPages(QWORD qwPages);
 void FreeContinousPages(PVOID pAddress, QWORD qwPages);
 void FreePage(PVOID pAddress);
 PVOID GetPhysicalAddress(sPageTable *pPML4, PVOID pVirtualAddress);
-sPageTable *ClonePML4(sPageTable *pTable);
 sPageTable *GetKernelPML4();
 sPageTable *GetCurrentPML4();
 sPageTable *CreateEmptyPML4(WORD wFlags);

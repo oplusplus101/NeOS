@@ -83,8 +83,8 @@ INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pPa
     sProc.pCPUState->qwCS    = KERNEL_CODE_SEGMENT;
     sProc.pCPUState->qwFlags = 0x0202; // Set the reserved and interrupt enable flags
 
-    // Setup paging
-    sProc.pPML4 = ClonePML4(GetCurrentPML4());
+    // TEMPORARY: Setup paging
+    sProc.pPML4 = GetCurrentPML4();
 
     for (WORD i = 0; i < pEXE->lstSections.qwLength; i++)
     {
@@ -145,8 +145,8 @@ INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE n
     sProc.pCPUState->qwCS    = KERNEL_CODE_SEGMENT;
     sProc.pCPUState->qwFlags = 0x0202; // Set the reserved and interrupt enable flags
 
-    // Setup paging
-    sProc.pPML4 = ClonePML4(GetCurrentPML4());
+    // TEMPORARY: Setup paging
+    sProc.pPML4 = GetCurrentPML4();
 
     AddListElement(&g_lstProcesses, &sProc);
     return sProc.iPID;
