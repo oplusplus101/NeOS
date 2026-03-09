@@ -69,7 +69,8 @@ QWORD Exception5(QWORD qwRSP, BYTE nErrorCode)
 
 QWORD Exception6(QWORD qwRSP, BYTE nErrorCode)
 {
-    PrintBytes((PVOID) qwRSP, sizeof(sCPUState), 16, true);
+    sCPUState *pState = (sCPUState *) qwRSP;
+    PrintBytes((PVOID) pState->qwRIP, 512, 32, true);
     _KERNEL_PANIC(L"Invalid opcode");
     return qwRSP;
 }
