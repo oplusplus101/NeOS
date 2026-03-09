@@ -135,7 +135,7 @@ BOOL AHCIRead(sHBAPort *pPort, QWORD nStart, WORD wCount, WORD *pBuffer)
     pCommandHeader->wPhysicalRegionDescriptorTable = (WORD) ((wCount - 1) >> 4) + 1;
 
     sHBACommandTable *pCommandTable = (sHBACommandTable *)(pCommandHeader->qwCommandTableDescriptorBaseAddress);
-    memset(pCommandTable, 0, sizeof(sHBACommandTable) + (pCommandHeader->wPhysicalRegionDescriptorTable - 1) * sizeof(HBA_PRDT_ENTRY));
+    memset(pCommandTable, 0, sizeof(sHBACommandTable) + (pCommandHeader->wPhysicalRegionDescriptorTable - 1) * sizeof(sHBAPRDTEntry));
 
     WORD i;
     for (i = 0; i < pCommandHeader->wPhysicalRegionDescriptorTable - 1; i++)
