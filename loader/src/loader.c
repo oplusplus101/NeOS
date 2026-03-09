@@ -167,30 +167,31 @@ void LoaderMainAfterStackSwitch(sBootData sData)
     sHeader.sPaging     = ExportPagingData();
 
     // Filesystem functions
-    sHeader.LoaderOpenFile    = (PVOID (*)(PWCHAR)) OpenFile;
-    sHeader.LoaderGetFileSize = (QWORD (*)(PVOID)) GetFileSize;
-    sHeader.LoaderReadFile    = (QWORD (*)(PVOID, PVOID, QWORD)) ReadFile;
-    sHeader.LoaderCloseFile   = (void (*)(PVOID)) CloseFile;
-    sHeader.LoaderSeekFile    = (void (*)(PVOID, QWORD)) SeekFile;
-    sHeader.LoaderTellFile    = (QWORD (*)(PVOID)) TellFile;
+    sHeader.LoaderOpenFile      = (PVOID (*)(PWCHAR)) OpenFile;
+    sHeader.LoaderGetFileSize   = (QWORD (*)(PVOID)) GetFileSize;
+    sHeader.LoaderReadFile      = (QWORD (*)(PVOID, PVOID, QWORD)) ReadFile;
+    sHeader.LoaderCloseFile     = (void (*)(PVOID)) CloseFile;
+    sHeader.LoaderSeekFile      = (void (*)(PVOID, QWORD)) SeekFile;
+    sHeader.LoaderTellFile      = (QWORD (*)(PVOID)) TellFile;
 
     // Screen functions
-    sHeader.PrintFormat       = (void (*)(const PWCHAR, ...)) PrintFormat;
-    sHeader.PrintString       = (void (*)(PCHAR)) PrintString;
-    sHeader.PrintBytes        = (void (*)(PVOID, QWORD, WORD, BOOL)) PrintBytes;
-    sHeader.PrintChar         = (void (*)(CHAR)) PrintChar;
-    sHeader.Log               = (void (*)(INT, const PWCHAR, ...)) Log;
-    sHeader.GetCursorX        = (INT  (*)()) GetCursorX;
-    sHeader.GetCursorY        = (INT  (*)()) GetCursorY;
-    sHeader.SetCursor         = (void (*)(INT, INT)) SetCursor;
-    sHeader.SetFGColor        = (void (*)(sColour)) SetFGColor;
-    sHeader.SetBGColor        = (void (*)(sColour)) SetBGColor;
-    sHeader.ClearScreen       = (void (*)()) ClearScreen;
-    sHeader.GetScreenWidth    = (INT  (*)()) GetScreenWidth;
-    sHeader.GetScreenHeight   = (INT  (*)()) GetScreenHeight;
+    sHeader.PrintFormat         = (void (*)(const PWCHAR, ...)) PrintFormat;
+    sHeader.PrintFormatVariadic = (void (*)(const PWCHAR, __builtin_va_list)) PrintFormatVariadic;
+    sHeader.PrintString         = (void (*)(PCHAR)) PrintString;
+    sHeader.PrintBytes          = (void (*)(PVOID, QWORD, WORD, BOOL)) PrintBytes;
+    sHeader.PrintChar           = (void (*)(CHAR)) PrintChar;
+    sHeader.Log                 = (void (*)(INT, const PWCHAR, ...)) Log;
+    sHeader.GetCursorX          = (INT  (*)()) GetCursorX;
+    sHeader.GetCursorY          = (INT  (*)()) GetCursorY;
+    sHeader.SetCursor           = (void (*)(INT, INT)) SetCursor;
+    sHeader.SetFGColor          = (void (*)(sColour)) SetFGColor;
+    sHeader.SetBGColor          = (void (*)(sColour)) SetBGColor;
+    sHeader.ClearScreen         = (void (*)()) ClearScreen;
+    sHeader.GetScreenWidth      = (INT  (*)()) GetScreenWidth;
+    sHeader.GetScreenHeight     = (INT  (*)()) GetScreenHeight;
 
-    sHeader.RegisterException = (void (*)(BYTE, ESR)) RegisterException;
-    sHeader.RegisterInterrupt = (void (*)(BYTE, ISR)) RegisterInterrupt;
+    sHeader.RegisterException   = (void (*)(BYTE, ESR)) RegisterException;
+    sHeader.RegisterInterrupt   = (void (*)(BYTE, ISR)) RegisterInterrupt;
 
     Log(LOG_LOG, L"Executing C:\\NeOS\\NeOS.sys at 0x%p", pPEOHeader->qwImageBase + (QWORD) pPEOHeader->dwAddressOfEntrypoint + NEOS_KERNEL_PHYSICAL_ADDRESS);
     
