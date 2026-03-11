@@ -10,8 +10,6 @@
 #include <common/ini.h>
 #include <memory/heap.h>
 #include <hardware/ports.h>
-#include <io/syscallimpl.h>
-#include <io/syscalls.h>
 #include <io/timer.h>
 #include <io/io.h>
 #include <runtime/exceptions.h>
@@ -55,10 +53,6 @@ void KernelMain(sNEOSKernelHeader hdr)
     // Override the previous exception handlers so that when a process crashes it doesn't kill the whole kernel.
     RegisterKernelExceptions();
     Log(LOG_LOG, L"Exceptions remapped to kernel");
-
-    InitSyscalls();
-    RegisterSyscalls();
-    Log(LOG_LOG, L"Syscalls initialised to interrupt 0x%02X", NEOS_SYSCALL_IRQ);
 
     InitObjectManager();
 
