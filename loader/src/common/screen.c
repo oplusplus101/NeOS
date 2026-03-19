@@ -364,7 +364,7 @@ void DrawPixel(INT x, INT y, sColour c)
     g_pScreen[x + y * g_iWidth] = 0xFF000000 | c.b | (c.g << 8) | (c.r << 16);
 }
 
-
+#ifdef QEMU_UART
 // Simple debug function for QEMU
 __attribute__((no_instrument_function))
 void QEMU_UART_WriteChar(CHAR c)
@@ -381,11 +381,14 @@ void QEMU_UART_WriteChar(CHAR c)
     while (!(inb(0x3F8 + 5) & 0x20)); // Wait for TX empty
     outb(0x3F8, c);
 }
+#endif // QEMU_UART
 
 __attribute__((no_instrument_function))
 void PrintChar(CHAR c)
 {
+#ifdef QEMU_UART
     QEMU_UART_WriteChar(c);
+#endif // QEMU_UART
     switch (c)
     {
     case '\n':
