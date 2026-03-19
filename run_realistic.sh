@@ -1,0 +1,17 @@
+qemu-system-x86_64 \
+    -machine q35,accel=whpx \
+    -cpu host \
+    -smp 4 \
+    -m 4G \
+    -bios OVMF.fd \
+    -drive file=disk.img,if=none,id=disk0 \
+    -device nvme,drive=disk0,serial=nvme0 \
+    -device ich9-ahci,id=ahci \
+    -drive file=ahci.img,if=none,id=disk1 \
+    -device ide-hd,drive=disk1,bus=ahci.0 \
+    -device e1000 \
+    -device qemu-xhci \
+    -device usb-kbd \
+    -device usb-mouse \
+    -rtc base=utc \
+    -global kvm-pit.lost_tick_policy=discard
