@@ -49,7 +49,7 @@ BOOL ReadFromDrive(BYTE bDrive, QWORD qwStart, WORD wCount, PVOID pBuffer)
         {
             for (DWORD i = 0; i < wCount * 512 / PAGE_SIZE; i++)
             {
-                if (!AHCIRead(GetHBAPort(AHCI_DEVICE_TYPE_SATA), qwStart, wCount, g_pReadBuffer))
+                if (!AHCIRead(GetHBAPort(AHCI_DEVICE_TYPE_SATA), (qwStart + i * PAGE_SIZE) / 512, wCount, g_pReadBuffer))
                     return false;
                 memcpy((PVOID) ((QWORD) pBuffer + i * PAGE_SIZE), g_pReadBuffer, PAGE_SIZE);
             }
