@@ -37,9 +37,9 @@ file(GLOB_RECURSE KERNEL_RUNTIME_SRC "${CMAKE_SOURCE_DIR}/lib/kernel_runtime/src
 add_library(runtime OBJECT ${KERNEL_RUNTIME_SRC})
 
 # Compiler flags
-target_compile_options(${LOADER_EXE} PRIVATE $<$<COMPILE_LANGUAGE:C>:${BASE_FLAGS} -fno-pie -finstrument-functions -DFUNCTION_INSTRUMENTATIONS>)
-target_compile_options(${KERNEL_EXE} PRIVATE $<$<COMPILE_LANGUAGE:C>:${BASE_FLAGS} -fno-pie -finstrument-functions -DFUNCTION_INSTRUMENTATIONS>)
-target_compile_options(runtime       PRIVATE $<$<COMPILE_LANGUAGE:C>:${BASE_FLAGS} -fno-pie -finstrument-functions -DFUNCTION_INSTRUMENTATIONS>)
+target_compile_options(${LOADER_EXE} PRIVATE $<$<COMPILE_LANGUAGE:C>:${BASE_FLAGS} -fno-pie -DQEMU_UART>)
+target_compile_options(${KERNEL_EXE} PRIVATE $<$<COMPILE_LANGUAGE:C>:${BASE_FLAGS} -fno-pie -DQEMU_UART>)
+target_compile_options(runtime       PRIVATE $<$<COMPILE_LANGUAGE:C>:${BASE_FLAGS} -fno-pie -DQEMU_UART>)
 
 # Linker flags
 target_link_options(${LOADER_EXE} PRIVATE -T ${CMAKE_SOURCE_DIR}/loader/linker.ld -no-pie -nostdlib -Wl,--image-base,0x100000)
