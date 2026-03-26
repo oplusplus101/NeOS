@@ -2,6 +2,8 @@
 #ifndef __NEOHID_H
 #define __NEOHID_H
 
+#include <NeoTypes.h>
+
 
 #define AK_ESCAPE        0x01
 #define AK_1             0x02
@@ -87,5 +89,11 @@
 #define AK_KP_0          0x53
 #define AK_KP_F11        0x57
 #define AK_KP_F12        0x58
+
+typedef struct
+{
+    WORD wKey;
+    BOOL bPressed;
+} __attribute__((packed)) sAbstractKeyboardEvent;
 
 #endif // __NEOHID_H
