@@ -127,5 +127,7 @@ void RemoveListElement(sList *pList, QWORD qwIndex)
     _ASSERT(pList->pData != NULL, L"Tried to remove an element from a list without data");
     _ASSERT(qwIndex < pList->qwLength, L"Tried to remove element outside list, index: %u, list length: %u", qwIndex, pList->qwLength);
     memcpy((PBYTE) pList->pData + qwIndex * pList->qwElementSize, (PBYTE) pList->pData + (qwIndex + 1) * pList->qwElementSize, (pList->qwLength-- - qwIndex) * pList->qwElementSize);
-    pList->pData = KHeapReAlloc(pList->pData, _MAX(1, pList->qwLength) * pList->qwElementSize);
+    PVOID pNewData = KHeapReAlloc(pList->pData, _MAX(1, pList->qwLength) * pList->qwElementSize);
+    _ASSERT(pNewData != NULL, L"Failed to reallocate memory for list");
+    pList->pData = pNewData;
 }
