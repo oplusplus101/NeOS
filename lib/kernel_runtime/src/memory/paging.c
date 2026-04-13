@@ -247,43 +247,49 @@ void PopulatePageMap(sPageTable *pPageTable)
 
 void InitPaging(sEFIMemoryDescriptor *pMemoryDescriptor,
                 QWORD nMemoryMapSize, QWORD nMemoryDescriptorSize,
-                QWORD nLoaderStart, QWORD nLoaderEnd)
+                QWORD qwLoaderStart, QWORD qwLoaderEnd)
 {
-    PVOID pLargestSegment = NULL;
-    QWORD nLargestSegmentSize = 0, qwMemorySize = 0;
-
+    QWORD qwMemorySize = 0;
     for (sEFIMemoryDescriptor *pEntry = pMemoryDescriptor;
          (BYTE *) pEntry < (BYTE *) pMemoryDescriptor + nMemoryMapSize;
          pEntry = (sEFIMemoryDescriptor *) ((BYTE *) pEntry + nMemoryDescriptorSize))
     {
         qwMemorySize += pEntry->nNumberOfPages * PAGE_SIZE;
-        if (pEntry->nType == 7 && pEntry->nNumberOfPages * PAGE_SIZE > nLargestSegmentSize)
+    }
+    
+    PVOID pBitmapSegment = NULL;
+    QWORD qwBitmapSegmentSize = _BYTES_TO_PAGES(qwMemorySize) / 8;
+    for (sEFIMemoryDescriptor *pEntry = pMemoryDescriptor;
+         (BYTE *) pEntry < (BYTE *) pMemoryDescriptor + nMemoryMapSize;
+         pEntry = (sEFIMemoryDescriptor *) ((BYTE *) pEntry + nMemoryDescriptorSize))
+    {
+        if (pEntry->nType == 7 && pEntry->nNumberOfPages * PAGE_SIZE >= qwBitmapSegmentSize &&
+            pEntry->nVirtualStart < qwLoaderStart && pEntry->nVirtualStart > qwLoaderEnd)
         {
-            pLargestSegment     = (PVOID) pEntry->nPhysicalStart;
-            nLargestSegmentSize = pEntry->nNumberOfPages * PAGE_SIZE;
+            qwBitmapSegmentSize = pEntry->nNumberOfPages * PAGE_SIZE;
+            pBitmapSegment = (PVOID) pEntry->nVirtualStart;
         }
     }
-
+    
     g_qwMemorySize         = qwMemorySize;
     g_qwFreeMemory         = qwMemorySize;
     
-    g_sPageBitmap.pData    = pLargestSegment;
-    g_sPageBitmap.qwLength = qwMemorySize / PAGE_SIZE / 8 + 1;
-    ZeroMemory(g_sPageBitmap.pData, g_sPageBitmap.qwLength);
-    
-    ReservePages(0, g_qwMemorySize / PAGE_SIZE + 1);
+    g_sPageBitmap.pData    = pBitmapSegment;
+    g_sPageBitmap.qwLength = qwBitmapSegmentSize;
+
+    memset(g_sPageBitmap.pData, 0xFF, g_sPageBitmap.qwLength);
     
     for (QWORD i = 0; i < nMemoryMapSize; i += nMemoryDescriptorSize)
     {
         sEFIMemoryDescriptor *pDesc = (sEFIMemoryDescriptor *) ((QWORD) pMemoryDescriptor + i);
         if (pDesc->nType == 7) ReturnPages((PVOID) pDesc->nPhysicalStart, pDesc->nNumberOfPages);
     }
-    
+
     ReservePages(0, 256); // Reserve the first 1MiB.
     ReservePages(g_sPageBitmap.pData, g_sPageBitmap.qwLength / PAGE_SIZE + 1); // Reserve the bitmap's pages.
     
     // Reserve the bootloader's pages.
-    ReservePages((PVOID) nLoaderStart, (nLoaderEnd - nLoaderStart) / PAGE_SIZE + 1);
+    ReservePages((PVOID) qwLoaderStart, (qwLoaderEnd - qwLoaderStart) / PAGE_SIZE + 1);
     
     g_pKernelPML4 = AllocatePage();
     g_pCurrentPML4 = g_pKernelPML4;
@@ -311,6 +317,7 @@ sPageTable *CreateEmptyPML4(WORD wFlags)
     MapPageRangeToIdentity(pTable, NULL, g_qwMemorySize / PAGE_SIZE + 1, wFlags);
     return pTable;
 }
+
 
 void FreePML4(sPageTable *pTable)
 {
