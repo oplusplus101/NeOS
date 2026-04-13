@@ -33,8 +33,8 @@ extern void (*LogVariadic)(INT iType, const PWCHAR wszFormat, __builtin_va_list 
 extern INT  (*GetCursorX)();
 extern INT  (*GetCursorY)();
 extern void (*SetCursor)(INT x, INT y);
-extern void (*SetFGColor)(sColour c);
-extern void (*SetBGColor)(sColour c);
+extern void (*SetFGColour)(sColour c);
+extern void (*SetBGColour)(sColour c);
 extern void (*ClearScreen)();
 extern INT  (*GetScreenWidth)();
 extern INT  (*GetScreenHeight)();
