@@ -155,5 +155,7 @@ PWCHAR strtokW(PWCHAR wsz, const PWCHAR wszDelim);
 PCHAR strdup(PCHAR sz);
 PWCHAR strdupW(PWCHAR sz);
 
+void itoa(INT iValue, PCHAR sz, BYTE bBase);
+void itow(INT iValue, PWCHAR wsz, BYTE bBase);
 
 #endif // __COMMON__STRING_H

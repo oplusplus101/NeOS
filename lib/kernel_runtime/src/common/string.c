@@ -67,3 +67,55 @@ PWCHAR strtokW(PWCHAR wsz, const PWCHAR wszDelim)
     
     return NULL;
 }
+
+void itoa(INT iValue, PCHAR sz, BYTE bBase)
+{
+    QWORD qwOffset = 0;
+    if (iValue < 0)
+    {
+        sz[qwOffset++] = '-';
+        iValue = -iValue;
+    }
+
+    PCHAR sDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    CHAR sBuffer[20];
+    QWORD nDigits = 0;
+    while (iValue)
+    {
+        sBuffer[nDigits++] = sDigits[iValue % bBase];
+        iValue /= bBase;
+    }
+
+    for (INT i = nDigits - 1; i >= 0; i--)
+        sz[qwOffset++] = sBuffer[i];
+    sz[qwOffset] = 0;
+}
+
+void itow(INT iValue, PWCHAR wsz, BYTE bBase)
+{
+    if (iValue == 0)
+    {
+        wsz[0] = '0';
+        wsz[1] = 0;
+        return;
+    }
+    QWORD qwOffset = 0;
+    if (iValue < 0)
+    {
+        wsz[qwOffset++] = '-';
+        iValue = -iValue;
+    }
+
+    PCHAR sDigits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    CHAR sBuffer[20];
+    QWORD nDigits = 0;
+    while (iValue)
+    {
+        sBuffer[nDigits++] = sDigits[iValue % bBase];
+        iValue /= bBase;
+    }
+
+    for (INT i = nDigits - 1; i >= 0; i--)
+        wsz[qwOffset++] = sBuffer[i];
+    wsz[qwOffset] = 0;
+}
