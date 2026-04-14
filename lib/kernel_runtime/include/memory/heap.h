@@ -83,8 +83,10 @@ void HeapFree(sHeap *pHeap, PVOID pMemory);
 /// @param qwNewSize 
 /// @return The new memory address upon success, NULL otherwise 
 PVOID  HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewSize);
-PVOID  KHeapAlloc(QWORD qwSize);
-void   KHeapFree(PVOID pMemory);
-PVOID  KHeapReAlloc(PVOID pMemory, QWORD qwSize);
+
+
+PVOID  STDCALL KHeapAlloc(QWORD qwSize);
+void   STDCALL KHeapFree(PVOID pMemory);
+PVOID  STDCALL KHeapReAlloc(PVOID pMemory, QWORD qwSize);
 
 #endif // __MEMORY__HEAP_HH

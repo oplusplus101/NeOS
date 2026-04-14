@@ -3,10 +3,14 @@
 #include <io/io.h>
 #include <runtime/objects.h>
 
-
-void STDCALL KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, QWORD (*pCallback)(QWORD))
+void STDCALL KNeoPrintChar(WORD c)
 {
-    RegisterInterrupt(bInterrupt, (ISR) pCallback);
+    PrintChar(c);
+}
+
+void STDCALL KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, ISR pCallback)
+{
+    RegisterInterrupt(bInterrupt, pCallback);
 }
 
 void STDCALL KNeoPrintString(const PCHAR szString)

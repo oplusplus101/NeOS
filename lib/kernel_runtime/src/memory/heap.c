@@ -82,19 +82,19 @@ sHeap *GetKernelHeap()
     return g_pKernelHeap;
 }
 
-PVOID KHeapAlloc(QWORD qwSize)
+PVOID STDCALL KHeapAlloc(QWORD qwSize)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     return HeapAlloc(g_pKernelHeap, qwSize);
 }
 
-void KHeapFree(PVOID pMemory)
+void STDCALL KHeapFree(PVOID pMemory)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     HeapFree(g_pKernelHeap, pMemory);
 }
 
-PVOID KHeapReAlloc(PVOID pMemory, QWORD qwSize)
+PVOID STDCALL KHeapReAlloc(PVOID pMemory, QWORD qwSize)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     return HeapReAlloc(g_pKernelHeap, pMemory, qwSize);

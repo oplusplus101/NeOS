@@ -4,6 +4,10 @@ LIBRARY NeOS
 EXPORTS
     KNeoPrintFormat=KNeoPrintFormat
     KNeoLog=KNeoLog
+    KNeoPrintChar=KNeoPrintChar
     KNeoPrintString=KNeoPrintString
     KNeoCreateDevice=CreateDevice
     KNeoRegisterInterrupt=KNeoRegisterInterrupt
+    KNeoHeapAllocate=KHeapAlloc
+    KNeoHeapReAllocate=KHeapReAlloc
+    KNeoHeapFree=KHeapFree
