@@ -180,7 +180,7 @@ sProcess *GetProcess(INT iPID)
     return NULL;
 }
 
-QWORD ScheduleProcesses(QWORD qwRSP)
+QWORD SYSV ScheduleProcesses(QWORD qwRSP)
 {
     if (g_lstProcesses.qwLength == 0) return qwRSP;
 

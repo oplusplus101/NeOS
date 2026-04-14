@@ -36,7 +36,7 @@ void KillCurrentProcess(PWCHAR wszReason)
     KillProcess(GetCurrentPID(), wszReason);
 }
 
-QWORD KException0(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException0(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Division by zero");
@@ -46,7 +46,7 @@ QWORD KException0(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException1(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException1(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Debug");
@@ -56,7 +56,7 @@ QWORD KException1(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException2(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException2(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Non-maskable interrupt");
@@ -66,7 +66,7 @@ QWORD KException2(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException3(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException3(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Breakpoint");
@@ -76,7 +76,7 @@ QWORD KException3(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException4(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException4(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Overflow");
@@ -86,7 +86,7 @@ QWORD KException4(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException5(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException5(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Bound range error");
@@ -96,7 +96,7 @@ QWORD KException5(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException6(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException6(QWORD qwRSP, WORD wErrorCode)
 {
     sCPUState *pState = (sCPUState *) qwRSP;
     Log(LOG_LOG, L"Dump of RIP at address 0x%p", pState->qwRIP);
@@ -110,7 +110,7 @@ QWORD KException6(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException7(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException7(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Device not available");
@@ -120,17 +120,14 @@ QWORD KException7(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException8(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException8(QWORD qwRSP, WORD wErrorCode)
 {
-    if (GetCurrentPID() == -1)
-        _PRINT_FAULT(qwRSP, L"Double fault");
+    _PRINT_FAULT(qwRSP, L"DOUBLE FAULT! Cannot recover system.");
         
-    KillCurrentProcess(L"Double fault");
-
-    return ScheduleProcesses(qwRSP);
+    return 0;
 }
 
-QWORD KException10(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException10(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Invalid TSS");
@@ -140,7 +137,7 @@ QWORD KException10(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException11(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException11(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Segment not present");
@@ -150,7 +147,7 @@ QWORD KException11(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException12(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException12(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
         _PRINT_FAULT(qwRSP, L"Stack segment fault");
@@ -160,48 +157,51 @@ QWORD KException12(QWORD qwRSP, BYTE nErrorCode)
     return ScheduleProcesses(qwRSP);
 }
 
-// NOTE: bErrorCode is technically a WORD in this exception
-QWORD KException13(QWORD qwRSP, BYTE bErrorCode)
+
+QWORD SYSV KException13(QWORD qwRSP, WORD wErrorCode)
 {
     if (GetCurrentPID() == -1)
-        _PRINT_FAULT(qwRSP, L"General protection fault, Error Code 0x%08X", bErrorCode);
+    {
+        sCPUState *pState = (sCPUState *) qwRSP;
+        _PRINT_FAULT(qwRSP, L"General protection fault, Error Code 0x%04X.\nCS = %04X", wErrorCode, pState->qwCS);
+    }
         
     KillCurrentProcess(L"General protection fault");
 
     return ScheduleProcesses(qwRSP);
 }
 
-QWORD KException14(QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV KException14(QWORD qwRSP, WORD wErrorCode)
 {
     QWORD qwExceptionAddress;
     __asm__ volatile("mov %%cr2, %0" : "=r" (qwExceptionAddress));
     
     if (GetCurrentPID() == -1)
-        switch (nErrorCode & 7)
+        switch (wErrorCode & 7)
         {
         case 0b000:
-            _PRINT_FAULT(qwRSP, L"Supervisory process tried to read a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"Supervisory process tried to read a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         case 0b001:
-            _PRINT_FAULT(qwRSP, L"Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"Supervisory process tried to read a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         case 0b010:
-            _PRINT_FAULT(qwRSP, L"Supervisory process tried to write to a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"Supervisory process tried to write to a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         case 0b011:
-            _PRINT_FAULT(qwRSP, L"Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"Supervisory process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         case 0b100:
-            _PRINT_FAULT(qwRSP, L"User process tried to read a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"User process tried to read a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         case 0b101:
-            _PRINT_FAULT(qwRSP, L"User process tried to read a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"User process tried to read a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         case 0b110:
-            _PRINT_FAULT(qwRSP, L"User process tried to write to a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"User process tried to write to a non-present page entry\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         case 0b111:
-            _PRINT_FAULT(qwRSP, L"User process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, nErrorCode);
+            _PRINT_FAULT(qwRSP, L"User process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         }
 
     SetFGColor(NEOS_ERROR_COLOUR);
     PrintFormat(L"Address: 0x%p\n", qwExceptionAddress);
     PrintFormat(L"PML4 Address: 0x%p\n", GetCurrentPML4());
 
-    switch (nErrorCode & 7)
+    switch (wErrorCode & 7)
     {
     case 0b000:
         KillCurrentProcess(L"Supervisory process tried to read a non-present page entry");

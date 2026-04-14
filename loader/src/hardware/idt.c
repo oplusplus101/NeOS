@@ -140,14 +140,14 @@ void InitIDT()
 }
 
 // Mark as sysv_abi, since some compilers default to a different one
-QWORD SYSV HandleInterrupt(BYTE nInterrupt, QWORD qwRSP, BYTE nErrorCode)
+QWORD SYSV HandleInterrupt(BYTE bInterrupt, QWORD qwRSP, WORD wErrorCode)
 {
-    if (nInterrupt < 32 && g_ESRs[nInterrupt] != 0)
-        qwRSP = g_ESRs[nInterrupt](qwRSP, nErrorCode);
-    else if (nInterrupt >= 32 && g_ISRs[nInterrupt - 32] != 0)
-        qwRSP = g_ISRs[nInterrupt - 32](qwRSP);
+    if (bInterrupt < 32 && g_ESRs[bInterrupt] != 0)
+    qwRSP = g_ESRs[bInterrupt](qwRSP, wErrorCode);
+    else if (bInterrupt >= 32 && g_ISRs[bInterrupt - 32] != 0)
+        qwRSP = g_ISRs[bInterrupt - 32](qwRSP);
     
-    if (nInterrupt >= 0x28)
+    if (bInterrupt >= 0x28)
     {
         outb(PIC_SLAVE_COMMAND, 0x20);
         IOWait();

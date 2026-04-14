@@ -13,8 +13,8 @@ typedef struct
     BYTE r, g, b;
 } __attribute__((packed)) sColour;
 
-typedef QWORD (*ISR)(QWORD);
-typedef QWORD (*ESR)(QWORD, BYTE);
+typedef QWORD (SYSV *ISR)(QWORD);
+typedef QWORD (SYSV *ESR)(QWORD, WORD);
 
 #define _RGB(r, g, b) ((sColour) { (r), (g), (b) })
 

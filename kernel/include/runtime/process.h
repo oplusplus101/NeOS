@@ -42,6 +42,6 @@ BOOL StopProcess(INT iPID);
 BOOL DoesProcessExist(INT iPID);
 BOOL SetProcessState(INT iPID, BYTE nState);
 
-QWORD ScheduleProcesses(QWORD qwRSP);
+QWORD SYSV ScheduleProcesses(QWORD qwRSP);
 
 #endif // __RUNTIME__PROCESS_H

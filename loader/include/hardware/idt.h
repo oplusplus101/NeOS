@@ -28,8 +28,8 @@ typedef struct
     QWORD qwBase;
 } __attribute__((packed)) sIDTPointer;
 
-typedef QWORD (FASTCALL *ISR)(QWORD);
-typedef QWORD (FASTCALL *ESR)(QWORD, BYTE);
+typedef QWORD (SYSV *ISR)(QWORD);
+typedef QWORD (SYSV *ESR)(QWORD, WORD);
 
 void InitIDT();
 void RegisterException(BYTE n, ESR pESR);

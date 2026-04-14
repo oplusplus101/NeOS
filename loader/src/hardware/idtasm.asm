@@ -7,7 +7,7 @@
     global HandleInterrupt%1
 HandleInterrupt%1:
     cli
-    mov byte [nInterrupt], %1
+    mov byte [bInterrupt], %1
     push qword 0
     jmp Interrupt
 %endmacro
@@ -16,7 +16,7 @@ HandleInterrupt%1:
     global HandleException%1
 HandleException%1:
     cli
-    mov byte [nInterrupt], %1
+    mov byte [bInterrupt], %1
     jmp Interrupt
 %endmacro
 
@@ -24,7 +24,7 @@ HandleException%1:
     global HandleException%1
 HandleException%1:
     cli
-    mov byte [nInterrupt], %1
+    mov byte [bInterrupt], %1
     push qword 0
     jmp Interrupt
 %endmacro
@@ -71,9 +71,9 @@ IRQ 0x81
 
 Interrupt:
 
-    cli ; Disable interrupts so only one can happen at once
-    ; Push all registers (pusha doesn't exist in x64)
+    cli ; Disable interrupts, so that only one can happen at any one time
 
+    ; Push all registers (pusha doesn't exist in x64)
     push rbp
     push rdi
     push rsi
@@ -91,16 +91,17 @@ Interrupt:
     push rcx
     push rbx
     push rax
-
-    ; The compiler uses registers instead of the stack for passing arguments.
-    mov rdx, qword [rsp]         ; nErrorCode
-    mov rsi, rsp                 ; qwRSP
-    movzx rdi, byte [nInterrupt] ; nInterrupt
+    
+    ; Pass the arguments according to the System V convention
+    movzx rdi, byte [bInterrupt] ; bInterrupt
+    mov   rsi, rsp               ; qwRSP
+    mov   rdx, qword [rsp + 120] ; wErrorCode
 
     extern HandleInterrupt
     call HandleInterrupt
     mov rsp, rax ; Set the stack to the returned value
 
+    ; Pop all
     pop rax
     pop rbx
     pop rcx
@@ -119,12 +120,11 @@ Interrupt:
     pop rdi
     pop rbp
 
-    add rsp, 8
-    
-    sti ; Re-enable interrupts so more can come
+    add rsp, 8 ; Skip the error code
+
     global IgnoreInterrupt
 IgnoreInterrupt:
     iretq
 
     section .data
-nInterrupt db 0
+bInterrupt db 0

@@ -20,6 +20,7 @@
 #define LIB_FUNC __declspec(dllimport)
 #endif
 #define STDCALL __attribute__((stdcall))
+#define SYSV __attribute__((sysv_abi))
 
 #define _ASSERT(c, m) if (!(c)) KNeoPrintFormat(L"%S", m);
 
