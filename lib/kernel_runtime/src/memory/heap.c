@@ -143,13 +143,15 @@ STATUS ResizeHeap(sHeap *pHeap, QWORD qwNewSize)
 }
 
 // Returns true if intact and false otherwise
-inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader)
+inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL bCheckAll)
 {
+    BOOL bStatus = true;
     // Check whether the chunk is within bounds
     if ((QWORD) pHeader < pHeap->qwStart || (QWORD) pHeader - sizeof(sHeapHeader) >= pHeap->qwStart + pHeap->qwSize)
     {
         Log(LOG_WARNING, L"Chunk 0x%p is out of bounds in heap 0x%p starting at 0x%p with size %u bytes", pHeader, pHeap, pHeap->qwStart, pHeap->qwSize);
-        return false;
+        bStatus = false;
+        if (!bCheckAll) return false;
     }
 
     // Check whether the chunk is bigger than the heap
@@ -157,14 +159,16 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader)
     if (pHeader->qwSize > pHeap->qwSize - sizeof(sHeapHeader) - sizeof(sHeapFooter) - qwPaddingSize)
     {
         Log(LOG_WARNING, L"Chunk 0x%p is bigger than the heap 0x%p, size: %u bytes, heap size: %u bytes", pHeader, pHeap, pHeader->qwSize + sizeof(sHeapHeader) + sizeof(sHeapFooter) + qwPaddingSize, pHeap->qwSize);
-        return false;
+        bStatus = false;
+        if (!bCheckAll) return false;
     }
     
     // Check the header vs the footer
     if (pHeader->qwSize != _HEAP_FOOTER(pHeader, pHeap->dwAlignment)->qwSize)
     {
         Log(LOG_WARNING, L"Header size %u bytes and footer size %u bytes do not match in heap 0x%p", pHeader->qwSize, _HEAP_FOOTER(pHeader, pHeap->dwAlignment)->qwSize, pHeap);
-        return false;
+        bStatus = false;
+        if (!bCheckAll) return false;
     }
     
     // Check whether the payload's size matches the value listed in the header (and footer)
@@ -172,30 +176,42 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader)
     if (qwPayloadSize != pHeader->qwSize)
     {
         Log(LOG_WARNING, L"Payload size %u bytes doesn't match the size listed in the header: %u bytes in heap 0x%p", qwPayloadSize, pHeader->qwSize, pHeap);
-        return false;
+        bStatus = false;
+        if (!bCheckAll) return false;
     }
 
     // The next field must be larger than the previous
     if ((QWORD) pHeader->pNext <= (QWORD) pHeader && (QWORD) pHeader->pNext != 0)
     {
         Log(LOG_WARNING, L"The chunk's next field is lower than the current chunk: current chunk at 0x%p, next chunk 0x%p", pHeader, pHeader->pNext);
-        return false;
+        bStatus = false;
+        if (!bCheckAll) return false;
     }
+
+    if (pHeader->bAllocated != false && pHeader->bAllocated != true)
+    {
+        Log(LOG_LOG, L"Allocated boolean was not the expected 0 or 1, but %u", pHeader->bAllocated);
+        bStatus = false;
+        if (!bCheckAll) return false;
+    }
+
 
     PBYTE pPadding = (PBYTE) pHeader + sizeof(sHeapHeader);
     for (QWORD i = 0; i < qwPaddingSize - sizeof(sHeapHeader *); i++)
         if (pPadding[i] != HEAP_PADDING_REDZONE_SEQUENCE)
         {
-            Log(LOG_WARNING, L"Invalid padding redzone sequence 0x%02X found at address 0x%p", pPadding[i], &pPadding[i]);
-            return false;
+            Log(LOG_WARNING, L"Invalid padding redzone sequence 0x%02X found at address 0x%p in chunk 0x%p", pPadding[i], &pPadding[i], pHeader);
+            bStatus = false;
+            if (!bCheckAll) return false;
         }
     
     sHeapFooter *pFooter = _HEAP_FOOTER(pHeader, pHeap->dwAlignment);
     for (QWORD i = 0; i < HEAP_FOOTER_REDZONE_SIZE; i++)
         if (pFooter->arrRedzone[i] != HEAP_FOOTER_REDZONE_SEQUENCE)
         {
-            Log(LOG_WARNING, L"Invalid footer redzone sequence 0x%02X found at address 0x%p", pFooter->arrRedzone[i], &pFooter->arrRedzone[i]);
-            return false;
+            Log(LOG_WARNING, L"Invalid footer redzone sequence 0x%02X found at address 0x%p in chunk 0x%p", pFooter->arrRedzone[i], &pFooter->arrRedzone[i], pHeader);
+            bStatus = false;
+            if (!bCheckAll) return false;
         }
     
 
@@ -204,8 +220,19 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader)
     if ((QWORD) pHeader != (QWORD) pHeaderPointer)
     {
         Log(LOG_WARNING, L"Padding pointer 0x%p doesn't match actual header address 0x%p", pHeaderPointer, pHeader);
-        return false;
+        bStatus = false;
+        if (!bCheckAll) return false;
     }
+
+    return bStatus;
+}
+
+BOOL CheckHeapIntegrity(sHeap *pHeap)
+{
+    for (sHeapHeader *pChunk = pHeap->pFirstChunk; pChunk != NULL; pChunk = pChunk->pNext)
+        if (!CheckChunkIntegrity(pHeap, pChunk, true))
+            return false;
+    
     return true;
 }
 
@@ -281,7 +308,7 @@ PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
         if (pChunk->qwSize >= qwSize && !pChunk->bAllocated)
         {
             // TODO: Actually fix the chunk (perhaps with by adding it to a list of corrupted chunks or directly in the HeapAlloc routine or if absolutely necessary just crash)
-            if (!CheckChunkIntegrity(pHeap, pChunk)) continue;
+            if (!CheckChunkIntegrity(pHeap, pChunk, false)) continue;
 
             pResult = pChunk;
             break;
@@ -342,7 +369,7 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
         return;
     }
     
-    if (!CheckChunkIntegrity(pHeap, pHeader))
+    if (!CheckChunkIntegrity(pHeap, pHeader, false))
         return;
     
     // Free the chunk

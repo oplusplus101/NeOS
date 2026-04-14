@@ -38,6 +38,11 @@ typedef struct
     BOOL  bResizeable, bUser;
 } sHeap;
 
+/// @brief Performs a series of integrity checks on each chunk in the heap
+/// @param pHeap The heap to be checked
+/// @return True if intact, false if corrupt
+BOOL CheckHeapIntegrity(sHeap *pHeap);
+
 // Internal function for the bootloader to setup kernel memory
 void   SetKernelHeap(sHeap *pHeap);
 // Internal function for the bootloader to setup kernel memory
