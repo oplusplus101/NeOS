@@ -184,8 +184,8 @@ void LoaderMainAfterStackSwitch(sBootData sData)
     sHeader.GetCursorX          = (INT  (*)()) GetCursorX;
     sHeader.GetCursorY          = (INT  (*)()) GetCursorY;
     sHeader.SetCursor           = (void (*)(INT, INT)) SetCursor;
-    sHeader.SetFGColor          = (void (*)(sColour)) SetFGColor;
-    sHeader.SetBGColor          = (void (*)(sColour)) SetBGColor;
+    sHeader.SetFGColour          = (void (*)(sColour)) SetFGColour;
+    sHeader.SetBGColour          = (void (*)(sColour)) SetBGColour;
     sHeader.ClearScreen         = (void (*)()) ClearScreen;
     sHeader.GetScreenWidth      = (INT  (*)()) GetScreenWidth;
     sHeader.GetScreenHeight     = (INT  (*)()) GetScreenHeight;
@@ -211,8 +211,8 @@ void LoaderMain(sBootData sData)
     // Screen
     InitScreen(sData.gop.nWidth, sData.gop.nHeight, sData.gop.pFramebuffer);
     ClearScreen();
-    SetBGColor(NEOS_BACKGROUND_COLOUR);
-    SetFGColor(NEOS_FOREGROUND_COLOUR);
+    SetBGColour(NEOS_BACKGROUND_COLOUR);
+    SetFGColour(NEOS_FOREGROUND_COLOUR);
     InitLogger();
 
     Log(LOG_LOG, L"Screen initialised!");

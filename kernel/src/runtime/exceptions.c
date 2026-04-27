@@ -197,9 +197,10 @@ QWORD SYSV KException14(QWORD qwRSP, WORD wErrorCode)
             _PRINT_FAULT(qwRSP, L"User process tried to write a page and caused a protection fault\nAddress: 0x%p\nError Code: %d", qwExceptionAddress, wErrorCode);
         }
 
-    SetFGColor(NEOS_ERROR_COLOUR);
+    SetFGColour(NEOS_ERROR_COLOUR);
     PrintFormat(L"Address: 0x%p\n", qwExceptionAddress);
     PrintFormat(L"PML4 Address: 0x%p\n", GetCurrentPML4());
+    SetFGColour(NEOS_FOREGROUND_COLOUR);
 
     switch (wErrorCode & 7)
     {

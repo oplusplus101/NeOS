@@ -26,7 +26,7 @@ void ClearScreen();
 void SetCursor(int x, int y);
 int GetCursorX();
 int GetCursorY();
-void SetFGColor(sColour c);
-void SetBGColor(sColour c);
+void SetFGColour(sColour c);
+void SetBGColour(sColour c);
 
 #endif // __COMMON__SCREEN_H

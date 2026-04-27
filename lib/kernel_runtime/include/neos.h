@@ -97,8 +97,8 @@ typedef struct
     INT  (*GetCursorX)();
     INT  (*GetCursorY)();
     void (*SetCursor)(INT x, INT y);
-    void (*SetFGColor)(sColour c);
-    void (*SetBGColor)(sColour c);
+    void (*SetFGColour)(sColour c);
+    void (*SetBGColour)(sColour c);
     void (*ClearScreen)();
     INT  (*GetScreenWidth)();
     INT  (*GetScreenHeight)();

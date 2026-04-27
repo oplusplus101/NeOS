@@ -9,7 +9,7 @@ INT g_iWidth, g_iHeight;
 INT g_iTextWidth, g_iTextHeight;
 INT g_iCursorX, g_iCursorY;
 const INT g_iFontWidth = 8, g_iFontHeight = 16;
-sColour g_fgColor, g_bgColor;
+sColour g_fgColour, g_bgColour;
 BOOL g_bControlCharState = true;
 
 // Array from: https://files.osdev.org/mirrors/geezer/osd/graphics/modes.c
@@ -339,15 +339,15 @@ INT GetCursorY()
 }
 
 __attribute__((no_instrument_function))
-void SetFGColor(sColour c)
+void SetFGColour(sColour c)
 {
-    g_fgColor = c;
+    g_fgColour = c;
 }
 
 __attribute__((no_instrument_function))
-void SetBGColor(sColour c)
+void SetBGColour(sColour c)
 {
-    g_bgColor = c;
+    g_bgColour = c;
 }
 
 __attribute__((no_instrument_function))
@@ -421,7 +421,7 @@ void PrintChar(CHAR c)
             for (INT x = 0; x < g_iFontWidth; x++)
                 DrawPixel(x + g_iCursorX * g_iFontWidth,
                           y + g_iCursorY * g_iFontHeight,
-                          g_8x16_font[(BYTE) c * g_iFontHeight + y] & (0x80 >> x) ? g_fgColor : g_bgColor);
+                          g_8x16_font[(BYTE) c * g_iFontHeight + y] & (0x80 >> x) ? g_fgColour : g_bgColour);
         g_iCursorX++;
         break;
     }

@@ -155,9 +155,9 @@ INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE n
 void KillProcess(INT iPID, PWCHAR wszReason)
 {
     if (!DoesProcessExist(iPID)) return;
-    SetFGColor(NEOS_ERROR_COLOUR);
+    SetFGColour(NEOS_ERROR_COLOUR);
     PrintFormat(L"Process %S with PID %d was killed: %S\n", GetProcess(iPID)->wszName, iPID, wszReason);
-    SetFGColor(NEOS_FOREGROUND_COLOUR);
+    SetFGColour(NEOS_FOREGROUND_COLOUR);
     StopProcess(iPID);
 }
 

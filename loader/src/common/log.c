@@ -13,33 +13,33 @@ static void InternalLog(INT iType, const PWCHAR wszFormat, ...)
     if (iType == 0)
     {
         PrintString("[");
-        SetFGColor(_RGB(0, 255, 255));
+        SetFGColour(_RGB(0, 255, 255));
         PrintString("  LOG  ");
-        SetFGColor(NEOS_FOREGROUND_COLOUR);
+        SetFGColour(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
     else if (iType == 1)
     {
         PrintString("[");
-        SetFGColor(_RGB(255, 255, 0));
+        SetFGColour(_RGB(255, 255, 0));
         PrintString("WARNING");
-        SetFGColor(NEOS_FOREGROUND_COLOUR);
+        SetFGColour(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
     else if (iType == 2)
     {
         PrintString("[");
-        SetFGColor(_RGB(255, 0, 0));
+        SetFGColour(_RGB(255, 0, 0));
         PrintString(" ERROR ");
-        SetFGColor(NEOS_FOREGROUND_COLOUR);
+        SetFGColour(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
     else if (iType == 3)
     {
         PrintString("[");
-        SetFGColor(_RGB(255, 0, 255));
+        SetFGColour(_RGB(255, 0, 255));
         PrintString("GOODBYE");
-        SetFGColor(NEOS_FOREGROUND_COLOUR);
+        SetFGColour(NEOS_FOREGROUND_COLOUR);
         PrintString("] ");
     }
 
