@@ -3,7 +3,6 @@
 #define __IO__IO_H
 
 #include <common/types.h>
-#include <common/list.h>
 #include <runtime/driver.h>
 #include <runtime/objects.h>
 
@@ -35,25 +34,34 @@ typedef struct
     DWORD dwDriverStackSize;
     sDriverObject **ppDriverStack;
     DWORD dwDeviceType;
-} __attribute__((packed)) sDeviceObject;
+} sDeviceObject;
 
+typedef struct
+{
+    sDeviceObject *pDeviceObject;
+    sString wsPath;
+    PVOID pContext;
+} sFileObject;
 
 typedef struct _tagIORequestPacket
 {
-    BYTE           nOperation;
+    BYTE           bOperation;
     PVOID          pBuffer;
     QWORD          qwLength;
     INT            iStatus;
     sDeviceObject *pDevice;
     QWORD          qwDriverStackIndex;
-    void         (*pFinishCallback)(struct _tagIORequestPacket *);
-} __attribute__((packed)) sIORequestPacket;
+    void (MS *pFinishCallback)(struct _tagIORequestPacket *);
+
+    sFileObject   *pFileObject;
+} sIORequestPacket;
 
 INT DispatchIRP(sIORequestPacket *pIRP);
-INT CreateDevice(sDriverObject *pDriverObject, PWCHAR wszDeviceName, DWORD dwDeviceType, sDeviceObject **ppDeviceObject);
+STATUS CreateDevice(sDriverObject *pDriverObject, sString wsPath, DWORD dwDeviceType, sDeviceObject **ppDeviceObject);
 INT DestroyDevice(sDeviceObject *pDeviceObject);
-INT CreateFile(sHandleTable *pCallersHandleTable, HANDLE *pHandle, PWCHAR wszPath,
+INT CreateFile(sHandleTable *pCallersHandleTable, HANDLE *pHandle, sString wsPath,
                HANDLE hParentDirectory, WORD wAccessFlags, WORD wFileAttributes, WORD wShareFlags, WORD wCreateType);
+INT ReadFile(sHandleTable *pCallersHandleTable, HANDLE hFile, PVOID pBuffer, QWORD qwLength);
 
 void InitIOManager();
 

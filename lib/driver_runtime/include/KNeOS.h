@@ -14,12 +14,7 @@
 #define PAGE_PAGETABLEATTRIBUTE 128
 #define PAGE_GLOBAL             256
 
-#ifdef DLL_BUILD
-#define LIB_FUNC __declspec(dllexport)
-#else
-#define LIB_FUNC __declspec(dllimport)
-#endif
-#define STDCALL __attribute__((stdcall))
+#define MS __attribute__((stdcall))
 #define SYSV __attribute__((sysv_abi))
 
 #define _ASSERT(c, m) if (!(c)) KNeoPrintFormat(L"%S", m);
@@ -38,13 +33,11 @@ struct _tagIORequestPacket;
 
 typedef struct _tagDriverObject
 {
-    void (STDCALL *pDriverEntry)(struct _tagDriverObject *);
-    void (STDCALL *pDriverUnload)(struct _tagDriverObject *);
+    void (MS *pDriverEntry)(struct _tagDriverObject *);
+    void (MS *pDriverUnload)(struct _tagDriverObject *);
 
-    INT (STDCALL *arrIOHandlers[5])(struct _tagDriverObject *, struct _tagIORequestPacket *);
-
-    PVOID pPML4; // Drivers shouln't have to access this
-} __attribute__((packed)) sDriverObject;
+    INT (MS *arrIOHandlers[5])(struct _tagDriverObject *, struct _tagIORequestPacket *);
+} sDriverObject;
 
 typedef struct
 {
@@ -52,63 +45,56 @@ typedef struct
     DWORD dwDriverStackSize;
     sDriverObject **ppDriverStack;
     DWORD dwDeviceType;
-} __attribute__((packed)) sDeviceObject;
+} sDeviceObject;
 
 typedef struct
 {
-    DWORD dwType;
-    QWORD qwSize;
     sDeviceObject *pDeviceObject;
-    PWCHAR wszFileName;
-    QWORD qwOffsetInBytes;
+    sString wsPath;
     PVOID pContext;
-} __attribute__((packed)) sFileObject;
+} sFileObject;
+
 
 typedef struct _tagIORequestPacket
 {
-    BYTE           nOperation;
+    BYTE           bOperation;
     PVOID          pBuffer;
     QWORD          qwLength;
     INT            iStatus;
     sDeviceObject *pDevice;
     QWORD          qwDriverStackIndex;
-    void (STDCALL *pFinishCallback)(struct _tagIORequestPacket *);
+    void (MS *pFinishCallback)(struct _tagIORequestPacket *);
 
     sFileObject   *pFileObject;
-} __attribute__((packed)) sIORequestPacket;
+} sIORequestPacket;
 
-LIB_FUNC void STDCALL KNeoPrintChar(CHAR c);
-LIB_FUNC void STDCALL KNeoPrintString(PCHAR sz);
-LIB_FUNC void STDCALL KNeoGetCursor(INT *x, INT *y);
-LIB_FUNC void STDCALL KNeoSetCursor(INT x, INT y);
-LIB_FUNC void STDCALL KNeoClearScreen();
-LIB_FUNC void STDCALL KNeoGetScreenSize(INT *pWidth, INT *pHeight);
-LIB_FUNC INT STDCALL KNeoGetVideoMode();
+void MS KNeoPrintChar(CHAR c);
+void MS KNeoPrintString(PCHAR sz);
+void MS KNeoGetCursor(INT *x, INT *y);
+void MS KNeoSetCursor(INT x, INT y);
+void MS KNeoClearScreen();
+void MS KNeoGetScreenSize(INT *pWidth, INT *pHeight);
+INT MS KNeoGetVideoMode();
 
-LIB_FUNC PVOID STDCALL KNeoGetDriverObject(PCHAR szName);
-LIB_FUNC INT STDCALL KNeoCallDriver(sDriverObject *pDriverObject, sIORequestPacket *pIRP);
+PVOID MS KNeoGetDriverObject(PCHAR szName);
+INT MS KNeoCallDriver(sDriverObject *pDriverObject, sIORequestPacket *pIRP);
 
-LIB_FUNC void STDCALL KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags);
-LIB_FUNC void STDCALL KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, QWORD (*pCallback)(QWORD));
-LIB_FUNC void STDCALL KNeoLog(INT iType, const PWCHAR wszMessage, ...);
+void MS KNeoMapPagesToIdentity(PVOID pAddress, QWORD qwPages, WORD wFlags);
+void MS KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, QWORD (SYSV *pCallback)(QWORD));
+void MS KNeoLog(INT iType, const PWCHAR wszMessage, ...);
 
-LIB_FUNC INT STDCALL KNeoGetCurrentPID();
-LIB_FUNC INT STDCALL KNeoStartProcess(void (*pEntryPoint), QWORD qwStackSize);
-LIB_FUNC void STDCALL KNeoKillProcess(INT iPID);
-LIB_FUNC void STDCALL KNeoPauseProcess(INT iPID);
+INT MS KNeoGetCurrentPID();
+INT MS KNeoStartProcess(void (*pEntryPoint), QWORD qwStackSize);
+void MS KNeoKillProcess(INT iPID);
+void MS KNeoPauseProcess(INT iPID);
 
-LIB_FUNC INT STDCALL KNeoCreateDevice(sDriverObject *pDriverObject, sString wszDeviceName, DWORD dwDeviceType, sDeviceObject **ppDeviceObject);
-LIB_FUNC INT STDCALL KNeoCreateFile(HANDLE *pHandle, sString wszPath, HANDLE hParentDirectory, WORD wAccessFlags, WORD wFileAttributes, WORD wShareFlags, WORD wCreateType);
+INT MS KNeoCreateDevice(sDriverObject *pDriverObject, sString wszDeviceName, DWORD dwDeviceType, sDeviceObject **ppDeviceObject);
+INT MS KNeoCreateFile(HANDLE *pHandle, sString wsPath, HANDLE hParentDirectory, WORD wAccessFlags, WORD wFileAttributes, WORD wShareFlags, WORD wCreateType);
 
-LIB_FUNC PVOID STDCALL KNeoHeapAllocate(QWORD qwSize);
-LIB_FUNC PVOID STDCALL KNeoHeapReAllocate(PVOID pOldMemory, QWORD qwNewSize);
-LIB_FUNC void STDCALL KNeoHeapFree(PVOID pMemory);
-LIB_FUNC PVOID STDCALL KNeoGetPhysicalAddress(PVOID pVirtualAddress);
-
-
-LIB_FUNC void STDCALL KNeoPrintHex(QWORD n, BYTE nDigits, BOOL bUppercase);
-LIB_FUNC void STDCALL KNeoPrintDec(QWORD n);
-LIB_FUNC void STDCALL KNeoPrintFormat(const PWCHAR wszFormat, ...);
+PVOID MS KNeoHeapAllocate(QWORD qwSize);
+PVOID MS KNeoHeapReAllocate(PVOID pOldMemory, QWORD qwNewSize);
+void MS KNeoHeapFree(PVOID pMemory);
+PVOID MS KNeoGetPhysicalAddress(PVOID pVirtualAddress);
 
 // TODO: Replace these with ARCH calls
 inline static void KNeoEnableInterrupts()

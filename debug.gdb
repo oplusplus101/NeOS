@@ -1,5 +1,5 @@
-add-symbol-file build/NEOSLDR.sys 0x100000
-add-symbol-file build/NeOS.sys    0x200000
+add-symbol-file build/arch/x86_64_EFI/ARCH.sys 0xFFFFF81000000000
+add-symbol-file build/kernel/NeOS.sys          0xFFFFF80000000000
 target remote localhost:9000
 b KException0
 b KException1

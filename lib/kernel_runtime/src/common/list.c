@@ -3,6 +3,7 @@
 #include <common/math.h>
 #include <common/memory.h>
 #include <common/panic.h>
+#include <archimports.h>
 
 // TODO: Move these into a header
 #define LOG_LOG 0
@@ -13,7 +14,8 @@
 extern PVOID KHeapAlloc(QWORD qwSize);
 extern void KHeapFree(PVOID pMemory);
 extern PVOID KHeapReAlloc(PVOID pOldMemory, QWORD qwSize);
-extern void (*Log)(INT, const PWCHAR, ...);
+// extern void (*ArchLog)(INT, const PWCHAR, ...);
+// void SYSV ArchLog(int, const PWCHAR, ...);
 
 sList CreateEmptyList(QWORD qwElementSize)
 {
@@ -58,17 +60,17 @@ PVOID GetListElement(sList *pList, QWORD qwIndex)
 {
     if (pList == NULL)
     {
-        Log(LOG_ERROR, L"Tried to get an element from a NULL list");
+        ArchLog(LOG_ERROR, L"Tried to get an element from a NULL list");
         return NULL;
     }
     if (pList->pData == NULL)
     {
-        Log(LOG_ERROR, L"Tried to get an element from a list without data");
+        ArchLog(LOG_ERROR, L"Tried to get an element from a list without data");
         return NULL;
     }
     if (qwIndex >= pList->qwLength)
     {
-        Log(LOG_ERROR, L"Tried to access element outside list, index: %u, list length: %u", qwIndex, pList->qwLength);
+        ArchLog(LOG_ERROR, L"Tried to access element outside list, index: %u, list length: %u", qwIndex, pList->qwLength);
         return NULL;
     }
     return (PVOID) ((QWORD) pList->pData + qwIndex * pList->qwElementSize);
@@ -94,7 +96,7 @@ PVOID AddListElement(sList *pList, PVOID pData)
 
     if (pNewData == NULL)
     {
-        Log(LOG_ERROR, L"Failed to re-allocate memory to add a list element");
+        ArchLog(LOG_ERROR, L"Failed to re-allocate memory to add a list element");
         return NULL;
     }
     pList->pData = pNewData;
@@ -111,7 +113,7 @@ void InsertListElement(sList *pList, QWORD qwIndex, PVOID pData)
 
     if (pNewData == NULL)
     {
-        Log(LOG_ERROR, L"Failed to re-allocate memory to insert a list element");
+        ArchLog(LOG_ERROR, L"Failed to re-allocate memory to insert a list element");
         return;
     }
     pList->pData = pNewData;

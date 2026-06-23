@@ -1,35 +1,41 @@
 
-#include <loaderfunctions.h>
 #include <io/io.h>
 #include <runtime/objects.h>
+#include <archimports.h>
+#include <common/panic.h>
 
-void STDCALL KNeoPrintChar(WORD c)
+void MS KNeoPrintChar(WORD c)
 {
-    PrintChar(c);
+    ArchPrintChar(c);
 }
 
-void STDCALL KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, ISR pCallback)
+void MS KNeoRegisterInterrupt(BYTE bInterrupt, BYTE bRing, ISR pCallback)
 {
-    RegisterInterrupt(bInterrupt, pCallback);
+    _KERNEL_PANIC("KNeoRegisterInterrupt not implemented");
 }
 
-void STDCALL KNeoPrintString(const PCHAR szString)
+void MS KNeoPrintString(const PCHAR szString)
 {
-    PrintString(szString);
+    ArchPrintFormat(L"%s", szString);
 }
 
-void STDCALL KNeoLog(INT iType, const PWCHAR wszFormat, ...)
+void MS KNeoLog(INT iType, const PWCHAR wszFormat, ...)
 {
     __builtin_va_list args;
     __builtin_va_start(args, wszFormat);
-    LogVariadic(iType, wszFormat, args);
+    ArchLogVariadic(iType, wszFormat, args);
     __builtin_va_end(args);
 }
 
-void STDCALL KNeoPrintFormat(const PWCHAR wszFormat, ...)
+void MS KNeoPrintFormat(const PWCHAR wszFormat, ...)
 {
     __builtin_va_list args;
     __builtin_va_start(args, wszFormat);
-    PrintFormatVariadic(wszFormat, args);
+    ArchPrintFormatVariadic(wszFormat, args);
     __builtin_va_end(args);
+}
+
+STATUS MS KNeoCreateDevice(sDriverObject *pDriverObject, sString wsPath, DWORD dwDeviceType, sDeviceObject **ppDeviceObject)
+{
+    return CreateDevice(pDriverObject, wsPath, dwDeviceType, ppDeviceObject);
 }

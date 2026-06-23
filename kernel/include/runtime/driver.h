@@ -6,28 +6,29 @@
 #include <runtime/process.h>
 #include <runtime/objects.h>
 #include <runtime/exe.h>
-#include <common/list.h>
+#include <common/exestructs.h>
 
 // Definition to avoid circular includes
 struct _tagIORequestPacket;
 
 typedef struct _tagDriverObject
 {
-    INT (*pDriverEntry)(struct _tagDriverObject *);
-    INT (*pDriverUnload)(struct _tagDriverObject *);
+    INT (MS *pDriverEntry)(struct _tagDriverObject *);
+    INT (MS *pDriverUnload)(struct _tagDriverObject *);
 
-    INT (*arrIOHandlers[5])(struct _tagDriverObject *, struct _tagIORequestPacket *);
-} __attribute__((packed)) sDriverObject;
+    INT (MS *arrIOHandlers[5])(struct _tagDriverObject *, struct _tagIORequestPacket *);
+} sDriverObject;
 
 typedef struct
 {
-    WCHAR wszName[129];
-    sExecutable *pExecutable;
+    WCHAR          wszName[129];
+    sPE32Headers   sHeaders;
+    QWORD          qwBaseAddress;
     sDriverObject *pDriverObject; // The object passed to the driver when the entry point is called.
 } sDriver;
 
 
-sObject *GetDriver(PWCHAR wszName);
+sDriver *GetDriver(PWCHAR wszName);
 INT LoadDriver(PWCHAR wszName);
 INT DispatchDriverIRP(sDriverObject *pDriver, struct _tagIORequestPacket *pIRP);
 

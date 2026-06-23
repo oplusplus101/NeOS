@@ -3,45 +3,49 @@
 #define __RUNTIME__PROCESS_H
 
 #include <common/list.h>
+#include <common/linkedlist.h>
 #include <common/types.h>
-#include <memory/paging.h>
 #include <runtime/exe.h>
+#include <memory/heap.h>
 
 #define PROC_RUNNING  0
-#define PROC_PAUSED   1
-#define PROC_SLEEPING 2
-#define PROC_KILLED   3
+#define PROC_SLEEPING 1
+#define PROC_KILLED   2
 
 typedef struct
 {
+    sLinkedListEntry sListEntry;
     WCHAR  wszName[129]; // One extra byte for the null terminator
-    BYTE  nType;  // 0 is a thread, 1 is a process
-    BYTE  nState; // 0 is running, 1 is sleeping, 2 is paused
-    BYTE  nRing;
+    BYTE  bState; // 0 is running, 1 is sleeping, 2 is paused
+    BOOL  bUser;
     WORD  wOwner; // 0 is the kernel
     INT   iPID;
     QWORD qwStackSize;
-    QWORD qwSleepTimeMS;
-    PVOID pStackUnaligned, pStack;
+    QWORD qwSleepTimeNS;
+    PVOID pStack, pKernelStack, pKernelStackTop;
     sCPUState *pCPUState;
-    sPageTable *pPML4;
-    sExecutable pEXE;
+    PVOID pPML4;
+} sTask;
+
+typedef struct
+{
+    sTask *pFirstTask;
+    BYTE   bSubsystem; // 0 is the NeOS subsystem
+    sHeap *pHeap;
 } sProcess;
 
-void InitProcessScheduler(DWORD dwScheduleIntervalMicroseconds);
+void InitProcessScheduler(DWORD dwFrequency);
 
-// Returns the PID
-INT GetCurrentPID();
-INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pParams, QWORD qwParamSizeBytes);
-INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner, BYTE nState);
-void KillProcess(INT iPID, PWCHAR wszReason);
-sProcess *GetCurrentProcess();
-INT GetNumberOfOProcesses();
-sProcess *GetProcess(INT iPID);
-BOOL StopProcess(INT iPID);
-BOOL DoesProcessExist(INT iPID);
-BOOL SetProcessState(INT iPID, BYTE nState);
+INT       GetNewPID();
+INT       GetCurrentPID();
+INT       StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BOOL bUser, WORD wOwner, BYTE bState);
+BOOL      KillProcess(INT iPID);
+sTask    *GetCurrentProcess();
+DWORD     GetNumberOfOProcesses();
+sTask    *GetProcess(INT iPID);
+BOOL      DoesProcessExist(INT iPID);
+BOOL      SetProcessState(INT iPID, BYTE bState);
 
-QWORD SYSV ScheduleProcesses(QWORD qwRSP);
+QWORD Schedule(QWORD qwRSP);
 
 #endif // __RUNTIME__PROCESS_H

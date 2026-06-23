@@ -1,0 +1,32 @@
+
+LIBRARY ARCH
+
+EXPORTS
+    ArchClearScreen
+    ArchPutPixel
+    ArchDrawLine
+    ArchSetFGColour
+    ArchSetBGColour
+    ArchPrintChar
+    ArchPrintFormat
+    ArchPrintFormatVariadic
+    ArchGetCursorX
+    ArchGetCursorY
+    ArchSetCursor
+    ArchScreenWidth
+    ArchScreenHeight
+    ArchTextWidth
+    ArchTextHeight
+    ArchRefreshPages
+    ArchLoadPageTable
+    ArchMapPage
+    ArchMapPages
+    ArchUnMapPage
+    ArchUnMapPages
+    ArchGetPhysicalAddress
+    ArchAllocatePage
+    ArchAllocatePagesContinuous
+    ArchFreePage
+    ArchFreePagesContinuous
+    ArchLog
+    ArchLogVariadic

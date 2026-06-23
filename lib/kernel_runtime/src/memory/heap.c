@@ -1,13 +1,10 @@
 
 #include <memory/heap.h>
-#include <memory/bitmap.h>
-
 #include <common/panic.h>
 #include <common/memory.h>
+#include <archimports.h>
 
 // This needs importing as extern, as the memory addresses are different in the kernel and loader
-extern void (*Log)(INT, const PWCHAR, ...);
-
 #define LOG_LOG 0
 #define LOG_WARNING 1
 #define LOG_ERROR 2
@@ -16,39 +13,42 @@ extern void (*Log)(INT, const PWCHAR, ...);
 sHeap *g_pKernelHeap;
 inline static void WriteChunk(PVOID pStart, QWORD qwPayloadSize, sHeapHeader *pNext, BOOL bAllocated, DWORD dwAlignment);
 
-STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bResizeable, BOOL bContinous, DWORD dwAlignment, PVOID pStart, sHeap *pHeap)
+STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bExecutable, BOOL bResizeable, BOOL bContinuous, DWORD dwAlignment, PVOID pStart, sHeap *pHeap)
 {
     if (((dwAlignment) & ((dwAlignment) - 1)) && dwAlignment >= 8)
-        return NEOS_INVALID_ARGUMENT;
+        return NEOS_INVALID_ARGUMENT | 0x40000;
 
     pHeap->qwStart = (QWORD) pStart;
     pHeap->bUser = bUser;
 
-    if (bContinous)
+    if (bContinuous)
     {
-        PVOID pPhysicalData = AllocateContinousPages(_BYTES_TO_PAGES(qwSize));
-        MapPageRange(NULL, pStart, pPhysicalData, _BYTES_TO_PAGES(qwSize), PF_WRITEABLE | (bUser ? PF_USER : 0));
+        PVOID pData = ArchAllocatePagesContinuous(_BYTES_TO_PAGES(qwSize));
+        if (pData == NULL) return NEOS_CREATE_HEAP_FAILURE | 0x100000;
+        ArchMapPages(NULL, pStart, pData, _BYTES_TO_PAGES(qwSize), (bUser ? PAGING_USERMODE : 0) | PAGING_WRITEABLE | (bExecutable ? PAGING_NOEXECUTE : 0), true);
+        ZeroMemory(pStart, qwSize);
     }
     else
     {
         for (QWORD i = 0; i < _BYTES_TO_PAGES(qwSize); i++)
         {
-            PVOID pPage = AllocatePage();
+            PVOID pPage = ArchAllocatePage();
             if (pPage == NULL)
             {
                 // Free everything allocated until now
                 for (QWORD j = 0; j <= i; j++)
                 {
-                    PVOID pAddress = GetPhysicalAddress(NULL, (PVOID) ((QWORD) pStart + j * PAGE_SIZE));
+                    PVOID pAddress = ArchGetPhysicalAddress(NULL, (PVOID) ((QWORD) pStart + j * PAGE_SIZE));
                     if (pAddress == NULL) continue;
-                    FreePage(pAddress);
+                    ArchFreePage(pAddress);
                 }
-                return NEOS_CREATE_HEAP_FAILURE;
+                return NEOS_CREATE_HEAP_FAILURE | 0x200000;
             }
-            MapPage(NULL, (PVOID) ((QWORD) pStart + i * PAGE_SIZE), pPage, PF_WRITEABLE | (bUser ? PF_USER : 0));
+            ArchMapPage(NULL, (PVOID) ((QWORD) pStart + i * PAGE_SIZE), pPage, (bUser ? PAGING_USERMODE : 0) | PAGING_WRITEABLE | (bExecutable ? PAGING_NOEXECUTE : 0), false);
         }
+        ArchRefreshPages();
+        ZeroMemory(pStart, qwSize);
     }
-    
     pHeap->dwAlignment             = dwAlignment;
     pHeap->bResizeable             = bResizeable;
     pHeap->qwSize                  = qwSize;
@@ -65,9 +65,9 @@ STATUS DestroyHeap(sHeap *pHeap)
 {
     for (QWORD i = 0; i < pHeap->qwSize; i++)
     {
-        PVOID pAddress = GetPhysicalAddress(NULL, (PVOID) (pHeap->qwStart + i * PAGE_SIZE));
+        PVOID pAddress = ArchGetPhysicalAddress(NULL, (PVOID) (pHeap->qwStart + i * PAGE_SIZE));
         if (pAddress == NULL) continue;
-        FreePage(pAddress);
+        ArchFreePage(pAddress);
     }
     return NEOS_SUCCESS;
 }
@@ -82,19 +82,19 @@ sHeap *GetKernelHeap()
     return g_pKernelHeap;
 }
 
-PVOID STDCALL KHeapAlloc(QWORD qwSize)
+PVOID MS KHeapAlloc(QWORD qwSize)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     return HeapAlloc(g_pKernelHeap, qwSize);
 }
 
-void STDCALL KHeapFree(PVOID pMemory)
+void MS KHeapFree(PVOID pMemory)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     HeapFree(g_pKernelHeap, pMemory);
 }
 
-PVOID STDCALL KHeapReAlloc(PVOID pMemory, QWORD qwSize)
+PVOID MS KHeapReAlloc(PVOID pMemory, QWORD qwSize)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
     return HeapReAlloc(g_pKernelHeap, pMemory, qwSize);
@@ -108,13 +108,13 @@ STATUS ResizeHeap(sHeap *pHeap, QWORD qwNewSize)
     if (qwNewSize > pHeap->qwSize)
         for (QWORD i = 0; i < _BYTES_TO_PAGES(qwNewSize - pHeap->qwSize); i++)
         {
-            PVOID pPage = AllocatePage();
+            PVOID pPage = ArchAllocatePage();
             // TODO: Free each page allocated within this loop upon failure
             if (pPage == NULL)
                 return NEOS_ALLOCATION_FAILURE;
-            
-            MapPage(NULL, (PVOID) (pHeap->qwStart + pHeap->qwSize + i * PAGE_SIZE), pPage, PF_WRITEABLE | (pHeap->bUser ? PF_USER : 0));
+            ArchMapPage(NULL, (PVOID) (pHeap->qwStart + pHeap->qwSize + i * PAGE_SIZE), pPage, PAGING_WRITEABLE | (pHeap->bUser ? PAGING_USERMODE : 0), false);
         }
+
     // The heap gets shrunk
     else
     {
@@ -126,14 +126,14 @@ STATUS ResizeHeap(sHeap *pHeap, QWORD qwNewSize)
              qwStart += sizeof(sHeapHeader) + pHeader->qwSize + sizeof(sHeapFooter))
         {
             if (qwStart + pHeader->qwSize + sizeof(sHeapFooter) >= qwNewSize && !pHeader->bAllocated)
-                return NEOS_FAILURE | NEOS_OUT_OF_BOUNDS;
+                return NEOS_OUT_OF_BOUNDS;
         }
 
         for (QWORD i = 0; i < pHeap->qwSize - qwNewSize; i++)
         {
-            PVOID pAddress = GetPhysicalAddress(NULL, (PVOID) (pHeap->qwStart + qwNewSize * PAGE_SIZE + i * PAGE_SIZE));
+            PVOID pAddress = ArchGetPhysicalAddress(NULL, (PVOID) (pHeap->qwStart + qwNewSize * PAGE_SIZE + i * PAGE_SIZE));
             if (pAddress == NULL) continue;
-            FreePage(pAddress);
+            ArchFreePage(pAddress);
         }
     }
 
@@ -149,7 +149,7 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     // Check whether the chunk is within bounds
     if ((QWORD) pHeader < pHeap->qwStart || (QWORD) pHeader - sizeof(sHeapHeader) >= pHeap->qwStart + pHeap->qwSize)
     {
-        Log(LOG_WARNING, L"Chunk 0x%p is out of bounds in heap 0x%p starting at 0x%p with size %u bytes", pHeader, pHeap, pHeap->qwStart, pHeap->qwSize);
+        ArchLog(LOG_WARNING, L"Chunk 0x%p is out of bounds in heap 0x%p starting at 0x%p with size %u bytes", pHeader, pHeap, pHeap->qwStart, pHeap->qwSize);
         bStatus = false;
         if (!bCheckAll) return false;
     }
@@ -158,7 +158,7 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     QWORD qwPaddingSize = _HEAP_PADDING_SIZE((QWORD) pHeader, pHeap->dwAlignment);
     if (pHeader->qwSize > pHeap->qwSize - sizeof(sHeapHeader) - sizeof(sHeapFooter) - qwPaddingSize)
     {
-        Log(LOG_WARNING, L"Chunk 0x%p is bigger than the heap 0x%p, size: %u bytes, heap size: %u bytes", pHeader, pHeap, pHeader->qwSize + sizeof(sHeapHeader) + sizeof(sHeapFooter) + qwPaddingSize, pHeap->qwSize);
+        ArchLog(LOG_WARNING, L"Chunk 0x%p is bigger than the heap 0x%p, size: %u bytes, heap size: %u bytes", pHeader, pHeap, pHeader->qwSize + sizeof(sHeapHeader) + sizeof(sHeapFooter) + qwPaddingSize, pHeap->qwSize);
         bStatus = false;
         if (!bCheckAll) return false;
     }
@@ -166,7 +166,7 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     // Check the header vs the footer
     if (pHeader->qwSize != _HEAP_FOOTER(pHeader, pHeap->dwAlignment)->qwSize)
     {
-        Log(LOG_WARNING, L"Header size %u bytes and footer size %u bytes do not match in heap 0x%p", pHeader->qwSize, _HEAP_FOOTER(pHeader, pHeap->dwAlignment)->qwSize, pHeap);
+        ArchLog(LOG_WARNING, L"Header size %u bytes and footer size %u bytes do not match in heap 0x%p", pHeader->qwSize, _HEAP_FOOTER(pHeader, pHeap->dwAlignment)->qwSize, pHeap);
         bStatus = false;
         if (!bCheckAll) return false;
     }
@@ -175,7 +175,7 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     QWORD qwPayloadSize = (QWORD) _HEAP_FOOTER(pHeader, pHeap->dwAlignment) - (QWORD) pHeader - sizeof(sHeapHeader) - qwPaddingSize;
     if (qwPayloadSize != pHeader->qwSize)
     {
-        Log(LOG_WARNING, L"Payload size %u bytes doesn't match the size listed in the header: %u bytes in heap 0x%p", qwPayloadSize, pHeader->qwSize, pHeap);
+        ArchLog(LOG_WARNING, L"Payload size %u bytes doesn't match the size listed in the header: %u bytes in heap 0x%p", qwPayloadSize, pHeader->qwSize, pHeap);
         bStatus = false;
         if (!bCheckAll) return false;
     }
@@ -183,14 +183,14 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     // The next field must be larger than the previous
     if ((QWORD) pHeader->pNext <= (QWORD) pHeader && (QWORD) pHeader->pNext != 0)
     {
-        Log(LOG_WARNING, L"The chunk's next field is lower than the current chunk: current chunk at 0x%p, next chunk 0x%p", pHeader, pHeader->pNext);
+        ArchLog(LOG_WARNING, L"The chunk's next field is lower than the current chunk: current chunk at 0x%p, next chunk 0x%p", pHeader, pHeader->pNext);
         bStatus = false;
         if (!bCheckAll) return false;
     }
 
     if (pHeader->bAllocated != false && pHeader->bAllocated != true)
     {
-        Log(LOG_LOG, L"Allocated boolean was not the expected 0 or 1, but %u", pHeader->bAllocated);
+        ArchLog(LOG_LOG, L"Allocated boolean was not the expected 0 or 1, but %u", pHeader->bAllocated);
         bStatus = false;
         if (!bCheckAll) return false;
     }
@@ -200,7 +200,7 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     for (QWORD i = 0; i < qwPaddingSize - sizeof(sHeapHeader *); i++)
         if (pPadding[i] != HEAP_PADDING_REDZONE_SEQUENCE)
         {
-            Log(LOG_WARNING, L"Invalid padding redzone sequence 0x%02X found at address 0x%p in chunk 0x%p", pPadding[i], &pPadding[i], pHeader);
+            ArchLog(LOG_WARNING, L"Invalid padding redzone sequence 0x%02X found at address 0x%p in chunk 0x%p", pPadding[i], &pPadding[i], pHeader);
             bStatus = false;
             if (!bCheckAll) return false;
         }
@@ -209,7 +209,7 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     for (QWORD i = 0; i < HEAP_FOOTER_REDZONE_SIZE; i++)
         if (pFooter->arrRedzone[i] != HEAP_FOOTER_REDZONE_SEQUENCE)
         {
-            Log(LOG_WARNING, L"Invalid footer redzone sequence 0x%02X found at address 0x%p in chunk 0x%p", pFooter->arrRedzone[i], &pFooter->arrRedzone[i], pHeader);
+            ArchLog(LOG_WARNING, L"Invalid footer redzone sequence 0x%02X found at address 0x%p in chunk 0x%p", pFooter->arrRedzone[i], &pFooter->arrRedzone[i], pHeader);
             bStatus = false;
             if (!bCheckAll) return false;
         }
@@ -219,7 +219,7 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
     sHeapHeader *pHeaderPointer = *((sHeapHeader **) ((PBYTE) pHeader + sizeof(sHeapHeader) + qwPaddingSize - sizeof(PVOID)));
     if ((QWORD) pHeader != (QWORD) pHeaderPointer)
     {
-        Log(LOG_WARNING, L"Padding pointer 0x%p doesn't match actual header address 0x%p", pHeaderPointer, pHeader);
+        ArchLog(LOG_WARNING, L"Padding pointer 0x%p doesn't match actual header address 0x%p", pHeaderPointer, pHeader);
         bStatus = false;
         if (!bCheckAll) return false;
     }
@@ -314,20 +314,19 @@ PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
             break;
         }
     }
-
+    
     if (pResult == NULL)
     {
-        Log(LOG_ERROR, L"Couldn't find a chunk to allocate %u bytes", qwSize);
+        ArchLog(LOG_ERROR, L"Couldn't find a chunk to allocate %u bytes", qwSize);
         return NULL;
     }
 
-    QWORD qwFinalSize = _HEAP_CHUNK_SIZE((QWORD) pResult, qwSize, pHeap->dwAlignment);
-    QWORD qwOriginalSize = _HEAP_CHUNK_SIZE((QWORD) pResult, pResult->qwSize, pHeap->dwAlignment);
-
-    if (qwFinalSize < qwOriginalSize)
+    if (_HEAP_CHUNK_SIZE((QWORD) pResult, qwSize, pHeap->dwAlignment) <
+        _HEAP_CHUNK_SIZE((QWORD) pResult, pResult->qwSize, pHeap->dwAlignment))
         SplitChunk(pResult, qwSize, pHeap->dwAlignment);
-
-    pHeap->qwFreeMemory -= qwFinalSize;
+    
+    // The chunk size must be recalculated, as SplitChunk could have changed it.
+    pHeap->qwFreeMemory -= _HEAP_CHUNK_SIZE((QWORD) pResult, qwSize, pHeap->dwAlignment);
     pResult->bAllocated = true;
 
     return (PBYTE) pResult + sizeof(sHeapHeader) + _HEAP_PADDING_SIZE((QWORD) pResult, pHeap->dwAlignment);
@@ -338,34 +337,39 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
     // Check for invalid inputs
     if (pHeap == NULL)
     {
-        Log(LOG_WARNING, L"Tried to free from a NULL heap");
+        ArchLog(LOG_ERROR, L"Tried to free from a NULL heap");
         return;
     }
     
     if (pMemory == NULL)
     {
-        Log(LOG_WARNING, L"Tried to free a NULL address in heap 0x%p", pHeap);
+        ArchLog(LOG_ERROR, L"Tried to free a NULL address in heap 0x%p", pHeap);
         return;
     }
-    
+
+    if (((QWORD) pMemory & (pHeap->dwAlignment - 1)) != 0)
+    {
+        ArchLog(LOG_ERROR, L"Tried to free an address 0x%p with invalid alignment in heap 0x%p", pMemory, pHeap);
+        return;
+    }
+
     if ((QWORD) pMemory - sizeof(sHeapHeader) < pHeap->qwStart || (QWORD) pMemory >= pHeap->qwStart + pHeap->qwSize)
     {
-        Log(LOG_WARNING, L"Tried to free memory address 0x%p outside heap 0x%p, start 0x%p, end 0x%p", pMemory, pHeap, pHeap->pFirstChunk, (QWORD) pHeap->pFirstChunk + pHeap->qwSize);
+        ArchLog(LOG_ERROR, L"Tried to free memory address 0x%p outside heap 0x%p, start 0x%p, end 0x%p", pMemory, pHeap, pHeap->pFirstChunk, (QWORD) pHeap->pFirstChunk + pHeap->qwSize);
         return;
     }
     
     sHeapHeader *pHeader = *((sHeapHeader **) ((PBYTE) pMemory - sizeof(PVOID)));
-    // Log(LOG_LOG, L"Header pointer 0x%p", *((PQWORD) ((PBYTE) pMemory - 8)));
     if ((QWORD) pHeader < pHeap->qwStart || (QWORD) pHeader >= pHeap->qwStart + pHeap->qwSize - sizeof(sHeapHeader *))
     {
-        Log(LOG_WARNING, L"Got invalid header pointer 0x%p from payload 0x%p in heap 0x%p", pHeader, pMemory, pHeap);
+        ArchLog(LOG_ERROR, L"Got invalid header pointer 0x%p from payload 0x%p in heap 0x%p", pHeader, pMemory, pHeap);
         return;
     }
     
     // Check for a double-free
     if (!pHeader->bAllocated)
     {
-        Log(LOG_WARNING, L"Double free detected! Address 0x%p in heap 0x%p", pMemory, pHeap);
+        ArchLog(LOG_ERROR, L"Double free detected! Address 0x%p in heap 0x%p", pMemory, pHeap);
         return;
     }
     
@@ -386,7 +390,7 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
     // Sanity check
     if (pPreviousFooter->qwSize >= pHeap->qwSize)
     {
-        Log(LOG_WARNING, L"Corrupt footer at 0x%p size %u", pPreviousFooter, pPreviousFooter->qwSize);
+        ArchLog(LOG_WARNING, L"Corrupt footer at 0x%p size %u", pPreviousFooter, pPreviousFooter->qwSize);
         return;
     }
 
@@ -408,6 +412,14 @@ PVOID HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewSize)
 {
     if (pMemory == NULL)
         return HeapAlloc(pHeap, qwNewSize);
+    
+    
+    if (((QWORD) pMemory & (pHeap->dwAlignment - 1)) != 0)
+    {
+        ArchLog(LOG_ERROR, L"Tried to re-allocate an address 0x%p with invalid alignment in heap 0x%p", pMemory, pHeap);
+        return NULL;
+    }
+
     
     sHeapHeader *pChunk = (sHeapHeader *) ((QWORD) pMemory - sizeof(sHeapHeader));
     QWORD qwPreviousSize = pChunk->qwSize;

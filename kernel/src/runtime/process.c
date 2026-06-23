@@ -1,247 +1,231 @@
 
 #include <runtime/process.h>
 #include <runtime/exe.h>
-#include <hardware/gdt.h>
 #include <common/memory.h>
 #include <common/string.h>
 #include <common/panic.h>
-#include <memory/heap.h>
-#include <io/timer.h>
 #include <neos.h>
-#include <loaderfunctions.h>
+#include <archimports.h>
 
-sList g_lstProcesses;
-INT   g_iCurrentProcessIndex = -1;
+INT g_iCurrentPID = -1;
+sObjectType *g_pProcessType;
+sObjectDirectory *g_pProcessDirectory;
+BOOL g_bScheduleingNeeded = false;
 
-void DummyProcess()
+void DestroyProcess(PVOID pObject)
 {
-    for (;;)
-        __asm__ volatile ("hlt");
+    sTask *pTask = pObject;
+    if (pTask == NULL) return;
+
+    RemoveFromLinkedList(&pTask->sListEntry);
+
+    ArchFreePagesContinuous(pTask->pStack, _BYTES_TO_PAGES(pTask->qwStackSize));
+    // if (pTask->bUser) 
+        // FreePML4(pTask->pPML4);
 }
 
-void InitProcessScheduler(DWORD dwScheduleIntervalMicroseconds)
+void InitProcessScheduler(DWORD dwFrequency)
 {
-    g_lstProcesses         = CreateEmptyList(sizeof(sProcess));
-    g_iCurrentProcessIndex = -1;
+    // g_iCurrentPID = -1;
+    // g_bScheduleingNeeded = false;
 
-    SetPITInterval(dwScheduleIntervalMicroseconds);
+    // SetPITFrequency(dwFrequency);
+    // SetSchedulerFunction(Schedule);
+
+    // g_pProcessType = CreateType(MakeString(L"Process"), sizeof(sTask), DestroyProcess, NULL);
+    // _ASSERT(g_pProcessType != NULL, L"Failed to create the Process type");
+
+    // g_pProcessDirectory = FindObject(L"Processes", NULL);
+    // _ASSERT(g_pProcessDirectory != NULL, L"Failed to find the Processes directory");
+}
+
+PVOID CreateUserPageTable()
+{
+    // PVOID pUserPML4 = ArchCreateUserPageTable();
+
+    // // // Copy the kernel's pages
+    // // sPageTable *pKernelPML4 = GetKernelPML4();
+    // // for (WORD i = pKernelPML4->arrEntries[_ADDRESS_TO_PML4_INDEX(MM_KERNEL_REGION_START)]; pKernelPML4->arrEntries[i] != 0; i++)
+    // //     pUserPML4->arrEntries[i] = pKernelPML4->arrEntries[i];
     
-    // Setup the dummy process
-    StartThread(L"Dummy", DummyProcess, 256, 0, 0, PROC_RUNNING);
-    RegisterInterrupt(32, ScheduleProcesses);   
-}
-
-INT StartKernelProcess(PWCHAR wszName, sExecutable *pEXE, BYTE nState, PVOID pParams, QWORD qwParamSizeBytes)
-{
-    QWORD qwStackSize = 0x100000; // 1MiB of stack space
-    
-    sProcess sProc;
-    if (wszName == NULL)
-        *sProc.wszName = 0;
-    else
-        strncpyW(sProc.wszName, wszName, 128);
-    sProc.nRing              = 0;
-    sProc.nType              = 1;
-    sProc.wOwner             = 0;
-    sProc.iPID               = g_lstProcesses.qwLength;
-    sProc.qwStackSize        = qwStackSize;
-    sProc.nState             = nState;
-    sProc.qwSleepTimeMS      = 0;
-
-    // Keep an unaligned copy of the stack so it can be freed
-    sProc.pStackUnaligned    = KHeapAlloc(qwStackSize + 16);
-    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for executable: %S", wszName);
-    QWORD qwAlignOffset      = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
-    // Align the stack
-    sProc.pStack             = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
-    sProc.pCPUState          = (sCPUState *) ((QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState) - qwParamSizeBytes);
-
-    if (pParams != NULL && qwParamSizeBytes != 0)
-        memcpy((PBYTE) sProc.pStack + qwStackSize - qwParamSizeBytes, pParams, qwParamSizeBytes);
-
-    // Setup the CPU State
-    sProc.pCPUState->qwRAX   = 0;
-    sProc.pCPUState->qwRBX   = 0;
-    sProc.pCPUState->qwRCX   = 0;
-    sProc.pCPUState->qwRDX   = 0;
-
-    sProc.pCPUState->qwR8    = 0;
-    sProc.pCPUState->qwR9    = 0;
-    sProc.pCPUState->qwR10   = 0;
-    sProc.pCPUState->qwR11   = 0;
-    sProc.pCPUState->qwR12   = 0;
-    sProc.pCPUState->qwR13   = 0;
-    sProc.pCPUState->qwR14   = 0;
-    sProc.pCPUState->qwR15   = 0;
-
-    sProc.pCPUState->qwRSI   = 0;
-    sProc.pCPUState->qwRDI   = 0;
-    sProc.pCPUState->qwRBP   = 0;
-
-    sProc.pCPUState->qwRSP   = (QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState) - qwParamSizeBytes;
-    sProc.pCPUState->qwRIP   = (QWORD) pEXE->qwEntryPoint;
-    sProc.pCPUState->qwCS    = KERNEL_CODE_SEGMENT;
-    sProc.pCPUState->qwFlags = 0x0202; // Set the reserved and interrupt enable flags
-
-    // TEMPORARY: Setup paging
-    sProc.pPML4 = GetCurrentPML4();
-
-    for (WORD i = 0; i < pEXE->lstSections.qwLength; i++)
-    {
-        sExecutableSection *pSection = GetListElement(&pEXE->lstSections, i);
-        MapPageRange(sProc.pPML4, (PVOID) pSection->qwVirtualAddress, pSection->pData, _BYTES_TO_PAGES(pSection->dwVirtualSize), PF_WRITEABLE);
-    }
-    
-    AddListElement(&g_lstProcesses, &sProc);
-    return sProc.iPID;
-}
-
-INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BYTE nRing, WORD wOwner, BYTE nState)
-{
-    _ASSERT(qwStackSize >= 256, L"Stack must be at least 256 bytes");
-    sProcess sProc;
-    if (wszName == NULL)
-        *sProc.wszName = 0;
-    else
-        strncpyW(sProc.wszName, wszName, 128);
-
-    sProc.nRing       = nRing;
-    sProc.nType       = 0;
-    sProc.wOwner      = wOwner;
-    sProc.iPID        = g_lstProcesses.qwLength;
-    sProc.qwStackSize = qwStackSize;
-    sProc.nState      = nState;
-
-
-    // Keep an unaligned copy of the stack so it can be freed
-    sProc.pStackUnaligned = KHeapAlloc(qwStackSize + 16);
-    _ASSERT(sProc.pStackUnaligned != NULL, L"Could not allocate memory for process: %S", wszName);
-    QWORD qwAlignOffset   = 16 - ((QWORD) sProc.pStackUnaligned & 0x0F);
-    // Align the stack
-    sProc.pStack          = (PBYTE) sProc.pStackUnaligned + qwAlignOffset;
-    sProc.pCPUState       = (sCPUState *) ((QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState));
-
-    // Setup the CPU State
-    sProc.pCPUState->qwRAX   = 0;
-    sProc.pCPUState->qwRBX   = 0;
-    sProc.pCPUState->qwRCX   = 0;
-    sProc.pCPUState->qwRDX   = 0;
-
-    sProc.pCPUState->qwR8    = 0;
-    sProc.pCPUState->qwR9    = 0;
-    sProc.pCPUState->qwR10   = 0;
-    sProc.pCPUState->qwR11   = 0;
-    sProc.pCPUState->qwR12   = 0;
-    sProc.pCPUState->qwR13   = 0;
-    sProc.pCPUState->qwR14   = 0;
-    sProc.pCPUState->qwR15   = 0;
-
-    sProc.pCPUState->qwRSI   = 0;
-    sProc.pCPUState->qwRDI   = 0;
-    sProc.pCPUState->qwRBP   = 0;
-
-    sProc.pCPUState->qwRSP   = (QWORD) sProc.pStack + qwStackSize - sizeof(sCPUState);
-    sProc.pCPUState->qwRIP   = (QWORD) pEntryPoint;
-    sProc.pCPUState->qwCS    = KERNEL_CODE_SEGMENT;
-    sProc.pCPUState->qwFlags = 0x0202; // Set the reserved and interrupt enable flags
-
-    // TEMPORARY: Setup paging
-    sProc.pPML4 = GetCurrentPML4();
-
-    AddListElement(&g_lstProcesses, &sProc);
-    return sProc.iPID;
-}
-
-void KillProcess(INT iPID, PWCHAR wszReason)
-{
-    if (!DoesProcessExist(iPID)) return;
-    SetFGColour(NEOS_ERROR_COLOUR);
-    PrintFormat(L"Process %S with PID %d was killed: %S\n", GetProcess(iPID)->wszName, iPID, wszReason);
-    SetFGColour(NEOS_FOREGROUND_COLOUR);
-    StopProcess(iPID);
-}
-
-BOOL StopProcess(INT iPID)
-{
-    if (!DoesProcessExist(iPID)) return false;
-    SetProcessState(iPID, PROC_KILLED);
-    return true;
-}
-
-sProcess *GetProcess(INT iPID)
-{
-    if (iPID < 0) return NULL;
-    for (QWORD i = 0; i < g_lstProcesses.qwLength; i++)
-    {
-        sProcess *pProcess = GetListElement(&g_lstProcesses, i);
-            if (pProcess->iPID == iPID)
-                return pProcess;
-    }
+    // return pUserPML4;
     return NULL;
 }
 
-QWORD SYSV ScheduleProcesses(QWORD qwRSP)
+INT StartThread(PWCHAR wszName, void (*pEntryPoint)(), QWORD qwStackSize, BOOL bUser, WORD wOwner, BYTE bState)
 {
-    if (g_lstProcesses.qwLength == 0) return qwRSP;
+    // _ASSERT(qwStackSize >= 256, L"Stack must be at least 256 bytes");
 
-    LoadPML4(GetKernelPML4());
+    // // Horrible way to do this, but it works
+    // INT iPID = GetNewPID();
+    // PWCHAR wszProcPath = L"           ";
+    // itow(iPID, wszProcPath, 10);
+
+    // sTask *pTask;
+    // sObjectCreationParameters sParams = MakeObjectCreationParameters(MakeString(wszProcPath), g_pProcessDirectory, 0);
+    // STATUS s = CreateObject(g_pProcessType, &sParams, sizeof(sTask), (PVOID *) &pTask);
+
+    // if (!_SUCCESSFUL(s))
+    //     _KERNEL_PANIC(L"Failed to start thread");
     
-    // Save the current process' state
-    if  (g_iCurrentProcessIndex >= 0)
-        ((sProcess *) GetListElement(&g_lstProcesses, g_iCurrentProcessIndex))->pCPUState = (sCPUState *) qwRSP;
+    // if (iPID == 0)
+    //     InitLinkedList(&pTask->sListEntry);
+    // else
+    //     AppendIntoLinkedList(&GetProcess(0)->sListEntry, &pTask->sListEntry);
 
-    sProcess *pProcess = NULL;
-    while (pProcess->nState != PROC_RUNNING || pProcess == NULL)
-    {
-        // If we've reached the last process, go back to the first.
-        if (++g_iCurrentProcessIndex >= g_lstProcesses.qwLength)
-            g_iCurrentProcessIndex = 0;
+    // ZeroMemory(pTask->wszName, sizeof(pTask->wszName));
+    // if (wszName != NULL)
+    //     strncpyW(pTask->wszName, wszName, 128);
 
-        pProcess = GetListElement(&g_lstProcesses, g_iCurrentProcessIndex);
+    // pTask->bUser         = bUser;
+    // pTask->wOwner        = wOwner;
+    // pTask->iPID          = iPID;
+    // pTask->qwStackSize   = qwStackSize;
+    // pTask->bState        = bState;
+    // pTask->qwSleepTimeNS = 0;
 
-        if (pProcess->nState == PROC_KILLED)
-        {
-            KHeapFree(pProcess->pStackUnaligned);
-            FreePML4(pProcess->pPML4);
-            PrintFormat(L"Killing %d\n", g_iCurrentProcessIndex);
-            RemoveListElement(&g_lstProcesses, g_iCurrentProcessIndex);
-        }
-        
-    }
+    // pTask->pStack          = AllocateContinuousPages(_BYTES_TO_PAGES(qwStackSize));
+    // pTask->pKernelStack    = AllocateContinuousPages(_BYTES_TO_PAGES(qwStackSize));
+    // pTask->pKernelStackTop = (PBYTE) pTask->pKernelStack + qwStackSize;
+    // _ASSERT(pTask->pStack != NULL, L"Could not allocate memory for process '%S' PID %d", pTask->wszName, iPID);
 
-    LoadPML4(pProcess->pPML4);
-    return (QWORD) pProcess->pCPUState;
+    // // Setup the CPU State
+    // pTask->pCPUState          = (sCPUState *) ((QWORD) pTask->pStack + qwStackSize - sizeof(sCPUState));
+    // pTask->pCPUState->qwRAX   = 0;
+    // pTask->pCPUState->qwRBX   = 0;
+    // pTask->pCPUState->qwRCX   = 0;
+    // pTask->pCPUState->qwRDX   = 0;
+
+    // pTask->pCPUState->qwR8    = 0;
+    // pTask->pCPUState->qwR9    = 0;
+    // pTask->pCPUState->qwR10   = 0;
+    // pTask->pCPUState->qwR11   = 0;
+    // pTask->pCPUState->qwR12   = 0;
+    // pTask->pCPUState->qwR13   = 0;
+    // pTask->pCPUState->qwR14   = 0;
+    // pTask->pCPUState->qwR15   = 0;
+
+    // pTask->pCPUState->qwRSI   = 0;
+    // pTask->pCPUState->qwRDI   = 0;
+    // pTask->pCPUState->qwRBP   = 0;
+
+    // pTask->pCPUState->qwRIP   = (QWORD) pEntryPoint;
+    // pTask->pCPUState->qwCS    = bUser ? USER_CODE_SEGMENT : KERNEL_CODE_SEGMENT;
+    // pTask->pCPUState->qwFlags = 0x0202;
+    
+    // pTask->pCPUState->qwRSP   = (QWORD) pTask->pStack + qwStackSize - sizeof(sCPUState);
+    // pTask->pCPUState->qwSS    = bUser ? USER_DATA_SEGMENT : KERNEL_DATA_SEGMENT;
+
+    // // Setup paging
+    // pTask->pPageTable = bUser ? CreateUserPageTable() : GetKernelPML4();
+    // ArchMapPages(pTask->pPageTable, pTask->pStack, _BYTES_TO_PAGES(qwStackSize), PAGING_WRITEABLE | (bUser ? PAGING_WRITEABLE : 0));
+    // ArchMapPages(pTask->pPageTable, pTask->pKernelStack, _BYTES_TO_PAGES(qwStackSize), PAGING_WRITEABLE);
+
+    // // TEMPORARY!
+
+    // if (bUser)
+    //     ArchMapPages(pTask->pPageTable, (PVOID) (QWORD) pEntryPoint, 1, PAGING_WRITEABLE | PAGING_WRITEABLE);
+
+    // return pTask->iPID;
+    return 0;
 }
 
-INT GetNumberOfOProcesses()
+BOOL KillProcess(INT iPID)
 {
-    return g_lstProcesses.qwLength;
+    return SetProcessState(iPID, PROC_KILLED);
+}
+
+sTask *GetProcess(INT iPID)
+{
+    if (iPID == -1)
+        return NULL;
+    PWCHAR wszProcPath = L"           ";
+    itow(iPID, wszProcPath, 10);
+    return FindObject(wszProcPath, g_pProcessDirectory);
+}
+
+sTask *GetNextProcess(INT iPID)
+{
+    if (g_iCurrentPID == -1)
+        return GetProcess(0);
+    
+    return _GET_LINKED_LIST_DATA(GetCurrentProcess()->sListEntry.pForwards, sTask, sListEntry);
+}
+
+void PrintRegs(QWORD qwRSP);
+
+QWORD Schedule(QWORD qwRSP)
+{
+    // PrintRegs(qwRSP);
+    // if (GetNumberOfOProcesses() == 0) return qwRSP;
+
+    // // Save the current process' state
+    // if (g_iCurrentPID != -1)
+    //     GetCurrentProcess()->pCPUState = (sCPUState *) qwRSP;
+
+    // sTask *pTask = NULL;
+    // INT iPID = g_iCurrentPID;
+    // while (pTask == NULL || pTask->bState != PROC_RUNNING)
+    // {
+    //     sTask *pProcessObject = GetNextProcess(iPID);
+    //     // Probably a bad idea, as this function gets called inside an interrupt
+    //     _ASSERT(pProcessObject != NULL, L"Couldn't get the next process");
+    //     pTask = pProcessObject;
+    //     iPID = pTask->iPID;
+
+    //     if (pTask->bState == PROC_KILLED)
+    //     {
+    //         DestroyObjectByReference(pProcessObject);
+    //         pTask = NULL;
+    //         continue;
+    //     }
+    // }
+
+    
+    // g_iCurrentPID = iPID;
+
+    // ArchSetKernelStackTop((QWORD) pTask->pKernelStackTop);
+    // ArchLoadPageTable(pTask->pPageTable);
+
+    // return (QWORD) pTask->pCPUState;
+    return 0;
+}
+
+DWORD GetNumberOfOProcesses()
+{
+    return g_pProcessDirectory->dwNumEntries;
+}
+
+INT GetNewPID()
+{
+    INT iPID = 0;
+
+    while (DoesProcessExist(iPID))
+        iPID++;
+    
+    return iPID;
 }
 
 INT GetCurrentPID()
 {
-    if (g_iCurrentProcessIndex == -1)
-        return -1;
-    return GetCurrentProcess()->iPID;
+    return g_iCurrentPID;
 }
 
-sProcess *GetCurrentProcess()
+sTask *GetCurrentProcess()
 {
-    return GetListElement(&g_lstProcesses, g_iCurrentProcessIndex);
+    return GetProcess(g_iCurrentPID);
 }
 
 BOOL DoesProcessExist(INT iPID)
 {
-    for (QWORD i = 0; i < g_lstProcesses.qwLength; i++)
-        if (GetProcess(i)->iPID == iPID)
-            return true;
-    
-    return false;
+    return GetProcess(iPID) != NULL;
 }
 
-BOOL SetProcessState(INT iPID, BYTE nState)
+BOOL SetProcessState(INT iPID, BYTE bState)
 {
-    if (!DoesProcessExist(iPID)) return false;
-    GetProcess(iPID)->nState = nState;
+    sTask *pTask = GetProcess(iPID);
+    if (pTask == NULL)
+        return false;
+    pTask->bState = bState;
     return true;
 }

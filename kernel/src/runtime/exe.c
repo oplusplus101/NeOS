@@ -6,319 +6,286 @@
 #include <common/panic.h>
 #include <common/math.h>
 #include <memory/heap.h>
-#include <loaderfunctions.h>
+#include <archimports.h>
 
 sObjectType *g_pLibraryObjectType;
+sExecutableFunction *g_arrExportedKernelFunctions;
+QWORD g_nsExportedKernelFunctions;
 
-void DestoryLibrary(sObject *pObject)
+STATUS LoadExports(sRAMFile *pFile, sPE32Headers *pHeaders, sExecutableFunction **ppExecutableFunctions, PQWORD pnsExportFuncions, QWORD qwBaseAddress);
+
+void DestoryLibrary(PVOID pObject)
 {
-    sLibraryObject *pLibrary = pObject->pBody;
-    FreeExecutable(&pLibrary->sEXE);
+    sLibraryObject *pLibrary = pObject;
+    // FreeExecutable(&pLibrary->sEXE);
     KHeapFree(pLibrary);
 }
 
 void InitExecutableLoader()
 {
-    g_pLibraryObjectType = CreateType(L"Library", sizeof(sLibraryObject), DestoryLibrary);
+    sPE32Headers sHeaders;
+    sRAMFile *pKernel = GetRAMFile(L"NeOS\\NeOS.sys");
+    STATUS status = ParsePEHeaders(pKernel, &sHeaders);
+    _ASSERT(_SUCCESSFUL(status), L"Could not parse the kernel's headers");
+    
+    status = LoadExports(pKernel, &sHeaders, &g_arrExportedKernelFunctions, &g_nsExportedKernelFunctions, MM_KERNEL_START);
+    _ASSERT(_SUCCESSFUL(status), L"Could not parse the kernel's export table");
+
+    // LoaderCloseFile(pFile);
+
+    g_pLibraryObjectType = CreateType(MakeString(L"Library"), sizeof(sLibraryObject), DestoryLibrary, NULL);
 }
 
-DWORD RVAToOffset(DWORD dwRVA, sList *pSections)
+DWORD RVAToOffset(DWORD dwRVA, sPE32Headers *pHeaders)
 {
-    for (int i = 0; i < pSections->qwLength; i++)
+    for (int i = 0; i < pHeaders->nsSections; i++)
     {
-        sExecutableSection *pSection = GetListElement(pSections, i);
-        QWORD qwSectionStartRVA = pSection->qwVirtualAddress;
-        QWORD qwSectionEndRVA = qwSectionStartRVA + _MAX(pSection->dwVirtualSize, pSection->dwRawSize);
+        QWORD qwSectionStartRVA = pHeaders->arrSections[i].dwVirtualAddress;
+        QWORD qwSectionEndRVA = qwSectionStartRVA + _MAX(pHeaders->arrSections[i].dwVirtualSize, pHeaders->arrSections[i].dwSizeOfRawData);
         
         if (dwRVA >= qwSectionStartRVA && dwRVA < qwSectionEndRVA)
-            return dwRVA - qwSectionStartRVA + pSection->dwSectionOffsetWithinFile;
+            return dwRVA - qwSectionStartRVA + pHeaders->arrSections[i].dwOffsetOfRawData;
     }
     return 0; // Not found
 }
 
-QWORD ResolveNameImport(sObject *pLibrary, PWCHAR wszName, WORD wHint)
+STATUS LoadRelocations(sRAMFile *pFile, sPE32Headers *pHeaders, QWORD qwVirtualStart)
 {
-    return 0;
-}
-
-QWORD ResolveOrdinalImport(sObject *pLibrary, WORD wOrdinal)
-{
-    return 0;
-}
-
-
-// Loads a DLL and caches it, if it isn't yet loaded,
-// returns cached result otherwise
-sObject *LoadKernelLibrary(PWCHAR wszName, QWORD qwBaseAddress)
-{
-    WCHAR wszObjectPath[256];
-    strcpyW(wszObjectPath, L"Cache\\Libraries\\Kernel\\");
-    strcpyW(wszObjectPath, wszName);
-
-    // See if the library exists
-    sObject *pObject;
-    if ((pObject = FindObject(wszObjectPath, NULL)) != NULL)
-        return pObject;
-
-    // Create it otherwise
-        
-    // TODO: Add a proper PATH variable to NeOS.cfg, so that other folders can be used
-    WCHAR wszFilePath[256];
-    strcpyW(wszFilePath, L"NeOS\\Libraries\\");
-    strcatW(wszFilePath, wszName);
-    
-    PVOID pFile = LoaderOpenFile(wszFilePath);
-    if (pFile == NULL) return NULL;
-    sLibraryObject sLibrary;
-    Log(LOG_WARNING, L"Replace GetKernelPML4() with a executable-independent value in exe.c:%d", __LINE__ + 1);
-    INT iStatus = LoadExecutable(pFile, qwBaseAddress, GetKernelPML4(), &sLibrary.sEXE);
-    LoaderCloseFile(pFile);
-    if (!_SUCCESSFUL(iStatus)) return NULL;
-
-    return CreateObject(wszObjectPath, g_pLibraryObjectType, &sLibrary);
-}
-
-INT LoadRelocations(PVOID pFile, sPE32DataDirectoryEntry sRelocationTable, QWORD qwBaseAddress, sExecutable *pEXE)
-{
-    Log(LOG_ERROR, L"LoadRelocations not yet implemented");
-    return NEOS_FAILURE;
-}
-
-INT LoadExports(PVOID pFile, sPE32DataDirectoryEntry sExportTable, sExecutable *pEXE)
-{
-    sPE32ExportTableHeader sExportTableHeader;
-    LoaderSeekFile(pFile, RVAToOffset(sExportTable.dwVirtualAddress, &pEXE->lstSections));
-    if (LoaderReadFile(pFile, &sExportTableHeader, sizeof(sPE32ExportTableHeader)) != sizeof(sPE32ExportTableHeader))
+    for (QWORD i = 0; i < pHeaders->sDataDirectory.sBaseRelocationTable.dwSize; )
     {
-        Log(LOG_ERROR, L"Invalid read size for sPE32ExportHeader");
-        return NEOS_LOAD_FAILURE | NEOS_ERROR_LIBRARY;
-    }
-    
-    // 4 bytes an entry
-    PDWORD pNames = KHeapAlloc(sExportTableHeader.dwNumberOfNames * sizeof(DWORD));
-    LoaderSeekFile(pFile, RVAToOffset(sExportTableHeader.dwAddressOfNames, &pEXE->lstSections));
-    _ASSERT(LoaderReadFile(pFile, pNames, sExportTableHeader.dwNumberOfNames * sizeof(DWORD)) == sExportTableHeader.dwNumberOfNames * sizeof(DWORD), L"Invalid read size for Names");
-    // 4 bytes an entry
-    // PDWORD pFunctions = (PVOID) ((PBYTE) pEXEData + RVAToOffset(sExportTableHeader.dwAddressOfFunctions, &pEXE->lstSections));
-    // 2 bytes an entry
-    PWORD pOrdinals = KHeapAlloc(sExportTableHeader.dwNumberOfFunctions * sizeof(WORD));
-    LoaderSeekFile(pFile, RVAToOffset(sExportTableHeader.dwAddressOfNameOrdinals, &pEXE->lstSections));
-    _ASSERT(LoaderReadFile(pFile, pOrdinals, sExportTableHeader.dwNumberOfFunctions * sizeof(WORD)) == sExportTableHeader.dwNumberOfFunctions * sizeof(WORD), L"Invalid read size for Name Ordinals");
+        sPE32BaseRelocationEntry sEntry;
+        DWORD dwOffset = RVAToOffset(pHeaders->sDataDirectory.sBaseRelocationTable.dwVirtualAddress, pHeaders);
+        memcpy(&sEntry, (PBYTE) pFile->pData + dwOffset + i, sizeof(sPE32BaseRelocationEntry));
 
-    for (DWORD i = 0; i < sExportTableHeader.dwNumberOfFunctions; i++)
-    {
-        sExecutableFunction sFunc;
-        // sFunc.pFunctionAddress = pFunctions[i];
-        sFunc.wOrdinal = pOrdinals[i];
-        LoaderSeekFile(pFile, RVAToOffset(pNames[i], &pEXE->lstSections));
-        LoaderReadFile(pFile, sFunc.szName, 256); // Not the best way to do it, for it ignores the actual length of function names.
-        AddListElement(&pEXE->lstExportedFunctions, &sFunc);
+        DWORD dwTypeOffsetSize = sEntry.dwBlockSize - sizeof(sPE32BaseRelocationEntry);
+        PWORD pTypeOffsets = KHeapAlloc(dwTypeOffsetSize);
+        ArchPrintFormat(L"Relocation : %u %p\n", dwTypeOffsetSize, sEntry.dwVirtualAddress);
+        memcpy(pTypeOffsets, (PBYTE) pFile->pData + RVAToOffset(sEntry.dwVirtualAddress, pHeaders), dwTypeOffsetSize);
+
+        for (DWORD j = 0; j < dwTypeOffsetSize / sizeof(WORD); j++)
+        {
+            switch (pTypeOffsets[j] >> 12)
+            {
+            case 0: // Ignore (doesn't relocate anything)
+                break;
+            
+            default:
+                ArchLog(LOG_ERROR, L"Relocation %u not implemented", pTypeOffsets[i] >> 12);
+                return 0x000010000 | NEOS_NOT_IMPLEMENTED;
+                break;
+            }
+        }
+
+        i += dwTypeOffsetSize + sizeof(sPE32BaseRelocationEntry);
     }
 
-    KHeapFree(pFile);
     return NEOS_SUCCESS;
 }
 
-INT LoadImports(PVOID pFile, sPE32DataDirectoryEntry sImportTable, sExecutable *pEXE)
+STATUS LoadExports(sRAMFile *pFile, sPE32Headers *pHeaders, sExecutableFunction **ppExecutableFunctions, PQWORD pnsExportFuncions, QWORD qwBaseAddress)
 {
-    for (QWORD qwImportDirectoryOffset = RVAToOffset(sImportTable.dwVirtualAddress, &pEXE->lstSections); ;
-         qwImportDirectoryOffset += sizeof(sPE32ImageImportDescriptor))
+    if (pHeaders->sDataDirectory.sExportTable.dwVirtualAddress == 0)
+    {
+        ArchLog(LOG_ERROR, L"Export Table doesn't exist");
+        return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
+    }
+
+    sPE32ExportTableHeader sExportTableHeader;
+    memcpy(&sExportTableHeader, (PBYTE) pFile->pData + RVAToOffset(pHeaders->sDataDirectory.sExportTable.dwVirtualAddress, pHeaders), sizeof(sPE32ExportTableHeader));
+    
+    // 4 bytes an entry
+    PDWORD pNames = KHeapAlloc(sExportTableHeader.dwNumberOfNames * sizeof(DWORD));
+    memcpy(pNames, (PBYTE) pFile->pData + RVAToOffset(sExportTableHeader.dwAddressOfNames, pHeaders), sExportTableHeader.dwNumberOfNames * sizeof(DWORD));
+
+    // 4 bytes an entry
+    PDWORD pFunctions = KHeapAlloc(sExportTableHeader.dwNumberOfFunctions * sizeof(DWORD));
+    memcpy(pFunctions, (PBYTE) pFile->pData + RVAToOffset(sExportTableHeader.dwAddressOfFunctions, pHeaders), sExportTableHeader.dwNumberOfFunctions * sizeof(DWORD));
+
+    // 2 bytes an entry
+    PWORD pOrdinals = KHeapAlloc(sExportTableHeader.dwNumberOfFunctions * sizeof(WORD));
+    memcpy(pOrdinals, (PBYTE) pFile->pData + RVAToOffset(sExportTableHeader.dwAddressOfNameOrdinals, pHeaders), sExportTableHeader.dwNumberOfFunctions * sizeof(WORD));
+
+    *ppExecutableFunctions = KHeapAlloc(sizeof(sExecutableFunction) * sExportTableHeader.dwNumberOfFunctions);
+    *pnsExportFuncions = sExportTableHeader.dwNumberOfFunctions;
+    for (DWORD i = 0; i < sExportTableHeader.dwNumberOfFunctions; i++)
+    {
+        sExecutableFunction *sFunc =  *ppExecutableFunctions + i;
+        sFunc->wOrdinal = pOrdinals[i];
+        sFunc->pFunctionAddress = (PVOID) (qwBaseAddress + pFunctions[i]);
+        memcpy(sFunc, (PBYTE) pFile->pData + RVAToOffset(pNames[i], pHeaders), 256);
+    }
+
+    return NEOS_SUCCESS;
+}
+
+PVOID GetKernelExportFunction(PCHAR szName)
+{
+    for (QWORD i = 0; i < g_nsExportedKernelFunctions; i++)
+        if (!strncmp(g_arrExportedKernelFunctions[i].szName, szName, 256))
+            return g_arrExportedKernelFunctions[i].pFunctionAddress;
+    
+    return NULL;
+}
+
+STATUS LoadImports(sRAMFile *pFile, sPE32Headers *pHeaders, QWORD qwBaseAddress)
+{
+    QWORD qwImportDirectoryOffset = RVAToOffset(pHeaders->sDataDirectory.sImportTable.dwVirtualAddress, pHeaders);
+    if (qwImportDirectoryOffset == 0)
+    {
+        ArchLog(LOG_ERROR, L"Import directory offset is 0");
+        return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
+    }
+
+    for (;; qwImportDirectoryOffset += sizeof(sPE32ImageImportDescriptor))
     {
         sPE32ImageImportDescriptor sDescriptor;
-        LoaderSeekFile(pFile, qwImportDirectoryOffset);
-        if (LoaderReadFile(pFile, &sDescriptor, sizeof(sPE32ImageImportDescriptor)) != sizeof(sPE32ImageImportDescriptor))
-        {
-            Log(LOG_ERROR, L"Invalid read size for sPE32ImageImportDescriptor");
-            return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
-        }
+        memcpy(&sDescriptor, (PBYTE) pFile->pData + qwImportDirectoryOffset, sizeof(sPE32ImageImportDescriptor));
 
         // Check if there is a name
         if (sDescriptor.dwAddressOfName == 0)
         {
-            // Log(LOG_WARNING, L"Import descriptor has no name");
+            // ArchLog(LOG_WARNING, L"Import descriptor has no name");
             qwImportDirectoryOffset += sizeof(sPE32ImageImportDescriptor);
             break;
         }
 
         // Read the name
-        QWORD qwNameOffset = RVAToOffset(sDescriptor.dwAddressOfName, &pEXE->lstSections);
+        QWORD qwNameOffset = RVAToOffset(sDescriptor.dwAddressOfName, pHeaders);
         if (qwNameOffset == 0)
         {
-            Log(LOG_ERROR, L"Could not get name offset");
-            return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
+            ArchLog(LOG_ERROR, L"Could not get name offset");
+            continue;
+            // return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
         }
 
-        LoaderSeekFile(pFile, qwNameOffset);
         WCHAR wszName[512] = { 0 };
         for (DWORD i = 0; i < sizeof(wszName) / sizeof(WCHAR) - 1; i++)
         {
-            if (LoaderReadFile(pFile, &wszName[i], sizeof(CHAR)) != sizeof(CHAR))
-            {
-                Log(LOG_ERROR, L"Failed to read import name %S", wszName);
-                return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
-            }
+            wszName[i] = ((PBYTE) pFile->pData + qwNameOffset)[i];
 
             if (wszName[i] == 0)
                 break;
         }
 
-        // TODO: Handle the base address properly
-        sObject *pLibrary = LoadKernelLibrary(wszName, 0);
-        if (pLibrary == NULL)
-        {
-            Log(LOG_ERROR, L"Could not load library '%S'", wszName);
-            return NEOS_LOAD_FAILURE | NEOS_ERROR_LIBRARY;
-        }
-
-        QWORD qwImportLookupTableOffset = RVAToOffset(sDescriptor.dwAddressOfOriginalFirstThunk != 0 ? sDescriptor.dwAddressOfOriginalFirstThunk : sDescriptor.dwAddressOfFirstThunk, &pEXE->lstSections);
-        QWORD qwImportAddressTableOffset = RVAToOffset(sDescriptor.dwAddressOfFirstThunk, &pEXE->lstSections);
+        QWORD qwImportLookupTableOffset = RVAToOffset(sDescriptor.dwAddressOfOriginalFirstThunk != 0 ? sDescriptor.dwAddressOfOriginalFirstThunk : sDescriptor.dwAddressOfFirstThunk, pHeaders);
+        QWORD qwImportAddressTableOffset = RVAToOffset(sDescriptor.dwAddressOfFirstThunk, pHeaders);
         
         uPE32ImageThunkData uImportLookupTableThunk, uImportAddressTableThunk;
         for (QWORD qwThunkIndex = 0; ; qwThunkIndex++)
         {
-            LoaderSeekFile(pFile, qwImportLookupTableOffset + qwThunkIndex * sizeof(uPE32ImageThunkData));
-            _ASSERT(LoaderReadFile(pFile, &uImportLookupTableThunk, sizeof(uPE32ImageThunkData)) == sizeof(uPE32ImageThunkData), L"Failed to read the import lookup table thunk");
-            LoaderSeekFile(pFile, qwImportAddressTableOffset + qwThunkIndex * sizeof(uPE32ImageThunkData));
-            _ASSERT(LoaderReadFile(pFile, &uImportAddressTableThunk, sizeof(uPE32ImageThunkData)) == sizeof(uPE32ImageThunkData), L"Failed to read the import address table thunk");
+            memcpy(&uImportLookupTableThunk, (PBYTE) pFile->pData + qwImportLookupTableOffset + qwThunkIndex * sizeof(uPE32ImageThunkData), sizeof(uPE32ImageThunkData));
+            memcpy(&uImportAddressTableThunk, (PBYTE) pFile->pData + qwImportAddressTableOffset + qwThunkIndex * sizeof(uPE32ImageThunkData), sizeof(uPE32ImageThunkData));
 
             if (uImportLookupTableThunk.qwAddressOfData == 0)
                 break;
-            
-            Log(LOG_WARNING, L"Importing not fully implemented yet!");
+
+            PVOID pResolvedAddress = NULL;
 
             if (uImportLookupTableThunk.qwOrdinal & 0x8000000000000000ULL) // Ordinal
             {
                 // WORD wOrdinal = sImportLookupTableThunk.qwOrdinal & 0xFFFF;
-                Log(LOG_ERROR, L"Ordinal imports not implemented");
-                return NEOS_FAILURE;
+                ArchLog(LOG_ERROR, L"Ordinal imports not implemented");
+                return NEOS_NOT_IMPLEMENTED;
             }
             else // Name
             {
-                QWORD qwOffset = RVAToOffset(uImportLookupTableThunk.qwAddressOfData, &pEXE->lstSections);
+                QWORD qwOffset = RVAToOffset(uImportLookupTableThunk.qwAddressOfData, pHeaders);
                 if (qwOffset == 0)
                 {
-                    Log(LOG_ERROR, L"Couldn't read import name entry");
+                    ArchLog(LOG_ERROR, L"Couldn't read import name entry");
                     return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
                 }
-                LoaderSeekFile(pFile, qwOffset);
 
-                WORD wHint;
-                _ASSERT(LoaderReadFile(pFile, &wHint, sizeof(WORD)) == sizeof(WORD), L"Failed to read hint while parsing import table");
-                
+                // WORD wHint = *((PWORD) ((PBYTE) pFile->pData + qwOffset));
                 CHAR szName[512];
                 for (DWORD i = 0; i < sizeof(szName) - 1; i++)
                 {
-                    _ASSERT(LoaderReadFile(pFile, &szName[i], sizeof(CHAR)) == sizeof(CHAR), L"Failed to read import name");
+                    szName[i] = ((PBYTE) pFile->pData + qwOffset + sizeof(WORD))[i];
                     if (szName[i] == 0)
                         break;
                 }
                 
-                // pResolvedAddress = 
+                pResolvedAddress = GetKernelExportFunction(szName);
+                if (pResolvedAddress == NULL)
+                {
+                    ArchLog(LOG_ERROR, L"Could not get function export '%s'", szName);
+                    return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
+                }
             }
             
-            // PVOID pAddressInExecutable = (PVOID) (sDescriptor.dwAddressOfFirstThunk + pEXE->qwVirtualStart + qwThunkIndex * sizeof(uPE32ImageThunkData));
-            // *((QWORD *) GetPhysicalAddress(pEXE->pPageTable, (PBYTE) pAddressInExecutable)) = (QWORD) ABTest;
+            PVOID pAddressInExecutable = (PVOID) (sDescriptor.dwAddressOfFirstThunk + qwBaseAddress + qwThunkIndex * sizeof(uPE32ImageThunkData));
+            *((PQWORD) pAddressInExecutable) = (QWORD) pResolvedAddress;
         }
     }
 
     return NEOS_SUCCESS;
 }
 
-INT LoadExecutable(PVOID pFile, QWORD qwVirtualAddress, sPageTable *pPML4, sExecutable *pEXE)
+// TODO: Replace asserts with error codes
+STATUS ParsePEHeaders(sRAMFile *pFile, sPE32Headers *pHeaders)
 {
     // Load the MS-DOS header
-    sMZHeader sMZHeader;
-    if (LoaderReadFile(pFile, &sMZHeader, sizeof(sMZHeader)) != sizeof(sMZHeader))
-    {
-        Log(LOG_ERROR, L"Invalid read size for sMZHeader");
-        return NEOS_LOAD_FAILURE | NEOS_ERROR_EXECUTABLE;
-    }
-    _ASSERT(sMZHeader.wMagic == 0x5A4D, L"Invalid MZ header magic number: %04X", sMZHeader.wMagic);
+    memcpy(&pHeaders->sMZ, pFile->pData, sizeof(sMZHeader));
+
+    // _ASSERT(pHeaders->sMZ.wMagic == 0x5A4D, L"Invalid MZ header magic number: %04X", pHeaders->sMZ.wMagic);
+    if (pHeaders->sMZ.wMagic != 0x5A4D)
+        return (pHeaders->sMZ.wMagic << 16) | NEOS_LOAD_FAILURE;
     
     // Read the PE header offset
-    DWORD dwPEHeaderOffset;
-    LoaderSeekFile(pFile, 0x3C);
-    LoaderReadFile(pFile, &dwPEHeaderOffset, sizeof(DWORD));
+    DWORD dwPEHeaderOffset = *((PDWORD) ((PBYTE) pFile->pData + 0x3C));
     
     // Load the PE32+ header
-    sPE32Header sPEHeader;
-    LoaderSeekFile(pFile, dwPEHeaderOffset);
-    _ASSERT(LoaderReadFile(pFile, &sPEHeader, sizeof(sPE32Header)) == sizeof(sPE32Header), L"Invalid read size for sPE32Header");
-    _ASSERT(sPEHeader.dwMagic == 0x4550, L"Invalid PE header magic number: 0x%08X", sPEHeader.dwMagic);
+    memcpy(&pHeaders->sPE, (PBYTE) pFile->pData + dwPEHeaderOffset, sizeof(sPE32Header));
+    _ASSERT(pHeaders->sPE.dwMagic == 0x4550, L"Invalid PE header magic number: 0x%08X", pHeaders->sPE.dwMagic);
 
     // Load the PE32+ "optional" header
-    sPE32OptionalHeader sOptionalHeader;
-    _ASSERT(LoaderReadFile(pFile, &sOptionalHeader, sizeof(sPE32OptionalHeader)) == sizeof(sPE32OptionalHeader), L"Invalid read size for sPE32OptionalHeader");
-    _ASSERT(sOptionalHeader.wMagic == 0x020B, L"Invalid PE optional header magic number: %04X", sPEHeader.dwMagic);
+    memcpy(&pHeaders->sPEOptional, (PBYTE) pFile->pData + dwPEHeaderOffset + sizeof(sPE32Header), sizeof(sPE32OptionalHeader));
+    _ASSERT(pHeaders->sPEOptional.wMagic == 0x020B, L"Invalid PE optional header magic number: %04X", pHeaders->sPEOptional.wMagic);
 
     // The data directory comes directly after the "optional" header
-    sPE32DataDirectory sDataDirectory;
-    _ASSERT(LoaderReadFile(pFile, &sDataDirectory, sOptionalHeader.dwNumberOfRVAAndSizes * sizeof(sPE32DataDirectoryEntry)) == sOptionalHeader.dwNumberOfRVAAndSizes * sizeof(sPE32DataDirectoryEntry), L"Invalid read size for data directory");
+    memcpy(&pHeaders->sDataDirectory,
+           (PBYTE) pFile->pData + dwPEHeaderOffset + sizeof(sPE32Header) + sizeof(sPE32OptionalHeader),
+           pHeaders->sPEOptional.dwNumberOfRVAAndSizes * sizeof(sPE32DataDirectoryEntry));
 
-    pEXE->qwEntryPoint         = (QWORD) sOptionalHeader.dwAddressOfEntrypoint;
-    pEXE->lstSections          = CreateEmptyList(sizeof(sExecutableSection));
-    pEXE->lstExportedFunctions = CreateEmptyList(sizeof(sExecutableFunction));
-    pEXE->pPageTable           = pPML4;
-    pEXE->qwVirtualStart       = qwVirtualAddress == 0 ? sOptionalHeader.qwImageBase : qwVirtualAddress;
-    pEXE->qwVirtualEnd         = 0;
+    pHeaders->nsSections = pHeaders->sPE.wNumberOfSections;
+    pHeaders->arrSections = KHeapAlloc(sizeof(sPE32SectionHeader) * pHeaders->sPE.wNumberOfSections);
+    memcpy(pHeaders->arrSections,
+           (PBYTE) pFile->pData + dwPEHeaderOffset + sizeof(sPE32Header) + sizeof(sPE32OptionalHeader) + pHeaders->sPEOptional.dwNumberOfRVAAndSizes * sizeof(sPE32DataDirectoryEntry),
+           sizeof(sPE32SectionHeader) * pHeaders->sPE.wNumberOfSections);
 
-    sPE32SectionHeader *pSections = KHeapAlloc(sizeof(sPE32SectionHeader) * sPEHeader.wNumberOfSections);
-    LoaderReadFile(pFile, pSections, sizeof(sPE32SectionHeader) * sPEHeader.wNumberOfSections);
-
-    for (WORD i = 0; i < sPEHeader.wNumberOfSections; i++)
-    {
-        sPE32SectionHeader *pSection = pSections++;
-        
-        sExecutableSection sSection;
-        strncpy(sSection.szName, (PCHAR) pSection->szName, 8);
-        sSection.dwRawSize                 = pSection->dwSizeOfRawData;
-        sSection.dwVirtualSize             = pSection->dwVirtualSize;
-        sSection.qwVirtualAddress          = pSection->dwVirtualAddress;
-        sSection.dwSectionOffsetWithinFile = pSection->dwOffsetOfRawData;
-
-        if (pSection->dwSizeOfRawData > 0 && !(pSection->dwCharacteristics & PE32_SCN_MEM_DISCARDABLE))
-        {
-            sSection.pData = AllocateContinousPages(_BYTES_TO_PAGES((QWORD) pSection->dwSizeOfRawData));
-            pEXE->qwVirtualEnd = _MAX(pEXE->qwVirtualEnd, sSection.qwVirtualAddress + pEXE->qwVirtualStart + pSection->dwVirtualSize);
-            MapPageRange(pEXE->pPageTable, (PVOID) (sSection.qwVirtualAddress + pEXE->qwVirtualStart), sSection.pData, _BYTES_TO_PAGES((QWORD) pSection->dwSizeOfRawData),
-                                                  (pSection->dwCharacteristics & PE32_SCN_MEM_WRITE ? PF_WRITEABLE : 0) |
-                                                  (pSection->dwCharacteristics & PE32_SCN_MEM_NOT_CACHED ? PF_CACHEDISABLE : 0));
-            LoaderSeekFile(pFile, sSection.dwSectionOffsetWithinFile);
-            LoaderReadFile(pFile, (PBYTE) sSection.pData + (sSection.qwVirtualAddress % PAGE_SIZE), sSection.dwRawSize);
-        }
-        
-        AddListElement(&pEXE->lstSections, &sSection);
-    }
-
-    KHeapFree(pSections);
-
-    INT iStatus = NEOS_SUCCESS;
-
-    if (sDataDirectory.sBaseRelocationTable.dwVirtualAddress != 0)
-        iStatus = LoadRelocations(pFile, sDataDirectory.sBaseRelocationTable, qwVirtualAddress, pEXE);
-
-    if (!_SUCCESSFUL(iStatus))
-        return iStatus;
-    
-    if (sDataDirectory.sExportTable.dwVirtualAddress != 0)
-        iStatus = LoadExports(pFile, sDataDirectory.sExportTable, pEXE);
-
-    if (!_SUCCESSFUL(iStatus))
-        return iStatus;
-    
-    if (sDataDirectory.sImportTable.dwVirtualAddress != 0)
-        iStatus = LoadImports(pFile, sDataDirectory.sImportTable, pEXE);
-    
-    return iStatus;
+    return NEOS_SUCCESS;
 }
 
-void FreeExecutable(sExecutable *pEXE)
+STATUS LoadDriverIntoMemory(sRAMFile *pFile, sPE32Headers *pHeaders, PVOID pVirtualStart, PVOID *pEntryPoint)
 {
-    _KERNEL_PANIC(L"FreeExecutable not yet implemented");
-    for (INT i = 0; i < pEXE->lstSections.qwLength; i++)
+    ArchLog(LOG_LOG, L"Loading driver to base address 0x%p", pVirtualStart);
+    // Loads all sections that aren't marked with PE32_SCN_MEM_DISCARDABLE into memory at pVirtualStart
+    for (QWORD i = 0; i < pHeaders->nsSections; i++)
     {
-        sExecutableSection *sSection = (sExecutableSection *) GetListElement(&pEXE->lstSections, i);
-        FreeContinousPages(sSection->pData, _BYTES_TO_PAGES(sSection->dwVirtualSize));
+        sPE32SectionHeader *pSection = pHeaders->arrSections + i;
+        if (pSection->dwCharacteristics & PE32_SCN_MEM_DISCARDABLE)
+            continue;
+
+        ArchLog(LOG_LOG, L"Loading driver section '%s' to RVA 0x%08X to PHYS 0x%p", pSection->szName, pSection->dwVirtualAddress, (PVOID) ((QWORD) pVirtualStart + pSection->dwVirtualAddress));
+        // Check if the section is aligned. & (PAGE_SIZE - 1) != 0 is the same as a modulo but faster.
+        if (pSection->dwVirtualAddress & (PAGE_SIZE - 1))
+        {
+            ArchLog(LOG_WARNING, L"Section '%s' contains an invalid RVA 0x%08X", pSection->szName, pSection->dwVirtualAddress);
+            return NEOS_INVALID_ARGUMENT;
+        }
+        
+        memcpy((PVOID) ((QWORD) pVirtualStart + pSection->dwVirtualAddress), (PBYTE) pFile->pData + pSection->dwOffsetOfRawData, pSection->dwSizeOfRawData);
     }
-    DestroyList(&pEXE->lstSections);
+
+    STATUS status = LoadRelocations(pFile, pHeaders, (QWORD) pVirtualStart);
+    if (!_SUCCESSFUL(status))
+        return status;
+
+    status = LoadImports(pFile, pHeaders, (QWORD) pVirtualStart);
+    if (!_SUCCESSFUL(status))
+        return status;
+
+    *pEntryPoint = (PVOID) ((QWORD) pVirtualStart + (QWORD) pHeaders->sPEOptional.dwAddressOfEntrypoint);
+    
+    return status;
 }

@@ -3,197 +3,358 @@
 #include <common/memory.h>
 #include <memory/heap.h>
 #include <common/string.h>
-#include <loaderfunctions.h>
+#include <common/panic.h>
+#include <archimports.h>
 
 
-sObject *g_pRootDirectoryObject;
-sObjectType *g_pDirectoryType;
+sObjectDirectory *g_pRootDirectoryObject;
+sObjectType *g_pObjectType;
+sObjectType *g_pObjectDirectoryType;
+
+sObjectDirectory *g_pTypeDirectory;
 
 ////////////////////////////////
-//        Object Stuff        //
+//          Utilities         //
 ////////////////////////////////
 
-void DestroyDirectoryCallback(sObject *pObject)
+
+/// @brief Calculates a FNV-1a hash
+/// @param wszPath The string hash
+/// @param bIgnoreCase Whether to ignore cases (only works with ASCII characters)
+/// @return The hash result
+QWORD HashPath(const PWCHAR wszPath, BOOL bIgnoreCase)
 {
-    sObjectDirectory *pDirectory = pObject->pBody;
-
-    for (QWORD i = 0; i < pDirectory->lstChildren.qwLength; i++)
+    QWORD qwHash = 0xcbf29ce484222325;
+    
+    for (QWORD i = 0; wszPath[i] != 0; i++)
     {
-        sObject *pChild = *((sObject **) GetListElement(&pDirectory->lstChildren, i));
-
-        if (pChild == NULL)
-            continue;
+        WCHAR wc = wszPath[i];
         
-        DestroyObjectByReference(pChild);
+        if (bIgnoreCase)
+            qwHash ^= wc >= 'A' && wc <= 'Z' ? wc | 32 : (wc & 0xFF);
+        qwHash *= 0x100000001b3;
+
+        qwHash ^= wc >> 8;
+        qwHash *= 0x100000001b3;
     }
     
-    DestroyList(&pDirectory->lstChildren);
-    KHeapFree(pDirectory);
+    return qwHash;
+}
 
-    sObject *pParent = pObject->pParent;
+void DestroyTypeCallback(PVOID pObject)
+{
+    sObjectType *pTypeObject = pObject;
+    DestroyString(&pTypeObject->wsName);
+}
 
-    if (pParent == NULL && pParent->pType == g_pDirectoryType)
-        return;
+////////////////////////////////
+//      Directory Stuff       //
+////////////////////////////////
 
-    sList *pParentList = &((sObjectDirectory *) pParent->pBody)->lstChildren;
-    
-    for (QWORD i = 0; i < pParentList->qwLength; i++)
-    {
-        sObject *pChild = *((sObject **) GetListElement(pParentList, i));
+void DestroyDirectoryCallback(PVOID pObject)
+{
+    sObjectDirectory *pDirectory = pObject;
 
-        if (pChild == pObject)
-            RemoveListElement(pParentList, i);
-    }
+    sObjectEnumerator sEnum = CreateObjectDirectoryEnumerator(pDirectory);
+    for (PVOID pObject = GetEnumeratedObject(&sEnum); pObject != NULL; pObject = GetEnumeratedObject(&sEnum))
+        DestroyObjectByReference(pObject);
 }
 
 ////////////////////////////////
 //       Implementation       //
 ////////////////////////////////
 
-BOOL AddObjectToDirectory(sObject *pDirectory, sObject *pObject)
+sObjectEnumerator CreateObjectDirectoryEnumerator(sObjectDirectory *pDirectory)
 {
-    if (pDirectory->pType != g_pDirectoryType) return false;
+    sObjectEnumerator sEnumerator;
+    sEnumerator.bBucketIndex = 0;
+    sEnumerator.pDirectory = pDirectory;
+    sEnumerator.pDirectoryEntry = NULL;
 
-    sObjectDirectory *pDirBody = (sObjectDirectory *) pDirectory->pBody;
-    if (pDirBody == NULL) return false;
-
-    AddListElement(&pDirBody->lstChildren, pObject);
-    return true;
+    for (; sEnumerator.bBucketIndex < OBJECT_BUCKETS_PER_DIRECTORY; sEnumerator.bBucketIndex++)
+    {
+        sObjectNamespaceExtension *pEntry = pDirectory->arrEntryBucket[sEnumerator.bBucketIndex];
+        
+        while (pEntry->pObject == NULL)
+        {
+            pEntry = pEntry->pNextEntry;
+            if (pEntry == NULL) break;
+        }
+        
+        if (pEntry == NULL)
+            continue;
+        
+        sEnumerator.pDirectoryEntry = pEntry;
+        break;
+    }
+    
+    return sEnumerator;
 }
 
-sObject *FindObjectInDirectory(sObjectDirectory *pDirectory, PWCHAR wszName)
+PVOID GetEnumeratedObject(sObjectEnumerator *pEnumerator)
 {
-    for (QWORD i = 0; i < pDirectory->lstChildren.qwLength; i++)
+    if (pEnumerator->pDirectoryEntry == NULL ||
+        pEnumerator->pDirectory == NULL ||
+        pEnumerator->pDirectory->dwNumEntries == 0)
+        return NULL;
+
+    PVOID pObject = pEnumerator->pDirectoryEntry->pObject;
+
+    // Advance to the next directory entry
+    pEnumerator->pDirectoryEntry = pEnumerator->pDirectoryEntry->pNextEntry;
+    
+    if (pEnumerator->pDirectoryEntry != NULL)
+        return pObject;
+    
+    for (pEnumerator->bBucketIndex++; pEnumerator->bBucketIndex < OBJECT_BUCKETS_PER_DIRECTORY; pEnumerator->bBucketIndex++)
     {
-        sObject *pObject = *((sObject **) GetListElement(&pDirectory->lstChildren, i));
-        if (pObject == NULL)
-            return NULL;
-        
-        if (!strncmpW(pObject->wszName, wszName, 256))
-            return pObject;
+        if (pEnumerator->pDirectory->arrEntryBucket[pEnumerator->bBucketIndex] == NULL) continue;
+        pEnumerator->pDirectoryEntry = pEnumerator->pDirectory->arrEntryBucket[pEnumerator->bBucketIndex];
+        break;
+    }
+
+    return pObject;
+}
+
+PVOID FindObjectInDirectory(sObjectDirectory *pDirectory, PWCHAR wszName)
+{
+    // Ugly code, but without it a heap allocation would be needed
+    QWORD qwHash = HashPath(wszName, (pDirectory->bFlags & OBJECT_FLAG_IGNORE_CASE) != 0);
+    
+    for (sObjectNamespaceExtension *pEntry = pDirectory->arrEntryBucket[qwHash % OBJECT_BUCKETS_PER_DIRECTORY];
+         pEntry != NULL; pEntry = pEntry->pNextEntry)
+    {
+        if (pEntry == NULL) break; // No such object exists
+        if (pEntry->qwNameHash != qwHash) continue; // The hashes don't match
+        if (strcmpW(pEntry->wsName.wszData, wszName)) continue; // Redundant check in case the hashes collide
+        return pEntry->pObject;
     }
     
     return NULL;
 }
 
-
-sObject *CreateObject(PWCHAR wszPath, sObjectType *pType, PVOID pBody)
+sObjectCreationParameters MakeObjectCreationParameters(sString wsName, sObjectDirectory *pParent, BYTE bFlags)
 {
-    if (FindObject(wszPath, NULL) != NULL) return NULL;
+    sObjectCreationParameters sParams;
+    sParams.pParent = pParent;
+    sParams.wsName  = wsName;
+    sParams.bFlags  = bFlags;
+
+    return sParams;
+}
+
+STATUS CreateObject(sObjectType *pType, sObjectCreationParameters *pParams, QWORD qwSize, PVOID *ppObject)
+{
+    if (qwSize < pType->qwObjectSize)
+        return NEOS_INVALID_ARGUMENT | NEOS_ERROR_OBJECT;
+
+    // Just a regular global object
+    if (pParams == NULL)
+    {
+        // Calculate the final size of the object
+        QWORD qwFinalSize = sizeof(sObjectHeader) + qwSize;
         
-    PWCHAR wszPathDup         = strdupW(wszPath);
-    sObject *pDirectoryObject = g_pRootDirectoryObject;
-    PWCHAR wszCurrentName     = strtokW(wszPathDup, L"\\/");
+        sObjectHeader *pHeader = KHeapAlloc(qwFinalSize);
+        if (pHeader == NULL)
+            return NEOS_ALLOCATION_FAILURE | NEOS_ERROR_OBJECT;
+
+        pHeader->bExtensions     = 0;
+        pHeader->pObjectType     = pType;
+        pHeader->qwNumHandles    = 0;
+        pHeader->qwNumReferences = 1;
+
+        ReferenceObject(pType);
+        *ppObject = pHeader + 1;
+
+        return NEOS_SUCCESS;
+    }
+    
+    // if (FindObject(wszPath, NULL) != NULL) return NULL;
+
+    PWCHAR wszPathDup                  = CopyStringAsCString(&pParams->wsName);
+    sObjectDirectory *pDirectoryObject = pParams->pParent == NULL ? g_pRootDirectoryObject : pParams->pParent;
+    PWCHAR wszCurrentName              = strtokW(wszPathDup, L"\\/");
 
     // FIXME: Add proper error handling in case a faulty path is entered
     while (wszCurrentName != NULL)
     {
-        sObject *pObject = FindObjectInDirectory(pDirectoryObject->pBody, wszCurrentName);
+        PVOID pObject = FindObjectInDirectory(pDirectoryObject, wszCurrentName);
         
         if (pObject == NULL)
+            break;
+
+        sObjectHeader *pHeader = (sObjectHeader *) pObject - 1;
+        if (pHeader->pObjectType != g_pObjectDirectoryType)
             break;
 
         pDirectoryObject = pObject;
         wszCurrentName   = strtokW(NULL, L"\\/");
-
         if (wszCurrentName == NULL)
             break;
-
-        if (pObject->pType == g_pDirectoryType)
-            pDirectoryObject = pObject;
     }
 
-    sObject *pObject          = KHeapAlloc(sizeof(sObject));
-    if (pObject == NULL)
+    if (wszCurrentName == NULL)
+        return NEOS_ERROR_OBJECT | NEOS_NOT_FOUND;
+
+    // Calculate the final size of the object
+    QWORD qwFinalSize = sizeof(sObjectNamespaceExtension) + sizeof(sObjectHeader) + qwSize;
+    
+    sObjectNamespaceExtension *pNameExt = KHeapAlloc(qwFinalSize);
+    if (pNameExt == NULL)
+        return NEOS_ALLOCATION_FAILURE | NEOS_ERROR_OBJECT;
+    
+    pNameExt->pParent    = pDirectoryObject;
+    pNameExt->wsName     = MakeString(wszCurrentName);
+    pNameExt->qwNameHash = HashPath(pNameExt->wsName.wszData, (pParams->bFlags & OBJECT_FLAG_IGNORE_CASE) != 0);
+    pNameExt->pNextEntry = NULL;
+    
+    sObjectHeader *pHeader   = (sObjectHeader *) (pNameExt + 1);
+    pHeader->bExtensions     = OBJECT_EXT_NAMESPACE;
+    pHeader->pObjectType     = pType;
+    pHeader->qwNumHandles    = 0;
+    pHeader->qwNumReferences = 1;
+
+    ReferenceObject(pType);
+    *ppObject         = pHeader + 1;
+    pNameExt->pObject = *ppObject;
+
+    sObjectNamespaceExtension *pDirectoryEntry = pDirectoryObject->arrEntryBucket[pNameExt->qwNameHash % OBJECT_BUCKETS_PER_DIRECTORY];
+
+    if (pDirectoryEntry == NULL) // This is the first entry
     {
-        Log(LOG_ERROR, L"Failed to allocate memory for object at path: %S", wszPath);
-        return NULL;
+        pDirectoryObject->arrEntryBucket[pNameExt->qwNameHash % OBJECT_BUCKETS_PER_DIRECTORY] = pNameExt;
+        pDirectoryObject->dwNumEntries++;
     }
-    pObject->dwReferenceCount = 1;
-    pObject->pType            = pType;
-    pObject->pBody            = KHeapAlloc(pType->qwBodySize);
-    pObject->pParent          = pDirectoryObject;
-    memcpy(pObject->pBody, pBody, pType->qwBodySize);
-    strncpyW(pObject->wszName, wszCurrentName, 256);
+    else
+    {
+        while (pDirectoryEntry->pNextEntry != NULL)
+            pDirectoryEntry = pDirectoryEntry->pNextEntry;
 
-    sObjectDirectory *pDirBody = (sObjectDirectory *) pDirectoryObject->pBody;
-    if (pDirBody == NULL) return NULL;
+        pDirectoryEntry->pNextEntry = pNameExt;
+        pDirectoryObject->dwNumEntries++;
+    }
 
-    AddListElement(&pDirBody->lstChildren, &pObject);
-    KHeapFree(wszPathDup);
-    return pObject;
+    return NEOS_SUCCESS;
 }
 
-sObject *FindObject(PWCHAR wszPath, sObject *pParent)
+PVOID FindObject(PWCHAR wszPath, sObjectDirectory *pParent)
 {
-    if (pParent == NULL)
-        pParent = g_pRootDirectoryObject;
-    
-    PWCHAR wszPathDup = strdupW(wszPath);
-    PWCHAR wsz = strtokW(wszPathDup, L"\\/");
-    
-    while (wsz != NULL)
+    PWCHAR wszPathDup                  = strdupW(wszPath);
+    sObjectDirectory *pDirectoryObject = pParent == NULL ? g_pRootDirectoryObject : pParent;
+    PWCHAR wszCurrentName              = strtokW(wszPathDup, L"\\/");
+
+    // FIXME: Add proper error handling in case a faulty path is entered
+    while (wszCurrentName != NULL)
     {
-        sObject *pObject = FindObjectInDirectory(pParent->pBody, wsz);
+        PVOID pObject = FindObjectInDirectory(pDirectoryObject, wszCurrentName);
+        
         if (pObject == NULL)
             break;
-        
-        wsz = strtokW(NULL, L"\\/");
-        
-        if (wsz == NULL)
+
+        sObjectHeader *pHeader = (sObjectHeader *) pObject - 1;
+        if (pHeader->pObjectType != g_pObjectDirectoryType)
         {
             KHeapFree(wszPathDup);
             return pObject;
         }
-        if (pObject->pType == g_pDirectoryType)
-            pParent = pObject;
+
+        pDirectoryObject = pObject;
+        wszCurrentName   = strtokW(NULL, L"\\/");
+
+        // This is the last part of the path
+        if (wszCurrentName == NULL)
+        {
+            KHeapFree(wszPathDup);
+            return pDirectoryObject;
+        }
     }
-    
+
     KHeapFree(wszPathDup);
     return NULL;
 }
 
-sObject *CreateObjectDirectory(PWCHAR wszPath)
+STATUS CreateObjectDirectory(sString wsPath, sObjectDirectory *pParent, sObjectDirectory **ppDirectoryObject)
 {
-    sObjectDirectory sDirectory;
-    sDirectory.lstChildren = CreateEmptyList(sizeof(sObject *));
-    if (sDirectory.lstChildren.pData == NULL)
-        return NULL;
-    return CreateObject(wszPath, g_pDirectoryType, &sDirectory);
+    if (pParent == NULL)
+        pParent = g_pRootDirectoryObject;
+
+    sObjectDirectory *pDirectoryObject;
+
+    sObjectCreationParameters sParams = MakeObjectCreationParameters(wsPath, pParent, 0);
+    STATUS s = CreateObject(g_pObjectDirectoryType, &sParams, sizeof(sObjectDirectory), (PVOID *) &pDirectoryObject);
+
+    if (!_SUCCESSFUL(s))
+        return s;
+
+    pDirectoryObject->pLock        = NULL;
+    pDirectoryObject->bFlags       = 0;
+    pDirectoryObject->dwNumEntries = 0;
+    ZeroMemory(pDirectoryObject->arrEntryBucket, sizeof(pDirectoryObject->arrEntryBucket));
+
+    if (ppDirectoryObject != NULL)
+        *ppDirectoryObject = pDirectoryObject;
+
+    return NEOS_SUCCESS;
 }
 
-sObjectType *CreateType(PWCHAR wszName, QWORD qwBodySize, void (*pDestroyCallback)(sObject *))
+sObjectType *CreateType(sString wsName, QWORD qwBodySize, void (*pDestroyCallback)(PVOID), void (*pParseCallback)(PVOID))
 {
-    sObjectType *pObjectType      = KHeapAlloc(sizeof(sObjectType));
-    pObjectType->pDestroyCallback = (void (*)(PVOID)) pDestroyCallback;
-    pObjectType->qwBodySize       = qwBodySize;
-    strncpyW(pObjectType->wszName, wszName, 256);
-    return pObjectType;
+    _ASSERT(pDestroyCallback != NULL, L"CreateType expects pDestroyCallback to have a non-NULL value");
+    sObjectCreationParameters sParameters = MakeObjectCreationParameters(wsName, g_pTypeDirectory, 0);
+    sObjectType *pResultType;
+
+    STATUS status = CreateObject(g_pObjectType, &sParameters, sizeof(sObjectType), (PVOID) &pResultType);
+    pResultType->pDestroyCallback = pDestroyCallback;
+    pResultType->pParseCallback   = pParseCallback;
+    pResultType->qwObjectSize     = qwBodySize;
+    pResultType->wsName           = wsName;
+
+    if (!_SUCCESSFUL(status))
+    {
+        ArchLog(LOG_WARNING, L"CreateType should return a STATUS");
+        return NULL;
+    }
+
+    return pResultType;
 }
 
 void DestroyType(sObjectType *pType)
 {
-    KHeapFree(pType);
+    DestroyObjectByReference(pType);
 }
 
-void DestroyObjectByReference(sObject *pObject)
+void DestroyObjectByReference(PVOID pObject)
 {
     if (pObject == NULL) 
         return;
     
-    if (pObject->pType->pDestroyCallback != NULL)
-        pObject->pType->pDestroyCallback(pObject);
+    sObjectHeader *pHeader = (sObjectHeader *) pObject - 1;
 
-    // FIXME: Very dangerous code!!
-    sList *pChildrenList = &((sObjectDirectory *) pObject->pParent->pBody)->lstChildren;
-    for (QWORD i = 0; i < pChildrenList->qwLength; i++)
+    if (pHeader->bExtensions & OBJECT_EXT_NAMESPACE)
     {
-        sObject *pChild = *((sObject **) GetListElement(pChildrenList, i));
-        if (pChild == pObject)
-            RemoveListElement(pChildrenList, i);
+        // Remove the object from its parent directory
+
+        sObjectNamespaceExtension *pExtension = (sObjectNamespaceExtension *) pHeader - 1;
+        pExtension->pParent->dwNumEntries--;
+
+        for (sObjectNamespaceExtension *pEntry = pExtension->pParent->arrEntryBucket[pExtension->qwNameHash % OBJECT_BUCKETS_PER_DIRECTORY];
+             pEntry != NULL; pEntry = pEntry->pNextEntry)
+        {
+            if (pEntry->pNextEntry != pExtension) continue;
+            // Cut out the entry to be destroyed
+            pEntry->pNextEntry = pEntry->pNextEntry->pNextEntry;
+            break;
+        }
+
     }
     
-    KHeapFree(pObject);
+    if (pHeader->pObjectType->pDestroyCallback != NULL)
+        pHeader->pObjectType->pDestroyCallback(pObject);
+
+    if (pHeader->bExtensions == 0)
+        KHeapFree(pHeader);
+    else if (pHeader->bExtensions == OBJECT_EXT_NAMESPACE)
+        KHeapFree((sObjectNamespaceExtension *) pHeader - 1);
 }
 
 void DestroyObject(PWCHAR wszPath)
@@ -201,15 +362,15 @@ void DestroyObject(PWCHAR wszPath)
     DestroyObjectByReference(FindObject(wszPath, NULL));
 }
 
-void ReferenceObject(sObject *pObject)
+void ReferenceObject(PVOID pObject)
 {
-    ((sObject *) pObject)->dwReferenceCount++;
+    ((sObjectHeader *) pObject - 1)->qwNumReferences++;
 }
 
-void DereferenceObject(sObject *pObject)
+void DereferenceObject(PVOID pObject)
 {
     // If the decremented value is 0, delete the object
-    if (--pObject->dwReferenceCount == 0)
+    if (--((sObjectHeader *) pObject - 1)->qwNumReferences == 0)
         DestroyObjectByReference(pObject);
 }
 
@@ -233,16 +394,17 @@ void DestroyHandleTable(sHandleTable *pTable)
     DestroyList(&pTable->lstHandles);
 }
 
-HANDLE AllocateHandle(sHandleTable *pTable, sObject *pObject)
+HANDLE AllocateHandle(sHandleTable *pTable, PVOID pObject)
 {
     sHandleEntry sEntry;
     sEntry.pObject = pObject;
     sEntry.hHandle = pTable->qwCurrentHandleNumber++;
+    ReferenceObject(pObject);
     AddListElement(&pTable->lstHandles, &sEntry);
     return sEntry.hHandle;
 }
 
-sObject *GetObjectFromHandle(sHandleTable *pTable, HANDLE hHandle)
+PVOID GetObjectFromHandle(sHandleTable *pTable, HANDLE hHandle)
 {
     for (QWORD i = 0; i < pTable->lstHandles.qwLength; i++)
     {
@@ -270,49 +432,77 @@ void FreeHandle(sHandleTable *pTable, HANDLE hHandle)
     }
 }
 
-void PrintObjectTree(sObject *pObject, DWORD dwCurrentDepth)
+void PrintObjectTree(sObjectDirectory *pDirectory, DWORD dwCurrentDepth)
 {
-    if (pObject == NULL && dwCurrentDepth == 0)
-        pObject = g_pRootDirectoryObject;
-    if (dwCurrentDepth == 0)
-        PrintFormat(L"%S\n", pObject->wszName);
-    
-    sObjectDirectory *pDirectory = pObject->pBody;
-    
-    for (QWORD i = 0; i < pDirectory->lstChildren.qwLength; i++)
+    if (pDirectory == NULL && dwCurrentDepth == 0)
     {
-        sObject *pObject = *((sObject **) GetListElement(&pDirectory->lstChildren, i));
-
-        PrintChar('\xB3'); // │
-        SetCursor(dwCurrentDepth * 2, GetCursorY());
-
-        if (i == pDirectory->lstChildren.qwLength - 1)
-            PrintString("\xC0\xC4"); // └─
-        else
-            PrintString("\xC3\xC4"); // ├─
-            
-        PrintFormat(L"%S\n", pObject);
-
-        if (pObject->pType == g_pDirectoryType)
-            PrintObjectTree(pObject, dwCurrentDepth + 1);
+        pDirectory = g_pRootDirectoryObject;
+        ArchPrintFormat(L"<root>\n");
+    }
+    else if (dwCurrentDepth == 0)
+    {
+        sObjectNamespaceExtension *pExtension = (sObjectNamespaceExtension *) ((PBYTE) pDirectory - sizeof(sObjectHeader) - sizeof(sObjectNamespaceExtension));
+        ArchPrintFormat(L"%S\n", pExtension->wsName.wszData);
     }
     
+    sObjectEnumerator sEnumerator = CreateObjectDirectoryEnumerator(pDirectory);
+    for (PVOID pObject = GetEnumeratedObject(&sEnumerator); pObject != NULL; pObject = GetEnumeratedObject(&sEnumerator))
+    {
+        ArchPrintChar('\xB3'); // │
+        ArchSetCursor(dwCurrentDepth * 2, ArchGetCursorY());
+
+        // if (i == pDirectory->lstChildren.qwLength - 1)
+        //     ArchPrintFormat(L"\xC0\xC4"); // └─
+        // else
+            ArchPrintFormat(L"\xC3\xC4"); // ├─
+        
+        sObjectHeader *pHeader = (sObjectHeader *) pObject - 1;
+        sObjectNamespaceExtension *pExtension = (sObjectNamespaceExtension *) pHeader - 1;
+        ArchPrintFormat(L"%S\n", pExtension->wsName.wszData);
+
+        if (pHeader->pObjectType == g_pObjectDirectoryType)
+            PrintObjectTree(pDirectory, dwCurrentDepth + 1);
+    }
 }
 
-void InitObjectManager()
+STATUS InitObjectManager()
 {
-    // Initialise the types
-    g_pDirectoryType = CreateType(L"Directory", sizeof(sObjectDirectory), DestroyDirectoryCallback);
-    
-    // Initialise the root object
-    g_pRootDirectoryObject                   = KHeapAlloc(sizeof(sObject));
-    g_pRootDirectoryObject->dwReferenceCount = 1;
-    g_pRootDirectoryObject->pType            = g_pDirectoryType;
-    g_pRootDirectoryObject->pParent          = NULL;
-    g_pRootDirectoryObject->pBody            = KHeapAlloc(sizeof(sObjectDirectory));
-    strncpyW(g_pRootDirectoryObject->wszName, L"<root>", 256);
+    // Initalise the Type type
+    sObjectHeader *pTypeObjectHeader = KHeapAlloc(sizeof(sObjectHeader) + sizeof(sObjectType));
+    pTypeObjectHeader->bExtensions = 0;
+    pTypeObjectHeader->pExtra = NULL;
+    pTypeObjectHeader->pObjectType = (sObjectType *) (pTypeObjectHeader + 1);
+    pTypeObjectHeader->qwNumHandles = 0;
+    pTypeObjectHeader->qwNumReferences = 1;
+    g_pObjectType = (sObjectType *) (pTypeObjectHeader + 1);
 
-    // Initialise the root directory
-    sObjectDirectory *pRootDirectory         = g_pRootDirectoryObject->pBody;
-    pRootDirectory->lstChildren              = CreateEmptyList(sizeof(sObject *));
+    g_pObjectType->wsName               = MakeString(L"Type");
+    g_pObjectType->qwObjectSize         = sizeof(sObjectType);
+    g_pObjectType->pDestroyCallback     = DestroyTypeCallback;
+    g_pObjectType->pParseCallback       = NULL;
+
+    STATUS s = CreateObject(g_pObjectType, NULL, sizeof(sObjectType), (PVOID *) &g_pObjectDirectoryType);
+    if (!_SUCCESSFUL(s))
+        return s;
+    
+    g_pObjectDirectoryType->pDestroyCallback     = DestroyDirectoryCallback;
+    g_pObjectDirectoryType->pParseCallback       = NULL;
+    g_pObjectDirectoryType->wsName               = MakeString(L"Directory");
+    g_pObjectDirectoryType->qwObjectSize         = sizeof(sObjectDirectory);
+
+    s = CreateObject(g_pObjectDirectoryType, NULL, sizeof(sObjectDirectory), (PVOID) &g_pRootDirectoryObject);
+    if (!_SUCCESSFUL(s))
+        return s;
+
+    ZeroMemory(g_pRootDirectoryObject->arrEntryBucket, sizeof(g_pRootDirectoryObject->arrEntryBucket));
+    g_pRootDirectoryObject->bFlags       = 0;
+    g_pRootDirectoryObject->dwNumEntries = 0;
+    g_pRootDirectoryObject->pLock        = NULL;
+    
+    // Initialise directories
+    s = CreateObjectDirectory(MakeString(L"ObjectTypes"), NULL, &g_pTypeDirectory);
+    if (!_SUCCESSFUL(s))
+        return s;
+
+    return NEOS_SUCCESS;
 }

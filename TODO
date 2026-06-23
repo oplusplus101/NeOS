@@ -1,18 +1,18 @@
-Make exceptions inside a driver not crash the entire kernel
+Write a proper README
+Redo the whole pager (add huge pages, a more efficient allocator for huge allocations, and redo the whole init function)
+Improve the LoaderReadFile function by caching sectors
+Completely redo the AHCI code
 Redo the boot process (comlpete overhaul of the 1st and possibly remove the 2nd stage bootloader, redo the drive abstraction, add a better way of finding the main partition)
-Add a neater way of making driver-to-kernel calls (Completely redo the kernel-driver interface)
+Make exceptions inside a driver not crash the entire kernel
 Replace sList with a different structure where appropriate to reduce heap overhead
 Add the build process of the drivers and libraries to CMakeLists.txt
 Fix process killing in the scheduler
 Rewrite/clean up the UEFI bootloader (Change UNIX types to Microsoft, make PE32+ code more efficient)
-Implement Dynamic Linked Libraries (DLLs) 
 Add a basic MS-DOS-like shell
-Clean up AHCI code
 Add support for multiple drives (AHCI)
 Document the whole codebase with comments
 Find a way to build the disk image without root
 Implement a neater way of dealing with paths
-Implement NVMe reading for the bootloader
 Implement a Windows-like registry
 Change the current filesystem (FAT-32) to a custom one
 Move all platform-specific code (GDT, IDT, TSS, etc.) over to a HAL-like interface

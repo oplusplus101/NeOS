@@ -6,7 +6,7 @@ EXPORTS
     KNeoLog=KNeoLog
     KNeoPrintChar=KNeoPrintChar
     KNeoPrintString=KNeoPrintString
-    KNeoCreateDevice=CreateDevice
+    KNeoCreateDevice=KNeoCreateDevice
     KNeoRegisterInterrupt=KNeoRegisterInterrupt
     KNeoHeapAllocate=KHeapAlloc
     KNeoHeapReAllocate=KHeapReAlloc
