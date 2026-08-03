@@ -351,6 +351,8 @@ void DestroyObjectByReference(PVOID pObject)
     if (pHeader->pObjectType->pDestroyCallback != NULL)
         pHeader->pObjectType->pDestroyCallback(pObject);
 
+    DereferenceObject(pHeader->pObjectType);
+
     if (pHeader->bExtensions == 0)
         KHeapFree(pHeader);
     else if (pHeader->bExtensions == OBJECT_EXT_NAMESPACE)
