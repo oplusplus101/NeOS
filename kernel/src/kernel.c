@@ -14,7 +14,7 @@
 #include <runtime/driver.h>
 #include <runtime/exe.h>
 #include <archimports.h>
-#include <ramfile.h>
+#include <file.h>
 
 #ifdef FUNCTION_INSTRUMENTATIONS
 
@@ -84,16 +84,12 @@ void SYSV KernelMain(sRAMFile *pRoot)
 #endif
 
     ArchLog(LOG_LOG, L"Kernel loaded!");
-    SetRoot(pRoot);
     
-    sHeap sKernelHeap;    
-    STATUS s = CreateHeap(NEOS_HEAP_SIZE, false, false, false, true, 16, (PVOID) MM_KERNEL_HEAP_START, &sKernelHeap);
-    _ASSERT(_SUCCESSFUL(s), L"Failed to create the heap [%08X]", s);
     SetKernelHeap(&sKernelHeap);
 
     ArchLog(LOG_LOG, L"Heap initialised!");
 
-    s = InitObjectManager();
+    STATUS s = InitObjectManager();
     _ASSERT(_SUCCESSFUL(s), L"Failed to initialise the object manager");
 
     // TODO: Move these into their own init function
@@ -107,6 +103,7 @@ void SYSV KernelMain(sRAMFile *pRoot)
 
     ArchLog(LOG_LOG, L"Object manager initialised");
     
+    InitialiseBootFiles(pRoot);
     // 10th of a millisecond per cycle
     InitProcessScheduler(1000);
     ArchLog(LOG_LOG, L"Process scheduler initialised");

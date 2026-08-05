@@ -7,7 +7,7 @@
 #include <io/io.h>
 #include <archimports.h>
 #include <neos.h>
-#include <ramfile.h>
+#include <file.h>
 
 sObjectType *g_pDriverType, *g_pDriverObjectType;
 

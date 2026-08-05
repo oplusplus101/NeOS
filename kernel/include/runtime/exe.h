@@ -5,7 +5,7 @@
 // #include <common/list.h>
 #include <runtime/objects.h>
 #include <common/exestructs.h>
-#include <ramfile.h>
+#include <file.h>
 
 typedef struct
 {

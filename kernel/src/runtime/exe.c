@@ -7,6 +7,7 @@
 #include <common/math.h>
 #include <memory/heap.h>
 #include <archimports.h>
+#include <file.h>
 
 sObjectType *g_pLibraryObjectType;
 sExecutableFunction *g_arrExportedKernelFunctions;
