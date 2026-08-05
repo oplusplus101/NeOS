@@ -36,6 +36,9 @@ typedef INT STATUS;
 
 typedef QWORD SIZE;
 
+typedef SIZE PHYSICAL_ADDRESS;
+typedef SIZE VIRTUAL_ADDRESS;
+
 #define true 1
 #define false 0
 #define TRUE 1
@@ -48,41 +51,18 @@ typedef QWORD SIZE;
 typedef QWORD (SYSV *ISR)(QWORD);
 typedef QWORD (SYSV *ESR)(QWORD, WORD);
 
-
-typedef struct
-{
-    QWORD qwRAX;
-    QWORD qwRBX;
-    QWORD qwRCX;
-    QWORD qwRDX;
-
-    QWORD qwR8;
-    QWORD qwR9;
-    QWORD qwR10;
-    QWORD qwR11;
-    QWORD qwR12;
-    QWORD qwR13;
-    QWORD qwR14;
-    QWORD qwR15;
-
-    QWORD qwRSI;
-    QWORD qwRDI;
-    QWORD qwRBP;
-
-    QWORD qwError;
-
-    QWORD qwRIP;
-    QWORD qwCS;
-    QWORD qwFlags;
-    QWORD qwRSP;
-    QWORD qwSS;
-} __attribute__((packed)) sCPUState;
-
 typedef struct
 {
     BYTE r, g, b;
 } sColour;
 
 #define _RGB(r, g, b) ((sColour) { (r), (g), (b) })
+
+
+#ifdef ARCH_EXE
+#define ARCH_FUNC
+#else
+#define ARCH_FUNC __declspec(dllimport)
+#endif
 
 #endif // __COMMON__TYPES_H

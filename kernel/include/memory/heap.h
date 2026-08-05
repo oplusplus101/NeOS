@@ -13,7 +13,8 @@
 #define _HEAP_FOOTER(h, align) ((sHeapFooter *) ((PBYTE) (h) + sizeof(sHeapHeader) + _HEAP_PADDING_SIZE((QWORD) (h), (align)) + (h)->qwSize))
 
 #define HEAP_PADDING_REDZONE_SEQUENCE 0x55
-#define HEAP_FOOTER_REDZONE_SEQUENCE 0xAA
+#define HEAP_FOOTER_REDZONE_SEQUENCE  0xAA
+#define HEAP_FREE_POISON_VALUE        0xDD
 #define HEAP_FOOTER_REDZONE_SIZE 16
 
 typedef struct _tagHeapHeader
@@ -32,7 +33,8 @@ typedef struct _tagHeapFooter
 typedef struct
 {
     sHeapHeader *pFirstChunk;
-    QWORD qwStart, qwSize;
+    VIRTUAL_ADDRESS Start;
+    SIZE  szLength;
     DWORD dwAlignment;
     QWORD qwFreeMemory;
     BOOL  bResizeable, bUser;
@@ -49,16 +51,16 @@ void   SetKernelHeap(sHeap *pHeap);
 sHeap *GetKernelHeap();
 
 /// @brief Creates a heap with the specified size and attributes
-/// @param qwSize The size in bytes
+/// @param szLength The length in bytes
 /// @param bUser User-mode heap
 /// @param bExecutable Executable heap
 /// @param bResizeable Can the heap grow or shrink
 /// @param bContinuous Will create a continuous heap mapped
 /// @param dwAlignment Must be a power of two (at least 8 bytes)
-/// @param pStart The virtual start address of the heap (will not work for an identity-mapped heap)
+/// @param Start The virtual start address of the heap
 /// @param pHeap The resulting heap object
 /// @return NEOS_SUCCESS upon success, an error code otherwise
-STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bExecutable, BOOL bResizeable, BOOL bContinuous, DWORD dwAlignment, PVOID pStart, sHeap *pHeap);
+STATUS CreateHeap(SIZE szLength, BOOL bUser, BOOL bExecutable, BOOL bResizeable, DWORD dwAlignment, VIRTUAL_ADDRESS Start, sHeap *pHeap);
 
 /// @brief Destroys the passed heap if nothing is allocated
 /// @param pHeap The heap to be destroyed
@@ -94,5 +96,7 @@ PVOID  HeapReAlloc(sHeap *pHeap, PVOID pMemory, QWORD qwNewSize);
 PVOID  MS KHeapAlloc(QWORD qwSize);
 void   MS KHeapFree(PVOID pMemory);
 PVOID  MS KHeapReAlloc(PVOID pMemory, QWORD qwSize);
+
+void WriteChunk(PVOID pStart, QWORD qwPayloadSize, sHeapHeader *pNext, BOOL bAllocated, DWORD dwAlignment);
 
 #endif // __MEMORY__HEAP_HH

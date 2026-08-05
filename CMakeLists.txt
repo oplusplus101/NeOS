@@ -9,8 +9,7 @@ set(ARCH_EXE      ARCH)
 set(ARCH_LIBRARY  libARCH.sys.a)
 set(KERNEL_EXE NeOS)
 set(KERNEL_LIBRARY libNeOS.sys.a)
-set(KERNEL_RUNTIME runtime)
-set(BASE_FLAGS -m64 -O0 -mno-avx -nostdlib -fno-builtin -fno-omit-frame-pointer -fno-exceptions -mno-stack-arg-probe -mno-red-zone -Wall -Wpedantic -Werror -fshort-wchar -Wl,--no-relax)
+set(BASE_FLAGS -m64 -O0 -mno-avx -nostdlib -fno-builtin -fno-omit-frame-pointer -fno-exceptions -mno-stack-arg-probe -mno-red-zone -fshort-wchar -Wl,--no-relax) # -Wall -Wpedantic -Werror -Wno-unused-local-typedef)
 
 set(TARGET_ARCH "x86_64_EFI" CACHE STRING "Target architecture/platform")
 
@@ -25,7 +24,6 @@ endif()
 message(STATUS "Building for architecture: ${TARGET_ARCH}")
 add_subdirectory(arch/${TARGET_ARCH})
 
-add_subdirectory(lib/kernel_runtime)
 add_subdirectory(lib/driver_runtime)
 
 add_subdirectory(kernel)

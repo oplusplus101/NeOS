@@ -1,5 +1,7 @@
 
 #include <memory/heap.h>
+#include <memory/mm.h>
+#include <memory/pmm.h>
 #include <common/panic.h>
 #include <common/memory.h>
 #include <archimports.h>
@@ -11,51 +13,49 @@
 #define LOG_GOODBYE 3
 
 sHeap *g_pKernelHeap;
-inline static void WriteChunk(PVOID pStart, QWORD qwPayloadSize, sHeapHeader *pNext, BOOL bAllocated, DWORD dwAlignment);
 
-STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bExecutable, BOOL bResizeable, BOOL bContinuous, DWORD dwAlignment, PVOID pStart, sHeap *pHeap)
+STATUS CreateHeap(SIZE szLength, BOOL bUser, BOOL bExecutable, BOOL bResizeable, DWORD dwAlignment, VIRTUAL_ADDRESS Start, sHeap *pHeap)
 {
     if (((dwAlignment) & ((dwAlignment) - 1)) && dwAlignment >= 8)
         return NEOS_INVALID_ARGUMENT | 0x40000;
 
-    pHeap->qwStart = (QWORD) pStart;
+    pHeap->Start = Start;
     pHeap->bUser = bUser;
 
-    if (bContinuous)
+    for (QWORD i = 0; i < szLength; i += PAGE_SIZE)
     {
-        PVOID pData = ArchAllocatePagesContinuous(_BYTES_TO_PAGES(qwSize));
-        if (pData == NULL) return NEOS_CREATE_HEAP_FAILURE | 0x100000;
-        ArchMapPages(NULL, pStart, pData, _BYTES_TO_PAGES(qwSize), (bUser ? PAGING_USERMODE : 0) | PAGING_WRITEABLE | (bExecutable ? PAGING_NOEXECUTE : 0), true);
-        ZeroMemory(pStart, qwSize);
-    }
-    else
-    {
-        for (QWORD i = 0; i < _BYTES_TO_PAGES(qwSize); i++)
+        PHYSICAL_ADDRESS Page = PMMAllocatePage();
+        if (Page == 0)
         {
-            PVOID pPage = ArchAllocatePage();
-            if (pPage == NULL)
+            // Free everything allocated until now
+            for (QWORD j = 0; j <= i; j += PAGE_SIZE)
             {
-                // Free everything allocated until now
-                for (QWORD j = 0; j <= i; j++)
-                {
-                    PVOID pAddress = ArchGetPhysicalAddress(NULL, (PVOID) ((QWORD) pStart + j * PAGE_SIZE));
-                    if (pAddress == NULL) continue;
-                    ArchFreePage(pAddress);
-                }
-                return NEOS_CREATE_HEAP_FAILURE | 0x200000;
+                PHYSICAL_ADDRESS Address;
+                WORD wFlags = ArchReadPageTableEntry(NULL, Start + j, &Address);
+                if (!(wFlags & PAGING_PRESENT)) continue;
+                PMMFreePage(Address);
             }
-            ArchMapPage(NULL, (PVOID) ((QWORD) pStart + i * PAGE_SIZE), pPage, (bUser ? PAGING_USERMODE : 0) | PAGING_WRITEABLE | (bExecutable ? PAGING_NOEXECUTE : 0), false);
+
+            _KERNEL_PANIC(L"Failed to create the kernels heap. Managed to allocate %u pages before failure", i / PAGE_SIZE);
         }
-        ArchRefreshPages();
-        ZeroMemory(pStart, qwSize);
+        
+        ArchMapPage(NULL, Start + i, Page,
+                          PAGING_WRITEABLE | PAGING_NOEXECUTE | PAGING_GLOBAL | PAGING_PRESENT, PMMAllocatePage);
+        ArchInvalidatePage(Start + i);
+
+        ZeroMemory((PBYTE) Start + i, PAGE_SIZE);
     }
+    
+
+    ArchRefreshPages();
+    ZeroMemory((PVOID) Start, szLength);
     pHeap->dwAlignment             = dwAlignment;
     pHeap->bResizeable             = bResizeable;
-    pHeap->qwSize                  = qwSize;
-    pHeap->qwFreeMemory            = qwSize - sizeof(sHeapHeader) - sizeof(sHeapFooter) - _HEAP_PADDING_SIZE(pHeap->qwStart, dwAlignment);
+    pHeap->szLength                = szLength;
+    pHeap->qwFreeMemory            = szLength - sizeof(sHeapHeader) - sizeof(sHeapFooter) - _HEAP_PADDING_SIZE(pHeap->Start, dwAlignment);
 
-    WriteChunk((PVOID) pHeap->qwStart, pHeap->qwFreeMemory, NULL, false, dwAlignment);
-    pHeap->pFirstChunk = (sHeapHeader *) pHeap->qwStart;
+    WriteChunk((PVOID) pHeap->Start, pHeap->qwFreeMemory, NULL, false, dwAlignment);
+    pHeap->pFirstChunk = (sHeapHeader *) pHeap->Start;
 
     return NEOS_SUCCESS;
 }
@@ -63,11 +63,12 @@ STATUS CreateHeap(QWORD qwSize, BOOL bUser, BOOL bExecutable, BOOL bResizeable, 
 
 STATUS DestroyHeap(sHeap *pHeap)
 {
-    for (QWORD i = 0; i < pHeap->qwSize; i++)
+    for (QWORD i = 0; i < pHeap->szLength; i++)
     {
-        PVOID pAddress = ArchGetPhysicalAddress(NULL, (PVOID) (pHeap->qwStart + i * PAGE_SIZE));
-        if (pAddress == NULL) continue;
-        ArchFreePage(pAddress);
+        PHYSICAL_ADDRESS Address;
+        WORD wFlags = ArchReadPageTableEntry(NULL, pHeap->Start + i * PAGE_SIZE, &Address);
+        if (!(wFlags & PAGING_PRESENT)) continue;
+        PMMFreePage(Address);
     }
     return NEOS_SUCCESS;
 }
@@ -82,10 +83,10 @@ sHeap *GetKernelHeap()
     return g_pKernelHeap;
 }
 
-PVOID MS KHeapAlloc(QWORD qwSize)
+PVOID MS KHeapAlloc(QWORD szLength)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
-    return HeapAlloc(g_pKernelHeap, qwSize);
+    return HeapAlloc(g_pKernelHeap, szLength);
 }
 
 void MS KHeapFree(PVOID pMemory)
@@ -94,50 +95,51 @@ void MS KHeapFree(PVOID pMemory)
     HeapFree(g_pKernelHeap, pMemory);
 }
 
-PVOID MS KHeapReAlloc(PVOID pMemory, QWORD qwSize)
+PVOID MS KHeapReAlloc(PVOID pMemory, QWORD szLength)
 {
     _ASSERT(g_pKernelHeap, L"Kernel heap not set");
-    return HeapReAlloc(g_pKernelHeap, pMemory, qwSize);
+    return HeapReAlloc(g_pKernelHeap, pMemory, szLength);
 }
 
 STATUS ResizeHeap(sHeap *pHeap, QWORD qwNewSize)
 {
-    if (!pHeap->bResizeable || pHeap->qwSize == qwNewSize) return NEOS_FAILURE;
+    if (!pHeap->bResizeable || pHeap->szLength == qwNewSize) return NEOS_FAILURE;
 
     // The heap gets expanded
-    if (qwNewSize > pHeap->qwSize)
-        for (QWORD i = 0; i < _BYTES_TO_PAGES(qwNewSize - pHeap->qwSize); i++)
+    if (qwNewSize > pHeap->szLength)
+        for (QWORD i = 0; i < _BYTES_TO_PAGES(qwNewSize - pHeap->szLength); i++)
         {
-            PVOID pPage = ArchAllocatePage();
+            PHYSICAL_ADDRESS Page = PMMAllocatePage();
             // TODO: Free each page allocated within this loop upon failure
-            if (pPage == NULL)
+            if (Page == 0)
                 return NEOS_ALLOCATION_FAILURE;
-            ArchMapPage(NULL, (PVOID) (pHeap->qwStart + pHeap->qwSize + i * PAGE_SIZE), pPage, PAGING_WRITEABLE | (pHeap->bUser ? PAGING_USERMODE : 0), false);
+            ArchMapPage(NULL, pHeap->Start + pHeap->szLength + i * PAGE_SIZE, Page, PAGING_WRITEABLE | (pHeap->bUser ? PAGING_USERMODE : 0), false);
         }
 
     // The heap gets shrunk
     else
     {
         // First check if the size is too small
-        QWORD qwStart = 0;
+        QWORD Start = 0;
         for (sHeapHeader *pHeader = pHeap->pFirstChunk;
              pHeader != NULL;
              pHeader = pHeader->pNext,
-             qwStart += sizeof(sHeapHeader) + pHeader->qwSize + sizeof(sHeapFooter))
+             Start += sizeof(sHeapHeader) + pHeader->qwSize + sizeof(sHeapFooter))
         {
-            if (qwStart + pHeader->qwSize + sizeof(sHeapFooter) >= qwNewSize && !pHeader->bAllocated)
+            if (Start + pHeader->qwSize + sizeof(sHeapFooter) >= qwNewSize && !pHeader->bAllocated)
                 return NEOS_OUT_OF_BOUNDS;
         }
 
-        for (QWORD i = 0; i < pHeap->qwSize - qwNewSize; i++)
+        for (QWORD i = 0; i < pHeap->szLength - qwNewSize; i++)
         {
-            PVOID pAddress = ArchGetPhysicalAddress(NULL, (PVOID) (pHeap->qwStart + qwNewSize * PAGE_SIZE + i * PAGE_SIZE));
-            if (pAddress == NULL) continue;
-            ArchFreePage(pAddress);
+            PHYSICAL_ADDRESS Address;
+            WORD wFlags = ArchReadPageTableEntry(NULL, pHeap->Start + qwNewSize * PAGE_SIZE + i * PAGE_SIZE, &Address);
+            if (!(wFlags & PAGING_PRESENT)) continue;
+            PMMFreePage(Address);
         }
     }
 
-    pHeap->qwSize = qwNewSize;
+    pHeap->szLength = qwNewSize;
 
     return NEOS_SUCCESS;
 }
@@ -147,18 +149,18 @@ inline static BOOL CheckChunkIntegrity(sHeap *pHeap, sHeapHeader *pHeader, BOOL 
 {
     BOOL bStatus = true;
     // Check whether the chunk is within bounds
-    if ((QWORD) pHeader < pHeap->qwStart || (QWORD) pHeader - sizeof(sHeapHeader) >= pHeap->qwStart + pHeap->qwSize)
+    if ((QWORD) pHeader < pHeap->Start || (QWORD) pHeader - sizeof(sHeapHeader) >= pHeap->Start + pHeap->szLength)
     {
-        ArchLog(LOG_WARNING, L"Chunk 0x%p is out of bounds in heap 0x%p starting at 0x%p with size %u bytes", pHeader, pHeap, pHeap->qwStart, pHeap->qwSize);
+        ArchLog(LOG_WARNING, L"Chunk 0x%p is out of bounds in heap 0x%p starting at 0x%p with size %u bytes", pHeader, pHeap, pHeap->Start, pHeap->szLength);
         bStatus = false;
         if (!bCheckAll) return false;
     }
 
     // Check whether the chunk is bigger than the heap
     QWORD qwPaddingSize = _HEAP_PADDING_SIZE((QWORD) pHeader, pHeap->dwAlignment);
-    if (pHeader->qwSize > pHeap->qwSize - sizeof(sHeapHeader) - sizeof(sHeapFooter) - qwPaddingSize)
+    if (pHeader->qwSize > pHeap->szLength - sizeof(sHeapHeader) - sizeof(sHeapFooter) - qwPaddingSize)
     {
-        ArchLog(LOG_WARNING, L"Chunk 0x%p is bigger than the heap 0x%p, size: %u bytes, heap size: %u bytes", pHeader, pHeap, pHeader->qwSize + sizeof(sHeapHeader) + sizeof(sHeapFooter) + qwPaddingSize, pHeap->qwSize);
+        ArchLog(LOG_WARNING, L"Chunk 0x%p is bigger than the heap 0x%p, size: %u bytes, heap size: %u bytes", pHeader, pHeap, pHeader->qwSize + sizeof(sHeapHeader) + sizeof(sHeapFooter) + qwPaddingSize, pHeap->szLength);
         bStatus = false;
         if (!bCheckAll) return false;
     }
@@ -237,7 +239,7 @@ BOOL CheckHeapIntegrity(sHeap *pHeap)
 }
 
 // Writes all the necessary metadata into a chunk without overwriting the payload.
-inline static void WriteChunk(PVOID pStart, QWORD qwPayloadSize, sHeapHeader *pNext, BOOL bAllocated, DWORD dwAlignment)
+void WriteChunk(PVOID pStart, QWORD qwPayloadSize, sHeapHeader *pNext, BOOL bAllocated, DWORD dwAlignment)
 {
     // Header
     sHeapHeader *pHeader = pStart;
@@ -295,17 +297,17 @@ inline static sHeapHeader *SplitChunk(sHeapHeader *pFirstHeader, QWORD qwFirstSi
     return pSecondHeader;
 }
 
-PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
+PVOID HeapAlloc(sHeap *pHeap, QWORD szLength)
 {
                                                 //  Minimum padding size
-    if (pHeap->qwFreeMemory < sizeof(sHeapHeader) + sizeof(PVOID) + qwSize + sizeof(sHeapFooter) || qwSize == 0)
+    if (pHeap->qwFreeMemory < sizeof(sHeapHeader) + sizeof(PVOID) + szLength + sizeof(sHeapFooter) || szLength == 0)
         return NULL;
 
     sHeapHeader *pResult = NULL;
 
-    for (sHeapHeader *pChunk = pHeap->pFirstChunk; pChunk != 0 && pResult == 0; pChunk = pChunk->pNext)
+    for (sHeapHeader *pChunk = pHeap->pFirstChunk; pChunk != NULL && pResult == NULL; pChunk = pChunk->pNext)
     {
-        if (pChunk->qwSize >= qwSize && !pChunk->bAllocated)
+        if (pChunk->qwSize >= szLength && !pChunk->bAllocated)
         {
             // TODO: Actually fix the chunk (perhaps with by adding it to a list of corrupted chunks or directly in the HeapAlloc routine or if absolutely necessary just crash)
             if (!CheckChunkIntegrity(pHeap, pChunk, false)) continue;
@@ -317,16 +319,16 @@ PVOID HeapAlloc(sHeap *pHeap, QWORD qwSize)
     
     if (pResult == NULL)
     {
-        ArchLog(LOG_ERROR, L"Couldn't find a chunk to allocate %u bytes", qwSize);
+        ArchLog(LOG_ERROR, L"Couldn't find a chunk to allocate %u bytes", szLength);
         return NULL;
     }
 
-    if (_HEAP_CHUNK_SIZE((QWORD) pResult, qwSize, pHeap->dwAlignment) <
+    if (_HEAP_CHUNK_SIZE((QWORD) pResult, szLength, pHeap->dwAlignment) <
         _HEAP_CHUNK_SIZE((QWORD) pResult, pResult->qwSize, pHeap->dwAlignment))
-        SplitChunk(pResult, qwSize, pHeap->dwAlignment);
+        SplitChunk(pResult, szLength, pHeap->dwAlignment);
     
     // The chunk size must be recalculated, as SplitChunk could have changed it.
-    pHeap->qwFreeMemory -= _HEAP_CHUNK_SIZE((QWORD) pResult, qwSize, pHeap->dwAlignment);
+    pHeap->qwFreeMemory -= _HEAP_CHUNK_SIZE((QWORD) pResult, szLength, pHeap->dwAlignment);
     pResult->bAllocated = true;
 
     return (PBYTE) pResult + sizeof(sHeapHeader) + _HEAP_PADDING_SIZE((QWORD) pResult, pHeap->dwAlignment);
@@ -353,14 +355,14 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
         return;
     }
 
-    if ((QWORD) pMemory - sizeof(sHeapHeader) < pHeap->qwStart || (QWORD) pMemory >= pHeap->qwStart + pHeap->qwSize)
+    if ((QWORD) pMemory - sizeof(sHeapHeader) < pHeap->Start || (QWORD) pMemory >= pHeap->Start + pHeap->szLength)
     {
-        ArchLog(LOG_ERROR, L"Tried to free memory address 0x%p outside heap 0x%p, start 0x%p, end 0x%p", pMemory, pHeap, pHeap->pFirstChunk, (QWORD) pHeap->pFirstChunk + pHeap->qwSize);
+        ArchLog(LOG_ERROR, L"Tried to free memory address 0x%p outside heap 0x%p, start 0x%p, end 0x%p", pMemory, pHeap, pHeap->pFirstChunk, (QWORD) pHeap->pFirstChunk + pHeap->szLength);
         return;
     }
     
     sHeapHeader *pHeader = *((sHeapHeader **) ((PBYTE) pMemory - sizeof(PVOID)));
-    if ((QWORD) pHeader < pHeap->qwStart || (QWORD) pHeader >= pHeap->qwStart + pHeap->qwSize - sizeof(sHeapHeader *))
+    if ((QWORD) pHeader < pHeap->Start || (QWORD) pHeader >= pHeap->Start + pHeap->szLength - sizeof(sHeapHeader *))
     {
         ArchLog(LOG_ERROR, L"Got invalid header pointer 0x%p from payload 0x%p in heap 0x%p", pHeader, pMemory, pHeap);
         return;
@@ -377,6 +379,7 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
         return;
     
     // Free the chunk
+    memset(pMemory, HEAP_FREE_POISON_VALUE, pHeader->qwSize);
     pHeap->qwFreeMemory += _HEAP_CHUNK_SIZE((QWORD) pHeader, pHeader->qwSize, pHeap->dwAlignment);
     pHeader->bAllocated   = false;
 
@@ -384,17 +387,17 @@ void HeapFree(sHeap *pHeap, PVOID pMemory)
 
     // Check if the footer is out of bounds.
     // This could either mean the chunk is invalid/corrupted or the first chunk.
-    if ((QWORD) pPreviousFooter < pHeap->qwStart)
+    if ((QWORD) pPreviousFooter < pHeap->Start)
         goto SkipMergePreviousChunk;
     
     // Sanity check
-    if (pPreviousFooter->qwSize >= pHeap->qwSize)
+    if (pPreviousFooter->qwSize >= pHeap->szLength)
     {
         ArchLog(LOG_WARNING, L"Corrupt footer at 0x%p size %u", pPreviousFooter, pPreviousFooter->qwSize);
         return;
     }
 
-    sHeapHeader *pPreviousChunk = *((sHeapHeader **) ((PBYTE) pPreviousFooter - pPreviousFooter->qwSize - sizeof(sHeapHeader *)));
+    sHeapHeader *pPreviousChunk = *((sHeapHeader **) ((PBYTE) pPreviousFooter - pPreviousFooter->qwSize- sizeof(sHeapHeader *)));
 
     // Ensure the header is inside the heap
     if (!pPreviousChunk->bAllocated)

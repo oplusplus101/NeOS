@@ -48,7 +48,7 @@
 #define NEOS_FOREGROUND_COLOUR       _RGB(168, 168, 168)
 #define NEOS_ERROR_COLOUR            _RGB(255, 0, 0)
 #define NEOS_MINIMUM_RAM_SIZE        (1024 * 1024 * 1024 * 1) // 1 GiB minimum ram
-#define NEOS_HEAP_SIZE               (1024 * 1024 * 64)       // 64 MiB heap
+#define NEOS_INITIAL_HEAP_SIZE       (1024 * 1024 * 2)        // 2 MiB heap
 #define NEOS_STACK_SIZE              (1024 * 64)              // 64 KiB stack
 
 // Memory map
