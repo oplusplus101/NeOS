@@ -114,6 +114,9 @@ void SYSV KernelMain(sRAMFile *pRoot)
     InitIOManager();
     ArchLog(LOG_LOG, L"I/O manager initialised");
 
+    InitialiseSyscalls();
+    ArchLog(LOG_LOG, L"User-mode system calls initialised");
+    
     InitExecutableLoader();
 
     ArchLog(LOG_LOG, L"Loading drivers...");
