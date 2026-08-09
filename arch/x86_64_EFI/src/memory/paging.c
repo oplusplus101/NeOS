@@ -4,16 +4,15 @@
 #include <msr.h>
 #include <common/memory.h>
 #include <io/screen.h>
+#include <io/log.h>
 #include <common/math.h>
+#include <common/panic.h>
 
-
-typedef QWORD PTE;
-typedef PTE *PageTable;
-
+PageTable g_pKernelPML4;
 PageTable g_pPML4;
 
-PBYTE g_arrBitmap;
-QWORD g_qwBitmapSize;
+PBYTE g_arrPageBitmap;
+QWORD g_qwBitmapLength;
 
 #pragma region Utilities
 
@@ -33,42 +32,75 @@ inline static void _DisableWriteProtect()
     __asm__ volatile ("mov %0, %%cr0" : : "r"(cr0) : "memory");
 }
 
-inline static void _ReservePage(PVOID pPage)
+WORD _ToAbstractFlags(PTE pte)
 {
-    QWORD qwIndex = ((QWORD) pPage / PAGE_SIZE) / 8;
-    if (qwIndex >= g_qwBitmapSize) return;
-    g_arrBitmap[qwIndex] |= 1 << (((QWORD) pPage / PAGE_SIZE) % 8);
+    return (pte & 0x0FFF) | (pte & PF_NOEXECUTE ? PAGING_NOEXECUTE : 0);
 }
 
-inline static void _ReturnPage(PVOID pPage)
+PTE _ToNativeFlags(WORD w)
 {
-    QWORD qwIndex = ((QWORD) pPage / PAGE_SIZE) / 8;
-    if (qwIndex >= g_qwBitmapSize) return;
-    g_arrBitmap[qwIndex] &= ~(1 << (((QWORD) pPage / PAGE_SIZE) % 8));
+    return (w & 0x0FFF) | (w & PAGING_NOEXECUTE ? PF_NOEXECUTE : 0);
 }
 
-inline static BOOL _IsReserved(PVOID pPage)
+inline static BOOL _IsReserved(PHYSICAL_ADDRESS Page)
 {
-    return (g_arrBitmap[(QWORD) pPage / PAGE_SIZE / 8] & (1 << (((QWORD) pPage / PAGE_SIZE) % 8))) != 0;
+    Page /= PAGE_SIZE;
+    return (g_arrPageBitmap[Page / 8] & (1 << Page % 8)) != 0;
 }
 
-inline static void _ReservePages(PVOID pPage, QWORD qwNumberOfPages)
+inline static void _ReservePage(PHYSICAL_ADDRESS Page)
+{
+    Page /= PAGE_SIZE;
+    QWORD qwIndex = Page / 8;
+    if (qwIndex >= g_qwBitmapLength) return;
+    g_arrPageBitmap[qwIndex] |= 1 << (Page % 8);
+}
+
+inline static void _ReturnPage(PHYSICAL_ADDRESS Page)
+{
+    Page /= PAGE_SIZE;
+    QWORD qwIndex = Page / 8;
+    if (qwIndex >= g_qwBitmapLength) return;
+    g_arrPageBitmap[qwIndex] &= ~(1 << (Page % 8));
+}
+
+
+inline static void _ReservePages(PHYSICAL_ADDRESS Page, QWORD qwNumberOfPages)
 {
     for (QWORD i = 0; i < qwNumberOfPages; i++)
-        _ReservePage((PVOID) ((QWORD) pPage + i * PAGE_SIZE));
+        _ReservePage(Page + i * PAGE_SIZE);
 }
 
-inline static void _ReturnPages(PVOID pPage, QWORD qwNumberOfPages)
+
+PHYSICAL_ADDRESS SYSV _AllocatePage()
 {
-    for (QWORD i = 0; i < qwNumberOfPages; i++)
-        _ReturnPage((PVOID) ((QWORD) pPage + i * PAGE_SIZE));
+    static PHYSICAL_ADDRESS Offset = 0;
+    PHYSICAL_ADDRESS Address = 0;
+    for (; Offset < g_qwBitmapLength * 8; Offset++)
+        if (!_IsReserved(Offset * PAGE_SIZE))
+        {
+            Address = Offset * PAGE_SIZE;
+            break;
+        }
+
+    if (Address == 0)
+    {
+        // Try again from the start
+        Offset = 0;
+        return _AllocatePage();
+    }
+
+    Offset++;
+
+    _ReservePage(Address);
+    return Address;
 }
 
 #pragma endregion
 
-void SYSV ArchInvalidatePage(PVOID pPage)
+void SYSV ArchInvalidatePage(VIRTUAL_ADDRESS Page)
 {
-    __asm__ volatile ("invlpg (%0)" :: "r"(pPage) : "memory");
+    __asm__ volatile ("invlpg (%0)" :: "r"(Page) : "memory");
 }
 
 void SYSV ArchLoadPageTable(PVOID pPageTablePhysical)
@@ -82,46 +114,48 @@ void SYSV ArchRefreshPages()
     __asm__ volatile ("mov %%cr3, %%rax\nmov %%rax, %%cr3" : : : "rax");
 }
 
-void SYSV ArchMapHugePage(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, BYTE bFlags, BOOL bRefreshPage)
+void SYSV ArchMapHugePage(PVOID pPageTable, VIRTUAL_ADDRESS VirtualAddress, PHYSICAL_ADDRESS PhysicalAddress, BYTE bFlags, PageAllocatorFunction pAllocator)
 {
     if (pPageTable == NULL)
         pPageTable = PML4_VIRT;
 
     _DisableWriteProtect();
         
-    pPhysicalAddress = (PVOID) _ALIGN_TO_HUGE_PAGE(pPhysicalAddress);
-    pVirtualAddress  = (PVOID) _ALIGN_TO_HUGE_PAGE(pVirtualAddress);
+    PhysicalAddress = _ALIGN_TO_HUGE_PAGE(PhysicalAddress);
+    VirtualAddress  = _ALIGN_TO_HUGE_PAGE(VirtualAddress);
 
     PageTable arrPML4 = pPageTable;
     // Page Directory Page Table
-    PTE *pEntry = &arrPML4[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)];
+    PTE *pEntry = &arrPML4[_ADDRESS_TO_PML4_INDEX(VirtualAddress)];
     PageTable arrPDPT;
     if (!(*pEntry & PF_PRESENT))
     {
-        arrPDPT = ArchAllocatePage();
+        arrPDPT = (PVOID) pAllocator();
+        _ASSERT(arrPDPT != 0, L"Could not allocate memory for arrPDPT");
         ZeroMemory(arrPDPT, PAGE_SIZE);
-        *pEntry = _ALIGN_TO_PAGE(arrPDPT) | PF_PRESENT | PF_ACCESSED | PF_DIRTY | PF_WRITEABLE;
-        arrPML4[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)] = *pEntry;
+        *pEntry = _ALIGN_TO_PAGE(arrPDPT) | PF_PRESENT | PF_WRITEABLE;
+        arrPML4[_ADDRESS_TO_PML4_INDEX(VirtualAddress)] = *pEntry;
     }
     else
         arrPDPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Directory
-    pEntry = &arrPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)];
+    pEntry = &arrPDPT[_ADDRESS_TO_PDPT_INDEX(VirtualAddress)];
     PageTable arrPD;
     if (!(*pEntry & PF_PRESENT))
     {
-        arrPD = ArchAllocatePage();
+        arrPD = (PVOID) pAllocator();
+        _ASSERT(arrPD != 0, L"Could not allocate memory for arrPD");
         ZeroMemory(arrPD, PAGE_SIZE);
-        *pEntry = _ALIGN_TO_PAGE(arrPD) | PF_PRESENT | PF_ACCESSED | PF_DIRTY | PF_WRITEABLE;
-        arrPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)] = *pEntry;
+        *pEntry = _ALIGN_TO_PAGE(arrPD) | PF_PRESENT | PF_WRITEABLE;
+        arrPDPT[_ADDRESS_TO_PDPT_INDEX(VirtualAddress)] = *pEntry;
     }
     else
         arrPD = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
-    pEntry = &arrPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
+    pEntry = &arrPD[_ADDRESS_TO_PD_INDEX(VirtualAddress)];
     if (*pEntry & PF_PRESENT && !(*pEntry & PF_PAGETABLEATTRIBUTE))
-        ArchFreePage((PVOID) (*pEntry & 0x000FFFFFFFFFF000));
+        _ReturnPage(*pEntry & 0x000FFFFFFFFFF000);
 
     WORD wFlags = 0;
     if (bFlags & PAGING_WRITEABLE) wFlags |= PF_WRITEABLE;
@@ -129,85 +163,101 @@ void SYSV ArchMapHugePage(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysic
     if (bFlags & PAGING_USERMODE)  wFlags |= PF_USER;
     if (bFlags & PAGING_GLOBAL)    wFlags |= PF_GLOBAL;
     
-    *pEntry = _ALIGN_TO_HUGE_PAGE(pPhysicalAddress) | PF_PRESENT | PF_PAGETABLEATTRIBUTE | (wFlags & 0x0FFF) | (bFlags & PAGING_NOEXECUTE ? PF_NOEXECUTE : 0);
+    *pEntry = _ALIGN_TO_HUGE_PAGE(PhysicalAddress) | PF_PRESENT | PF_PAGETABLEATTRIBUTE | (wFlags & 0x0FFF) | (bFlags & PAGING_NOEXECUTE ? PF_NOEXECUTE : 0);
 
     _EnableWriteProtect();
-
-    if (bRefreshPage)
-        ArchInvalidatePage(pVirtualAddress);
 }
 
-void _MapPageInternal(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, WORD wFlagsNative, BOOL bNoExecute)
+void _WritePTE4KiB(PVOID pPageTable, VIRTUAL_ADDRESS VirtualAddress, PTE pte, PageAllocatorFunction pAllocator)
 {
     _DisableWriteProtect();
     PageTable arrPML4 = pPageTable;
 
     // Page Directory Page Table
-    PTE *pEntry = &arrPML4[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)];
+    PTE *pEntry = &arrPML4[_ADDRESS_TO_PML4_INDEX(VirtualAddress)];
+    if (pte & PF_USER)
+        *pEntry |= PF_USER;
+    else
+        *pEntry &= ~PF_USER;
+
     PageTable arrPDPT;
     if (!(*pEntry & PF_PRESENT))
     {
-        arrPDPT = ArchAllocatePage();
+        arrPDPT = (PageTable) pAllocator();
+        _ASSERT(arrPDPT != 0, L"Could not allocate memory for arrPDPT");
         ZeroMemory(arrPDPT, PAGE_SIZE);
-        *pEntry = _ALIGN_TO_PAGE(arrPDPT) | PF_PRESENT | PF_ACCESSED | PF_DIRTY | PF_WRITEABLE;
-        arrPML4[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)] = *pEntry;
+        *pEntry = _ALIGN_TO_PAGE(arrPDPT) | PF_PRESENT | PF_WRITEABLE | (pte & PF_USER);
+        arrPML4[_ADDRESS_TO_PML4_INDEX(VirtualAddress)] = *pEntry;
     }
     else
         arrPDPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Directory
-    pEntry = &arrPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)];
+    pEntry = &arrPDPT[_ADDRESS_TO_PDPT_INDEX(VirtualAddress)];
+    if (pte & PF_USER)
+        *pEntry |= PF_USER;
+    else
+        *pEntry &= ~PF_USER;
+
     PageTable arrPD;
     if (!(*pEntry & PF_PRESENT))
     {
-        arrPD = ArchAllocatePage();
+        arrPD = (PageTable) pAllocator();
+        _ASSERT(arrPD != 0, L"Could not allocate memory for arrPD");
         ZeroMemory(arrPD, PAGE_SIZE);
-        *pEntry = _ALIGN_TO_PAGE(arrPD) | PF_PRESENT | PF_ACCESSED | PF_DIRTY | PF_WRITEABLE;
-        arrPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)] = *pEntry;
+        *pEntry = _ALIGN_TO_PAGE(arrPD) | PF_PRESENT | PF_WRITEABLE | (pte & PF_USER);
+        arrPDPT[_ADDRESS_TO_PDPT_INDEX(VirtualAddress)] = *pEntry;
     }
     else
         arrPD = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Table
-    pEntry = &arrPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
+    pEntry = &arrPD[_ADDRESS_TO_PD_INDEX(VirtualAddress)];
+    if (pte & PF_USER)
+        *pEntry |= PF_USER;
+    else
+        *pEntry &= ~PF_USER;
+
     PageTable arrPT;
     if (!(*pEntry & PF_PRESENT))
     {
-        arrPT = ArchAllocatePage();
+        arrPT = (PageTable) pAllocator();
+        _ASSERT(arrPT != 0, L"Could not allocate memory for arrPT");
         ZeroMemory(arrPT, PAGE_SIZE);
-        *pEntry = _ALIGN_TO_PAGE(arrPT) | PF_PRESENT | PF_ACCESSED | PF_DIRTY | PF_WRITEABLE;
-        arrPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)] = *pEntry;
+        *pEntry = _ALIGN_TO_PAGE(arrPT) | PF_PRESENT | PF_WRITEABLE | (pte & PF_USER);
+        arrPD[_ADDRESS_TO_PD_INDEX(VirtualAddress)] = *pEntry;
     }
     else
         arrPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
-    pEntry = &arrPT[_ADDRESS_TO_PT_INDEX(pVirtualAddress)];
-    *pEntry = _ALIGN_TO_PAGE(pPhysicalAddress) | PF_PRESENT | wFlagsNative | ((bNoExecute & PAGING_NOEXECUTE) ? PF_NOEXECUTE : 0);
+    arrPT[_ADDRESS_TO_PT_INDEX(VirtualAddress)] = pte;
 
     _EnableWriteProtect();
 }
 
-void SYSV ArchMapPage(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, BYTE bFlags, BOOL bRefreshPage)
+void SYSV ArchMapPage(PVOID pPageTable, VIRTUAL_ADDRESS VirtualAddress, PHYSICAL_ADDRESS PhysicalAddress, WORD wFlags, PageAllocatorFunction pAllocator)
 {
+    if (!(wFlags & PAGING_PRESENT))
+        _KERNEL_PANIC(L"PAGING_PRESENT not specified in ArchMapPage");
+    
     if (pPageTable == NULL)
         pPageTable = PML4_VIRT;
     
-    PageTable arrPML4 = pPageTable;
-    pPhysicalAddress = (PVOID) _ALIGN_TO_PAGE(pPhysicalAddress);
-    pVirtualAddress  = (PVOID) _ALIGN_TO_PAGE(pVirtualAddress);
+    PhysicalAddress = _ALIGN_TO_PAGE(PhysicalAddress);
+    VirtualAddress  = _ALIGN_TO_PAGE(VirtualAddress);
 
     // Page Directory Pointer
-    PTE *pEntry = &arrPML4[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)];
+    PTE *pEntry = &((PageTable) pPageTable)[_ADDRESS_TO_PML4_INDEX(VirtualAddress)];
     if (!(*pEntry & PF_PRESENT)) goto SkipPageFixup;
     PageTable arrPDPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Directory
-    pEntry = &arrPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)];
+    pEntry = &arrPDPT[_ADDRESS_TO_PDPT_INDEX(VirtualAddress)];
     if (!(*pEntry & PF_PRESENT)) goto SkipPageFixup;
     PageTable arrPD = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
     
     // Page Table
-    pEntry = &arrPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
+    pEntry = &arrPD[_ADDRESS_TO_PD_INDEX(VirtualAddress)];
     if (!(*pEntry & PF_PAGETABLEATTRIBUTE)) goto SkipPageFixup;
 
     if (*pEntry & PF_PAGETABLEATTRIBUTE) // For huge pages
@@ -217,42 +267,26 @@ void SYSV ArchMapPage(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAd
         BOOL bNoExecute                = (*pEntry & PF_NOEXECUTE) != 0;
         wPreviousFlags &= ~PF_PAGETABLEATTRIBUTE;
 
-        PageTable arrPT = ArchAllocatePage();
+        PageTable arrPT = (PVOID) pAllocator();
+        _ASSERT(arrPT != 0, L"Could not allocate memory for PageTable");
         ZeroMemory(arrPT, PAGE_SIZE);
 
         for (QWORD i = 0; i < HUGE_PAGE_SIZE / PAGE_SIZE; i++)
         {
-            if (_ALIGN_TO_PAGE(pVirtualAddress) == _ALIGN_TO_HUGE_PAGE(pVirtualAddress) + i * PAGE_SIZE) continue; // Skip this page
-            arrPT[i] = _ALIGN_TO_PAGE(_ALIGN_TO_HUGE_PAGE(pPreviousPhysicalAddress) + i * PAGE_SIZE) | PF_PRESENT | wPreviousFlags | (bNoExecute ? PF_NOEXECUTE : 0);
+            if (_ALIGN_TO_PAGE(VirtualAddress) == _ALIGN_TO_HUGE_PAGE(VirtualAddress) + i * PAGE_SIZE) continue; // Skip this page
+            arrPT[i] = _ALIGN_TO_PAGE(_ALIGN_TO_HUGE_PAGE(pPreviousPhysicalAddress) + i * PAGE_SIZE) | wPreviousFlags | (bNoExecute ? PF_NOEXECUTE : 0);
         }
 
-        *pEntry = _ALIGN_TO_PAGE(arrPT) | PF_PRESENT | PF_ACCESSED | PF_DIRTY | PF_WRITEABLE;
-        arrPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)] = *pEntry;
+        *pEntry = _ALIGN_TO_PAGE(arrPT) | PF_PRESENT | PF_WRITEABLE;
+        arrPD[_ADDRESS_TO_PD_INDEX(VirtualAddress)] = *pEntry;
     }
 
 SkipPageFixup:
-    WORD wFlags = 0;
-    if (bFlags & PAGING_WRITEABLE) wFlags |= PF_WRITEABLE;
-    if (bFlags & PAGING_UNCACHED)  wFlags |= PF_CACHEDISABLE;
-    if (bFlags & PAGING_USERMODE)  wFlags |= PF_USER;
-    if (bFlags & PAGING_GLOBAL)    wFlags |= PF_GLOBAL;
 
-    _MapPageInternal(pPageTable, pVirtualAddress, pPhysicalAddress, wFlags, bFlags & PAGING_NOEXECUTE);
-
-    if (bRefreshPage)
-        ArchInvalidatePage(pVirtualAddress);
+    _WritePTE4KiB(pPageTable, VirtualAddress, _ToNativeFlags(wFlags) | (PhysicalAddress & ~(PAGE_SIZE - 1)), pAllocator);
 }
 
-void SYSV ArchMapPages(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwNumberOfPages, BYTE bFlags, BYTE bRefreshPage)
-{
-    for (QWORD i = 0; i < qwNumberOfPages; i++)
-        ArchMapPage(pPageTable, (PBYTE) pVirtualAddress + i * PAGE_SIZE, (PBYTE) pPhysicalAddress + i * PAGE_SIZE, bFlags, false);
-
-    if (bRefreshPage)
-        ArchRefreshPages();
-}
-
-void SYSV ArchUnMapPage(PVOID pPageTable, PVOID pVirtualAddress, BOOL bRefreshPage)
+void SYSV ArchUnMapPage(PVOID pPageTable, PVOID pVirtualAddress)
 {
     if (pPageTable == NULL)
         pPageTable = PML4_VIRT;
@@ -261,34 +295,31 @@ void SYSV ArchUnMapPage(PVOID pPageTable, PVOID pVirtualAddress, BOOL bRefreshPa
 
     // Page Directory Pointer
     PTE *pEntry = &((PageTable) pPageTable)[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)];
-    if (!(*pEntry & PF_PRESENT)) goto ArchUnMapPageExit;
+    if (!(*pEntry & PF_PRESENT)) return;
     PageTable pPDPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Directory
     pEntry = &pPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)];
-    if (!(*pEntry & PF_PRESENT)) goto ArchUnMapPageExit;
+    if (!(*pEntry & PF_PRESENT)) return;
     PageTable pPD = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Table
     pEntry = &pPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
-    if (!(*pEntry & PF_PRESENT)) goto ArchUnMapPageExit;
+    if (!(*pEntry & PF_PRESENT)) return;
 
     PageTable pPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Entry
     pEntry = &pPT[_ADDRESS_TO_PT_INDEX(pVirtualAddress)];
+
     // Get rid of the entry
     *pEntry = 0;
 
-    if (bRefreshPage)
-        ArchInvalidatePage(pVirtualAddress);
-
-ArchUnMapPageExit:
     _EnableWriteProtect();
 }
 
 
-void SYSV ArchUnMapHugePage(PVOID pPageTable, PVOID pVirtualAddress, BOOL bRefreshPage)
+void SYSV ArchUnMapHugePage(PVOID pPageTable, VIRTUAL_ADDRESS VirtualAddress)
 {
     if (pPageTable == NULL)
         pPageTable = PML4_VIRT;
@@ -296,132 +327,78 @@ void SYSV ArchUnMapHugePage(PVOID pPageTable, PVOID pVirtualAddress, BOOL bRefre
     _DisableWriteProtect();
     
     // Page Directory Pointer
-    PTE *pEntry = &((PageTable) pPageTable)[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)];
+    PTE *pEntry = &((PageTable) pPageTable)[_ADDRESS_TO_PML4_INDEX(VirtualAddress)];
     if (!(*pEntry & PF_PRESENT)) return;
     PageTable pPDPT = (PageTable) _ALIGN_TO_PAGE(*pEntry);
 
     // Page Directory
-    pEntry = &pPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)];
+    pEntry = &pPDPT[_ADDRESS_TO_PDPT_INDEX(VirtualAddress)];
     if (!(*pEntry & PF_PRESENT)) return;
     PageTable pPD = (PageTable) _ALIGN_TO_PAGE(*pEntry);
 
     // Page Entry
-    pEntry = &pPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
+    pEntry = &pPD[_ADDRESS_TO_PD_INDEX(VirtualAddress)];
 
     // Get rid of the entry
     *pEntry = 0;
 
     _EnableWriteProtect();
-
-    if (bRefreshPage)
-        ArchInvalidatePage(pVirtualAddress);
 }
 
-void SYSV ArchUnMapPages(PVOID pPageTable, PVOID pVirtualAddress, QWORD qwNumberOfPages, BOOL bRefreshPages)
-{
-     for (QWORD i = 0; i < qwNumberOfPages; i++)
-        ArchUnMapPage(pPageTable, (PBYTE) pVirtualAddress + i * PAGE_SIZE, false);
-
-    if (bRefreshPages)
-        ArchRefreshPages();
-}
-
-void SYSV ArchUnMapHugePages(PVOID pPageTable, PVOID pVirtualAddress, QWORD qwNumberOfPages, BOOL bRefreshPages)
-{
-     for (QWORD i = 0; i < qwNumberOfPages; i++)
-        ArchUnMapHugePage(pPageTable, (PBYTE) pVirtualAddress + i * HUGE_PAGE_SIZE, false);
-
-    if (bRefreshPages)
-        ArchRefreshPages();
-}
-
-PVOID ArchGetPhysicalAddress(PVOID pPageTable, PVOID pVirtualAddress)
+WORD SYSV ArchReadPageTableEntry(PVOID pPageTable, PVOID pVirtualAddress, PHYSICAL_ADDRESS *pPhysicalAddress)
 {
     if (pPageTable == NULL)
         pPageTable = PML4_VIRT;
     
     // Page Directory Pointer
     PTE *pEntry = &((PageTable) pPageTable)[_ADDRESS_TO_PML4_INDEX(pVirtualAddress)];
-    if (!(*pEntry & PF_PRESENT)) return NULL;
+    if (!(*pEntry & PF_PRESENT)) return 0;
     PageTable pPDPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Directory
     pEntry = &pPDPT[_ADDRESS_TO_PDPT_INDEX(pVirtualAddress)];
-    if (!(*pEntry & PF_PRESENT)) return NULL;
+    if (!(*pEntry & PF_PRESENT)) return 0;
     PageTable pPD = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Table
     pEntry = &pPD[_ADDRESS_TO_PD_INDEX(pVirtualAddress)];
-    if (!(*pEntry & PF_PRESENT)) return NULL;
+    if (!(*pEntry & PF_PRESENT)) return 0;
 
     if (*pEntry & PF_PAGETABLEATTRIBUTE) // For huge pages
-        return (PVOID) ((*pEntry & 0x000FFFFFFFFFF000) + ((QWORD) pVirtualAddress % HUGE_PAGE_SIZE));
+    {
+        if (pPhysicalAddress != NULL)
+            *pPhysicalAddress = *pEntry & 0x000FFFFFFFFFF000;
+        return _ToAbstractFlags(*pEntry);
+    }
 
     PageTable pPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
 
     // Page Entry
     pEntry = &pPT[_ADDRESS_TO_PT_INDEX(pVirtualAddress)];
-    return (*pEntry & PF_PRESENT) ? (PVOID) (_ALIGN_TO_PAGE(*pEntry) + ((QWORD) pVirtualAddress % PAGE_SIZE)) : NULL;
-}
-
-
-PVOID SYSV ArchAllocatePage()
-{
-    static QWORD qwOffset = 0;
-    PVOID pAddress = NULL;
-    for (; qwOffset < g_qwBitmapSize * 8; qwOffset++)
-        if (!_IsReserved((PVOID) (qwOffset * PAGE_SIZE)))
-        {
-            pAddress = (PVOID) (qwOffset * PAGE_SIZE);
-            break;
-        }
-
-    if (pAddress == NULL)
-    {
-        // Try again from the start
-        qwOffset = 0;
-        return ArchAllocatePage();
-    }
-
-    _ReservePage(pAddress);
-    return pAddress;
-}
-
-void SYSV ArchFreePage(PVOID pPage)
-{
-    // ArchUnMapPage(PML4_VIRT, pPage);
-}
-
-PVOID SYSV ArchAllocatePagesContinuous(QWORD qwNumberOfPages)
-{
-    for (QWORD i = 0; i < g_qwBitmapSize * 8; )
-    {
-        BOOL bAllFree = true;
-        QWORD j = 0;
-        for (; j < qwNumberOfPages; j++)
-            if (_IsReserved((PVOID) ((i + j) * PAGE_SIZE)))
-            {
-                bAllFree = false;
-                break;
-            }
-        
-        if (!bAllFree)
-        {
-            i += _MAX(1, j);
-            continue;
-        }
-        
-        _ReservePages((PVOID) _PAGE_TO_ADDRESS(i), qwNumberOfPages);
-        return (PVOID) _PAGE_TO_ADDRESS(i);
-    }
     
-    return NULL;
+    if (pPhysicalAddress != NULL)
+        *pPhysicalAddress = *pEntry & 0x000FFFFFFFFFF000;
+    
+    return _ToAbstractFlags(*pEntry);
 }
 
-
-void SYSV ArchFreePagesContinuous(PVOID pPages, QWORD qwNumberOfPages)
+PVOID SYSV ArchGetKernelPageTable()
 {
+    return g_pKernelPML4;
 }
+
+PVOID SYSV ArchCloneKernelPageTable(PageAllocatorFunction pAllocator)
+{
+    PageTable pPML4 = (PageTable) pAllocator();
+    _ASSERT(pPML4 != 0, L"Could not allocate memory for PageTable");
+    if (pPML4 == NULL) return NULL;
+    ArchMapPage(NULL, (VIRTUAL_ADDRESS) pPML4, (PHYSICAL_ADDRESS) pPML4, PAGING_WRITEABLE | PF_PRESENT, pAllocator);
+    memcpy(pPML4, g_pKernelPML4, PAGE_SIZE);
+    pPML4[511] = (PTE) pPML4 | 0x103;
+    
+    return pPML4;
+}
+
 
 void _InitialisePaging(sARCHHeader *pHeader)
 {
@@ -429,58 +406,34 @@ void _InitialisePaging(sARCHHeader *pHeader)
     wrmsr(IA32_EFER, rdmsr(IA32_EFER) | EFER_NXE);
     _EnableWriteProtect();
 
-    g_arrBitmap    = pHeader->pPageBitmap;
-    g_qwBitmapSize = pHeader->qwPageBitmapSize;
-    g_pPML4        = pHeader->pPML4;
+    g_arrPageBitmap  = pHeader->pPageBitmap;
+    g_qwBitmapLength = pHeader->qwPageBitmapSize;
+    g_pKernelPML4    = pHeader->pPML4;
+    g_pPML4          = pHeader->pPML4;
 
-    _ReservePages(NULL, 512); // Reserve the first 2MiB, otherwise strange things will happen
+    _ReservePages(0, 512); // Reserve the first 2MiB, otherwise strange things will happen
 
     for (sEFIMemoryDescriptor *pEntry = pHeader->arrMemoryMap; (QWORD) pEntry < (QWORD) pHeader->arrMemoryMap + pHeader->qwMemoryMapSize; pEntry = (sEFIMemoryDescriptor *) ((PBYTE) pEntry + pHeader->qwMemoryDescriptorSize))
     {
         if (pEntry->dwType != 7) // not EfiConventionalMemory
-            _ReservePages((PVOID) pEntry->qwPhysicalStart, pEntry->qwNumberOfPages);
+            _ReservePages(pEntry->qwPhysicalStart, pEntry->qwNumberOfPages);
     }
 
     // Make page zero trigger a page fault
-    ArchMapPage(NULL, NULL, NULL, 0, true);
-    ArchUnMapPage(NULL, NULL, true);
-
-    ArchMapPages(NULL, g_arrBitmap, g_arrBitmap, _BYTES_TO_PAGES(g_qwBitmapSize), PAGING_GLOBAL | PAGING_WRITEABLE | PAGING_NOEXECUTE, true);
+    ArchMapPage(NULL, 0, 0, PAGING_PRESENT, _AllocatePage);
+    ArchUnMapPage(NULL, 0);
 
     // Protect the RAM file system
-    ArchMapPages(NULL, pHeader->pRoot, pHeader->pRoot, (pHeader->qwRootSize + PAGE_SIZE - 1) / PAGE_SIZE, PAGING_GLOBAL | PAGING_NOEXECUTE, true);
+    for (QWORD i = 0; i < pHeader->qwRootSize + PAGE_SIZE - 1; i += PAGE_SIZE)
+    {
+        ArchMapPage(NULL,
+                    (VIRTUAL_ADDRESS) pHeader->pRoot + i,
+                    (PHYSICAL_ADDRESS) pHeader->pRoot + i,
+                    PAGING_GLOBAL | PAGING_NOEXECUTE | PAGING_PRESENT,
+                    _AllocatePage);
+        ArchInvalidatePage((VIRTUAL_ADDRESS) pHeader->pRoot + i);
+    }
 
-    
     // Should already be reserved.
-    _ReservePages(pHeader->pRoot, (pHeader->qwRootSize + PAGE_SIZE - 1) / PAGE_SIZE);
-
-    // for (QWORD i = 0; i < 511; i++)
-    // {
-    //     PTE *pEntry = &((PageTable) PML4_VIRT)[i];
-    //     if (!(*pEntry & PF_PRESENT)) continue;;
-    //     PageTable pPDPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
-
-    //     for (QWORD j = 0; j < 512; j++)
-    //     {
-    //         PTE *pEntry = &pPDPT[j];
-    //         if (!(*pEntry & PF_PRESENT)) continue;
-    //         PageTable pPD = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
-
-    //         for (QWORD k = 0; k < 512; k++)
-    //         {
-    //             PTE *pEntry = &pPD[k];
-    //             if (!(*pEntry & PF_PRESENT)) continue;
-    //             if (*pEntry & PF_PAGETABLEATTRIBUTE) continue;
-    //             PageTable pPT = (PageTable) (*pEntry & 0x000FFFFFFFFFF000);
-
-    //             for (QWORD l = 0; l < 512; l++)
-    //             {
-    //                 PTE *pEntry = &pPT[l];
-    //                 ArchPrintFormat(L"VIRT %p PTE %p\n", l << 12 | k << 21 | j << 30 | i << 39, *pEntry);
-    //             }
-    //         }
-    //     }
-    // }
-    
-    ArchRefreshPages();
+    _ReservePages((PHYSICAL_ADDRESS) pHeader->pRoot, (pHeader->qwRootSize + PAGE_SIZE - 1) / PAGE_SIZE);
 }

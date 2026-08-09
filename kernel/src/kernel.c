@@ -84,7 +84,47 @@ void SYSV KernelMain(sRAMFile *pRoot)
 #endif
 
     ArchLog(LOG_LOG, L"Kernel loaded!");
+    InitialisePhysicalMemoryManager(pPageBitmap, qwBitmapLength);
+
+
+    sHeap sKernelHeap;
+    // Create the kernel heap (must be bootstrapped, as actual memory management doesn't exist yet).
+
+    // TODO: Add the relevant parameters to the config
+    sKernelHeap.Start                   = MM_KERNEL_HEAP_START;
+    sKernelHeap.bUser                   = false;
+    sKernelHeap.dwAlignment             = 16;
+    sKernelHeap.bResizeable             = true;
+    sKernelHeap.szLength                = NEOS_INITIAL_HEAP_SIZE;
+    sKernelHeap.qwFreeMemory            = sKernelHeap.szLength - sizeof(sHeapHeader) - sizeof(sHeapFooter) - _HEAP_PADDING_SIZE(sKernelHeap.Start, sKernelHeap.dwAlignment);
+    sKernelHeap.pFirstChunk             = (sHeapHeader *) sKernelHeap.Start;
+
+    // TODO: Allocate guard pages
+    for (QWORD i = 0; i < NEOS_INITIAL_HEAP_SIZE; i += PAGE_SIZE)
+    {
+        PHYSICAL_ADDRESS Page = PMMAllocatePage();
+        if (Page == 0)
+        {
+            // Free everything allocated until now
+            for (QWORD j = 0; j <= i; j += PAGE_SIZE)
+            {
+                PHYSICAL_ADDRESS Address;
+                WORD wFlags = ArchReadPageTableEntry(NULL, sKernelHeap.Start + j, &Address);
+                if (!(wFlags & PAGING_PRESENT)) continue;
+                PMMFreePage(Address);
+            }
+
+            _KERNEL_PANIC(L"Failed to create the kernels heap. Managed to allocate %u pages before failure", i / PAGE_SIZE);
+        }
+        
+        ArchMapPage(NULL, sKernelHeap.Start + i, Page,
+                          PAGING_WRITEABLE | PAGING_NOEXECUTE | PAGING_GLOBAL | PAGING_PRESENT, PMMAllocatePage);
+        ArchInvalidatePage(sKernelHeap.Start + i);
+
+        ZeroMemory((PBYTE) sKernelHeap.Start + i, PAGE_SIZE);
+    }
     
+    WriteChunk(sKernelHeap.pFirstChunk, sKernelHeap.qwFreeMemory, NULL, false, sKernelHeap.dwAlignment);
     SetKernelHeap(&sKernelHeap);
 
     ArchLog(LOG_LOG, L"Heap initialised!");
@@ -104,7 +144,10 @@ void SYSV KernelMain(sRAMFile *pRoot)
     ArchLog(LOG_LOG, L"Object manager initialised");
     
     InitialiseBootFiles(pRoot);
-    // 10th of a millisecond per cycle
+    
+    InitialiseMemoryManager();
+    ArchLog(LOG_LOG, L"Memory manager initialised");
+    
     InitProcessScheduler(1000);
     ArchLog(LOG_LOG, L"Process scheduler initialised");
 

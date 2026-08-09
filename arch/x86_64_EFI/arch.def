@@ -30,4 +30,9 @@ EXPORTS
     ArchFreePagesContinuous
     ArchLog
     ArchLogVariadic
+    ArchGetKernelPageTable
+    ArchCloneKernelPageTable
+    ArchReadPageTableEntry
+    ArchRegisterPageFaultHandler
+    ArchInvalidatePage
     ArchRegisterSyscallHandler

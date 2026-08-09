@@ -8,13 +8,24 @@
 #define HUGE_PAGE_SIZE (1024 * 1024 * 2) // 2 MiB
 #define PAGE_TABLE_SIZE 512
 
-#define PAGING_WRITEABLE 1
-#define PAGING_UNCACHED  2
-#define PAGING_USERMODE  4
-#define PAGING_GLOBAL    8
-#define PAGING_NOEXECUTE 16
+
+#define PAGING_PRESENT            1
+#define PAGING_WRITEABLE          2
+#define PAGING_USERMODE           4
+#define PAGING_WRITETHROUGH       8
+#define PAGING_UNCACHED           16
+#define PAGING_ACCESSED           32
+#define PAGING_DIRTY              64
+#define PAGING_HUGE               128
+#define PAGING_GLOBAL             256
+#define PAGING_NOEXECUTE          512
+
 
 #ifdef ARCH_EXE
+
+
+typedef QWORD PTE;
+typedef PTE *PageTable;
 
 #include <arch.h>
 
@@ -36,64 +47,59 @@
 #define PF_GLOBAL             256
 #define PF_NOEXECUTE          0x8000000000000000
 
-#define _ADDRESS_TO_PML4_INDEX(a) (((QWORD) (a) >> 39) & (PAGE_TABLE_SIZE - 1))
-#define _ADDRESS_TO_PDPT_INDEX(a) (((QWORD) (a) >> 30) & (PAGE_TABLE_SIZE - 1))
-#define _ADDRESS_TO_PD_INDEX(a)   (((QWORD) (a) >> 21) & (PAGE_TABLE_SIZE - 1))
-#define _ADDRESS_TO_PT_INDEX(a)   (((QWORD) (a) >> 12) & (PAGE_TABLE_SIZE - 1))
-#define _BYTES_TO_PAGES(n)        (((QWORD) (n) + PAGE_SIZE - 1) / PAGE_SIZE)
-#define _PAGE_TO_ADDRESS(p)       ((QWORD) (p) << 12)
-#define _ADDRESS_TO_PAGE(a)       ((QWORD) (a) >> 12)
-#define _ALIGN_TO_PAGE(n)         ((QWORD) (n) & ~((QWORD) PAGE_SIZE - 1))
-#define _ALIGN_TO_HUGE_PAGE(a)    ((QWORD) (a) & ~((QWORD) HUGE_PAGE_SIZE - 1))
+#define _ADDRESS_TO_PML4_INDEX(a) (((SIZE) (a) >> 39) & (PAGE_TABLE_SIZE - 1))
+#define _ADDRESS_TO_PDPT_INDEX(a) (((SIZE) (a) >> 30) & (PAGE_TABLE_SIZE - 1))
+#define _ADDRESS_TO_PD_INDEX(a)   (((SIZE) (a) >> 21) & (PAGE_TABLE_SIZE - 1))
+#define _ADDRESS_TO_PT_INDEX(a)   (((SIZE) (a) >> 12) & (PAGE_TABLE_SIZE - 1))
+#define _BYTES_TO_PAGES(n)        (((SIZE) (n) + PAGE_SIZE - 1) / PAGE_SIZE)
+#define _PAGE_TO_ADDRESS(p)       ((SIZE) (p) << 12)
+#define _ADDRESS_TO_PAGE(a)       ((SIZE) (a) >> 12)
+#define _ALIGN_TO_PAGE(n)         ((SIZE) (n) & ~((SIZE) PAGE_SIZE - 1))
+#define _ALIGN_TO_HUGE_PAGE(a)    ((SIZE) (a) & ~((SIZE) HUGE_PAGE_SIZE - 1))
 
 
 void _InitialisePaging(sARCHHeader *pHeader);
+WORD _ToAbstractFlags(PTE pte);
 
 
 #endif // ARCH_EXE
 
-void SYSV ArchMapPage(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, BYTE bFlags, BOOL bRefreshPage);
+typedef PHYSICAL_ADDRESS (SYSV *PageAllocatorFunction)();
 
-/// @brief 
-/// @param pPageTable 
-/// @param pVirtualAddress 
-/// @param pPhysicalAddress 
-/// @param qwNumberOfPages 
-/// @param bFlags 
-/// @param bRefreshPage 
-/// @warning bRefresh page doesn't apply to global pages
-/// @return 
-void SYSV ArchMapPages(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwNumberOfPages, BYTE bFlags, BOOL bRefreshPage);
+/// @brief Maps a single page from pPhysicalAddress to pVirtualAddress
+/// @param pPageTable A page table object. Set this to NULL if the current page table is to be used. 
+/// @param pAllocator A function that returns a valid 4KiB-aligned page
+void SYSV ArchMapPage(PVOID pPageTable, VIRTUAL_ADDRESS VirtualAddress, PHYSICAL_ADDRESS PhysicalAddress, WORD wFlags, PageAllocatorFunction pAllocator);
 
-void SYSV ArchUnMapPage(PVOID pPageTable, PVOID pVirtualAddress, BOOL bRefreshPage);
-void SYSV ArchUnMapPages(PVOID pPageTable, PVOID pVirtualAddress, QWORD qwNumberOfPages, BOOL bRefreshPage);
+/// @brief Clears a 4KiB page by setting its PTE to zero
+/// @param pPageTable A page table object. Set this to NULL if the current page table is to be used. 
+void SYSV ArchUnMapPage(PVOID pPageTable, PVOID pVirtualAddress);
 
-void SYSV ArchMapHugePage(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, BYTE bFlags, BOOL bRefreshPage);
-void SYSV ArchMapHugePages(PVOID pPageTable, PVOID pVirtualAddress, PVOID pPhysicalAddress, QWORD qwNumberOfPages, BYTE bFlags, BOOL bRefreshPage);
-
-void SYSV ArchUnMapHugePage(PVOID pPageTable, PVOID pVirtualAddress, BOOL bRefreshPage);
-void SYSV ArchUnMapHugePages(PVOID pPageTable, PVOID pVirtualAddress, QWORD qwNumberOfPages, BOOL bRefreshPage);
+/// @brief Maps a single huge (2MiB) page from pPhysicalAddress to pVirtualAddress
+/// @param pPageTable A page table object. Set this to NULL if the current page table is to be used. 
+/// @param pAllocator A function that returns a valid 4KiB-aligned page
+void SYSV ArchMapHugePage(PVOID pPageTable, VIRTUAL_ADDRESS VirtualAddress, PHYSICAL_ADDRESS PhysicalAddress, BYTE bFlags, PageAllocatorFunction pAllocator);
 
 
-/// @brief Returns the physical address, which pVirtualAddress is mapped to
-/// @return The physical address upon success, NULL otherwise
-PVOID ArchGetPhysicalAddress(PVOID pPageTable, PVOID pVirtualAddress);
+/// @brief Clears a 2MiB page by setting its PTE to zero
+/// @param pPageTable A page table object. Set this to NULL if the current page table is to be used. 
+void SYSV ArchUnMapHugePage(PVOID pPageTable, VIRTUAL_ADDRESS VirtualAddress);
 
-/// @brief Tries to allocate one page
-/// @param pStart The virtual start of the page. Set this to NULL for an identity mapping
-/// @return The physical page addresss upon success, NULL otherwise
-/// @warning This function does not guarantee that the returned page is mapped
-PVOID SYSV ArchAllocatePage();
+/// @brief Invalidates a single page
+void SYSV ArchInvalidatePage(VIRTUAL_ADDRESS Page);
 
-/// @brief Tries to allocate a continuous region of pages
-/// @return The start of the region upon success, NULL otherwise
-/// @warning This function does not guarantee that the returned pages are mapped
-PVOID SYSV ArchAllocatePagesContinuous(QWORD qwNumberOfPages);
+/// @brief Creates a new page table with the kernel regions (0xFFFFF70000000000+) pointing to the kernel's page table, save for the recursive slot
+/// @param pAllocator A function that returns a valid 4KiB-aligned page
+/// @return The cloned page table
+PVOID SYSV ArchCloneKernelPageTable(PageAllocatorFunction pAllocator);
 
-/// @brief Frees a single page
-void SYSV ArchFreePage(PVOID pPage);
 
-/// @brief Frees a Continuous region of pages and maps them to identity
-void SYSV ArchFreePagesContinuous(PVOID pPages, QWORD qwNumberOfPages);
+/// @brief Reads a page table entry and returns an abstraction of the flags along with its physical address
+/// @param pPageTable The page table to be read
+/// @param pVirtualAddress The virtual address, whose PTE is to be read.
+/// @param pPhysicalAddress OPTIONAL: The resulting physical address. Set this to NULL in case it isn't needed.
+/// @return The abstracted flags
+WORD SYSV ArchReadPageTableEntry(PVOID pPageTable, PVOID pVirtualAddress, PHYSICAL_ADDRESS *pPhysicalAddress);
+
 
 #endif // __ARCH__MEMORY__PAGING_H
