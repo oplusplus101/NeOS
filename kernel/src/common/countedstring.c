@@ -22,6 +22,8 @@ void DestroyString(sString *ws)
 PWCHAR CopyStringAsCString(sString *ws)
 {
     PWCHAR wsz = KHeapAlloc((ws->qwLength + 1) * sizeof(PWCHAR));
+    if (wsz == NULL || ws->wszData == NULL)
+        return NULL;
     strncpyW(wsz, ws->wszData, ws->qwLength);
     return wsz;
 }

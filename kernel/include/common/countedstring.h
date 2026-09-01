@@ -11,7 +11,7 @@ typedef struct
 } sString;
 
 // Allocates a sString on the stack
-#define _TEXT(ws) (sString) { ws, sizeof(ws) / sizeof(PWCHAR) }
+#define _TEXT(ws) ((sString) { .wszData = ws, .qwLength = sizeof(ws) / sizeof(WCHAR) })
 
 
 sString MakeString(const PWCHAR wsz);
