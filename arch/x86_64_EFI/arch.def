@@ -19,6 +19,7 @@ EXPORTS
     ArchTextHeight
     ArchRefreshPages
     ArchLoadPageTable
+    ArchGetCurrentPageTable
     ArchMapPage
     ArchMapPages
     ArchUnMapPage

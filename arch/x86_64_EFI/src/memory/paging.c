@@ -382,6 +382,11 @@ WORD SYSV ArchReadPageTableEntry(PVOID pPageTable, PVOID pVirtualAddress, PHYSIC
     return _ToAbstractFlags(*pEntry);
 }
 
+PVOID SYSV ArchGetCurrentPageTable()
+{
+    return g_pPML4;
+}
+
 PVOID SYSV ArchGetKernelPageTable()
 {
     return g_pKernelPML4;
