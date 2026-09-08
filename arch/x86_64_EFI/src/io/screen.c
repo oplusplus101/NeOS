@@ -613,8 +613,11 @@ void SYSV ArchPrintFormatVariadic(const PWCHAR wszFormat, __builtin_va_list args
                     else if (wszFormat[i] == 'x')
                         ArchPrintHex(__builtin_va_arg(args, QWORD), qwDigits, false);
                     else if (wszFormat[i] == 's')
-                        for (BYTE j = 0; j < qwDigits && __builtin_va_arg(args, const PCHAR)[j] != 0; j++)
-                            ArchPrintChar(__builtin_va_arg(args, const PCHAR)[j]);
+                    {
+                        const PCHAR sz = __builtin_va_arg(args, const PCHAR);
+                        for (BYTE j = 0; j < qwDigits && sz[j] != 0; j++)
+                            ArchPrintChar(sz[j]);
+                    }
                 }
             }
             
