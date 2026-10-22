@@ -53,12 +53,15 @@ QWORD BLKGetRAMFileSize(sAbstractBlockDevice *pSelf)
 QWORD BLKReadRAMFile(sAbstractBlockDevice *pSelf, QWORD qwStart, QWORD qwLength, PVOID pBuffer)
 {
     sRAMFile *pFile = (sRAMFile *) pSelf->pBackend;
-    if (qwStart + qwLength >= pFile->qwFileSize) return -1LL;
+    if (qwStart + qwLength >= pFile->qwFileSize) return ~0ULL;
     memcpy(pBuffer, (PBYTE) pFile->pData + qwStart, qwLength);
+    return qwLength;
 }
 
 STATUS CreateBlockDeviceFromRAMFile(sRAMFile *pFile, sAbstractBlockDevice **ppDevice)
 {
+    if (pFile == NULL) return NEOS_INVALID_ARGUMENT;
+
     STATUS s = CreateObject(g_pBlockDeviceType, NULL, sizeof(sAbstractBlockDevice), (PVOID *) ppDevice);
     if (!_SUCCESSFUL(s))
         return s;
